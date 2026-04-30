@@ -4,5 +4,25 @@ out/
 graphify-out/
 *.log
 .claude/
+
+# Docs (local only)
+ARCHITECTURE.md
+CLAUDE.md
+ROADMAP.md
+
+# Secrets
+.env
+.env.*
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editor
+.vscode/
+
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
