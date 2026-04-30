@@ -1,26 +1,8 @@
-# Xcode build artifacts
-build/
-DerivedData/
-*.xcuserstate
-*.xcuserdatad/
-xcuserdata/
-*.moved-aside
-*.pbxuser
-*.xcworkspace/
-
-# Claude Code session data
+node_modules/
+dist/
+out/
+graphify-out/
+*.log
 .claude/
-
-# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-
-# Packages
-.swiftpm/
-
-# Secrets — never commit credentials
-*.credentials.json
+Thumbs.db

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Siphon Widget</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="floating-body">
+    <main class="floating-widget" aria-label="Siphon floating widget">
+      <div class="floating-content">
+        <button id="floatingOpenButton" class="floating-percent-button" aria-label="Abrir Siphon">
+          <span class="floating-percent" id="floatingPercent">--</span>
+        </button>
+        <span class="floating-reset" id="floatingReset">Sign in to load limits</span>
+      </div>
+      <button id="floatingCloseButton" class="floating-close" aria-label="Fechar widget">
+        <!-- Carbon: Close -->
+        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M24 9.4 22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6L24 9.4z"/>
+        </svg>
+      </button>
+      <div class="floating-meter" aria-hidden="true">
+        <div id="floatingBar" class="floating-meter-fill"></div>
+      </div>
+    </main>
+
+    <script type="module" src="./floating.js"></script>
+  </body>
+</html>

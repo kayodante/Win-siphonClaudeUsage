@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Siphon</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="../../assets/Logo.png" alt="Siphon" />
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="refreshButton" title="Atualizar agora" aria-label="Atualizar agora">
+            <!-- Carbon: Restart -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
+          </button>
+          <button class="icon-button" id="historyButton" title="Últimos dias" aria-label="Últimos dias">
+            <!-- Carbon: ExecutionHistory -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M18,22c0,3.8599-3.1401,7-7,7v-2c2.7568,0,5-2.2432,5-5s-2.2432-5-5-5c-2.045,0-3.8025,1.2373-4.5762,3h2.5762v2H3v-6h2v2.4131c1.2245-2.0405,3.4521-3.4131,6-3.4131,3.8599,0,7,3.1401,7,7ZM28,5v22c0,1.103-.8975,2-2,2h-6v-2h6v-4h-6v-2h6v-4h-6v-2h6v-4H4v-6c0-1.103.8975-2,2-2h20c1.1025,0,2,.897,2,2ZM26,5H6v4h20v-4Z"/></svg>
+          </button>
+          <button class="icon-button" id="settingsButton" title="Configurações" aria-label="Configurações">
+            <!-- Carbon: Settings -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,16.76c0-.25,0-.5,0-.76s0-.51,0-.77l1.92-1.68A2,2,0,0,0,29.3,11L26.94,7a2,2,0,0,0-1.73-1,2,2,0,0,0-.64.1l-2.43.82a11.35,11.35,0,0,0-1.31-.75l-.51-2.52a2,2,0,0,0-2-1.61H13.64a2,2,0,0,0-2,1.61l-.51,2.52a11.48,11.48,0,0,0-1.32.75L7.43,6.06A2,2,0,0,0,6.79,6,2,2,0,0,0,5.06,7L2.7,11a2,2,0,0,0,.41,2.51L5,15.24c0,.25,0,.5,0,.76s0,.51,0,.77L3.11,18.45A2,2,0,0,0,2.7,21L5.06,25a2,2,0,0,0,1.73,1,2,2,0,0,0,.64-.1l2.43-.82a11.35,11.35,0,0,0,1.31.75l.51,2.52a2,2,0,0,0,2,1.61h4.72a2,2,0,0,0,2-1.61l.51-2.52a11.48,11.48,0,0,0,1.32-.75l2.42.82a2,2,0,0,0,.64.1,2,2,0,0,0,1.73-1L29.3,21a2,2,0,0,0-.41-2.51ZM25.21,24l-3.43-1.16a8.86,8.86,0,0,1-2.71,1.57L18.36,28H13.64l-.71-3.55a9.36,9.36,0,0,1-2.7-1.57L6.79,24,4.43,20l2.72-2.4a8.9,8.9,0,0,1,0-3.13L4.43,12,6.79,8l3.43,1.16a8.86,8.86,0,0,1,2.71-1.57L13.64,4h4.72l.71,3.55a9.36,9.36,0,0,1,2.7,1.57L25.21,8,27.57,12l-2.72,2.4a8.9,8.9,0,0,1,0,3.13L27.57,20Z"/><path d="M16,22a6,6,0,1,1,6-6A5.94,5.94,0,0,1,16,22Zm0-10a3.91,3.91,0,0,0-4,4,3.91,3.91,0,0,0,4,4,3.91,3.91,0,0,0,4-4A3.91,3.91,0,0,0,16,12Z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="mainView" class="view">
+        <section class="card quota-panel">
+          <div class="card-eyebrow">
+            <!-- Carbon: Lightning -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
+            <span>Sessão Atual</span>
+          </div>
+          <div class="quota-headline">
+            <span class="quota-percent" id="sessionPercent">--</span>
+          </div>
+          <div class="meter" aria-hidden="true">
+            <div id="sessionBar" class="meter-fill"></div>
+          </div>
+          <div class="quota-meta">
+            <span id="sessionReset" class="reset-line">Sign in to load plan limits</span>
+            <span class="pill" id="notificationState" data-tone="accent">
+              <!-- Carbon: Notification -->
+              <svg id="notificationIconOn" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M28.7071,19.293,26,16.5859V13a10.0136,10.0136,0,0,0-9-9.9492V1H15V3.0508A10.0136,10.0136,0,0,0,6,13v3.5859L3.2929,19.293A1,1,0,0,0,3,20v3a1,1,0,0,0,1,1h7v.7768a5.152,5.152,0,0,0,4.5,5.1987A5.0057,5.0057,0,0,0,21,25V24h7a1,1,0,0,0,1-1V20A1,1,0,0,0,28.7071,19.293ZM19,25a3,3,0,0,1-6,0V24h6Zm8-3H5V20.4141L7.707,17.707A1,1,0,0,0,8,17V13a8,8,0,0,1,16,0v4a1,1,0,0,0,.293.707L27,20.4141Z"/></svg>
+              <!-- Carbon: NotificationOff -->
+              <svg id="notificationIconOff" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" hidden><path d="M26,16.5859V13a9.9217,9.9217,0,0,0-1.0833-4.5024L30,3.4141,28.5859,2,2,28.5859,3.4141,30l6-6H11v1a5,5,0,0,0,10,0V24h7a1,1,0,0,0,1-1V20a1,1,0,0,0-.293-.707ZM19,25a3,3,0,0,1-6,0V24h6Zm8-3H11.4141L23.4119,10.0024A7.949,7.949,0,0,1,24,13v4a1,1,0,0,0,.293.707L27,20.4141Z"/><path d="M7.707,17.707A1,1,0,0,0,8,17V13a8.0092,8.0092,0,0,1,8-8,7.9253,7.9253,0,0,1,4.9857,1.7681l1.4264-1.4263A9.934,9.934,0,0,0,17,3.0508V1H15V3.0508A10.0136,10.0136,0,0,0,6,13v3.5859l-3,3L4.4141,21Z"/></svg>
+              <span id="notificationStateLabel">On</span>
+            </span>
+          </div>
+        </section>
+
+        <section class="grid">
+          <article class="card">
+            <span class="card-eyebrow">Weekly all</span>
+            <span class="stat-value" id="weeklyAll">--</span>
+          </article>
+          <article class="card">
+            <span class="card-eyebrow">Weekly Sonnet</span>
+            <span class="stat-value" id="weeklySonnet">--</span>
+          </article>
+          <article class="card">
+            <span class="card-eyebrow">Hoje</span>
+            <span class="stat-value" id="todayCost">--</span>
+          </article>
+          <article class="card">
+            <span class="card-eyebrow">Este mês</span>
+            <span class="stat-value" id="monthCost">--</span>
+          </article>
+        </section>
+
+        <div class="last-updated">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="lastUpdated">--</span>
+        </div>
+
+      </section>
+
+      <section id="historyView" class="view" hidden>
+        <div class="section-heading">
+          <h2>Últimos dias</h2>
+          <button class="ghost compact" id="backFromHistoryButton">
+            Voltar
+          </button>
+        </div>
+        <div id="recentDays" class="days"></div>
+      </section>
+
+      <section id="settingsView" class="view" hidden>
+        <div class="section-heading">
+          <h2>Configurações</h2>
+          <button class="ghost compact" id="backButton">
+            Voltar
+          </button>
+        </div>
+        <section class="settings-list">
+          <article>
+            <span>Pasta do app</span>
+            <strong id="configPath">--</strong>
+          </article>
+          <article>
+            <span>Dados do Claude Code</span>
+            <strong id="claudePath">--</strong>
+          </article>
+          <article>
+            <span>Login</span>
+            <strong id="settingsLogin">--</strong>
+          </article>
+          <article class="settings-toggle-row">
+            <span>Notificações de reset</span>
+            <label class="switch" for="settingsNotificationsToggle">
+              <input id="settingsNotificationsToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true">
+                <span class="switch-thumb"></span>
+              </span>
+            </label>
+          </article>
+          <article class="settings-toggle-row">
+            <span>Widget flutuante</span>
+            <label class="switch" for="settingsFloatingToggle">
+              <input id="settingsFloatingToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true">
+                <span class="switch-thumb"></span>
+              </span>
+            </label>
+          </article>
+        </section>
+        <section class="card auth-card settings-auth-card" id="authCard">
+          <div class="card-eyebrow">
+            <span>Authentication</span>
+          </div>
+          <p id="authStatus">Not signed in.</p>
+          <div class="button-row">
+            <button id="signInButton">Sign in with Claude</button>
+            <button class="ghost" id="signOutButton">Sign out</button>
+          </div>
+          <form id="codeForm" class="code-form" hidden>
+            <label for="codeInput">Paste the full redirect URL or code</label>
+            <textarea id="codeInput" rows="3" spellcheck="false"></textarea>
+            <div class="button-row">
+              <button type="submit">Submit</button>
+              <button type="button" class="ghost" id="cancelAuthButton">Cancel</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <p id="errorText" class="error"></p>
+    </main>
+
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+appId: com.kayodantes.siphon
+productName: Siphon
+directories:
+  output: dist
+  buildResources: assets/installer
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+  - "!test/**"
+  - "!scripts/**"
+  - "!docs/**"
+  - "!mockup.html"
+  - "!ROADMAP.md"
+  - "!ARCHITECTURE.md"
+win:
+  target: nsis
+  icon: assets/installer/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/installer/icon.ico
+  uninstallerIcon: assets/installer/icon.ico
+  installerSidebar: assets/installer/installer-sidebar.bmp
+  installerHeader: assets/installer/installer-header.bmp
+  shortcutName: Siphon
