@@ -41,7 +41,7 @@ const STRINGS = Object.freeze({
     'settings.title': 'Settings',
     'settings.language': 'Language',
     'settings.languageEN': 'English',
-    'settings.languagePT': 'Portuguese',
+    'settings.languagePT': 'Português',
     'settings.notifReset': 'Reset notification',
     'settings.floating': 'Floating widget',
     'settings.claudePath': 'Claude Code data',
@@ -49,7 +49,12 @@ const STRINGS = Object.freeze({
     'settings.back': 'Back',
 
     'footer.openClaude': 'Open claude.ai',
-    'footer.quit': 'Quit'
+    'footer.quit': 'Quit',
+
+    'error.saveNotification': 'Could not save notification preference.',
+    'error.saveFloating': 'Could not save floating widget preference.',
+    'error.saveLanguage': 'Could not save language preference.',
+    'error.loadState': 'Could not load app state. Try restarting Siphon.'
   }),
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
@@ -90,7 +95,7 @@ const STRINGS = Object.freeze({
     'settings.signedInFallback': 'Conectado com Claude',
     'settings.title': 'Configurações',
     'settings.language': 'Idioma',
-    'settings.languageEN': 'Inglês',
+    'settings.languageEN': 'English',
     'settings.languagePT': 'Português',
     'settings.notifReset': 'Notificação de reset',
     'settings.floating': 'Widget flutuante',
@@ -99,7 +104,12 @@ const STRINGS = Object.freeze({
     'settings.back': 'Voltar',
 
     'footer.openClaude': 'Abrir claude.ai',
-    'footer.quit': 'Sair'
+    'footer.quit': 'Sair',
+
+    'error.saveNotification': 'Não foi possível salvar a preferência de notificação.',
+    'error.saveFloating': 'Não foi possível salvar a preferência do widget flutuante.',
+    'error.saveLanguage': 'Não foi possível salvar a preferência de idioma.',
+    'error.loadState': 'Não foi possível carregar o estado do app. Reinicie o Siphon.'
   })
 });
 

@@ -13,20 +13,20 @@
           <img class="brand-logo" src="../../assets/Logo.png" alt="Siphon" />
         </div>
         <div class="top-actions">
-          <button class="icon-button" id="refreshButton" title="Atualizar agora" aria-label="Atualizar agora">
+          <button class="icon-button" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
             <!-- Carbon: Restart -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
           </button>
-<button class="icon-button" id="settingsButton" title="Configurações" aria-label="Configurações">
+          <button class="icon-button" id="settingsButton" title="Settings" aria-label="Settings" data-i18n-title="topbar.settings" data-i18n-aria-label="topbar.settings">
             <!-- Carbon: Settings -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,16.76c0-.25,0-.5,0-.76s0-.51,0-.77l1.92-1.68A2,2,0,0,0,29.3,11L26.94,7a2,2,0,0,0-1.73-1,2,2,0,0,0-.64.1l-2.43.82a11.35,11.35,0,0,0-1.31-.75l-.51-2.52a2,2,0,0,0-2-1.61H13.64a2,2,0,0,0-2,1.61l-.51,2.52a11.48,11.48,0,0,0-1.32.75L7.43,6.06A2,2,0,0,0,6.79,6,2,2,0,0,0,5.06,7L2.7,11a2,2,0,0,0,.41,2.51L5,15.24c0,.25,0,.5,0,.76s0,.51,0,.77L3.11,18.45A2,2,0,0,0,2.7,21L5.06,25a2,2,0,0,0,1.73,1,2,2,0,0,0,.64-.1l2.43-.82a11.35,11.35,0,0,0,1.31.75l.51,2.52a2,2,0,0,0,2,1.61h4.72a2,2,0,0,0,2-1.61l.51-2.52a11.48,11.48,0,0,0,1.32-.75l2.42.82a2,2,0,0,0,.64.1,2,2,0,0,0,1.73-1L29.3,21a2,2,0,0,0-.41-2.51ZM25.21,24l-3.43-1.16a8.86,8.86,0,0,1-2.71,1.57L18.36,28H13.64l-.71-3.55a9.36,9.36,0,0,1-2.7-1.57L6.79,24,4.43,20l2.72-2.4a8.9,8.9,0,0,1,0-3.13L4.43,12,6.79,8l3.43,1.16a8.86,8.86,0,0,1,2.71-1.57L13.64,4h4.72l.71,3.55a9.36,9.36,0,0,1,2.7,1.57L25.21,8,27.57,12l-2.72,2.4a8.9,8.9,0,0,1,0,3.13L27.57,20Z"/><path d="M16,22a6,6,0,1,1,6-6A5.94,5.94,0,0,1,16,22Zm0-10a3.91,3.91,0,0,0-4,4,3.91,3.91,0,0,0,4,4,3.91,3.91,0,0,0,4-4A3.91,3.91,0,0,0,16,12Z"/></svg>
           </button>
           <div class="window-controls">
-            <button class="window-control-btn" id="minimizeButton" title="Minimizar" aria-label="Minimizar">
+            <button class="window-control-btn" id="minimizeButton" title="Minimize" aria-label="Minimize" data-i18n-title="topbar.minimize" data-i18n-aria-label="topbar.minimize">
               <!-- Carbon: Subtract -->
               <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 15H24V17H8z"/></svg>
             </button>
-            <button class="window-control-btn" id="closeButton" title="Fechar" aria-label="Fechar">
+            <button class="window-control-btn" id="closeButton" title="Close" aria-label="Close" data-i18n-title="topbar.close" data-i18n-aria-label="topbar.close">
               <!-- Carbon: Close -->
               <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
             </button>
@@ -80,7 +80,7 @@
           <div class="card-eyebrow">
             <!-- Carbon: Lightning -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
-            <span>Current Session</span>
+            <span data-i18n="home.session">Current Session</span>
           </div>
           <div class="quota-headline">
             <span class="quota-percent" id="sessionPercent">--</span>
@@ -93,19 +93,19 @@
 
         <section class="grid">
           <article class="card">
-            <span class="card-eyebrow">Weekly All</span>
+            <span class="card-eyebrow" data-i18n="home.weeklyAll">Weekly All</span>
             <span class="stat-value" id="weeklyAll">--</span>
           </article>
           <article class="card">
-            <span class="card-eyebrow">Weekly Sonnet</span>
+            <span class="card-eyebrow" data-i18n="home.weeklySonnet">Weekly Sonnet</span>
             <span class="stat-value" id="weeklySonnet">--</span>
           </article>
           <article class="card">
-            <span class="card-eyebrow">Today</span>
+            <span class="card-eyebrow" data-i18n="home.today">Today</span>
             <span class="stat-value" id="todayCost">--</span>
           </article>
           <article class="card">
-            <span class="card-eyebrow">This Month</span>
+            <span class="card-eyebrow" data-i18n="home.month">This Month</span>
             <span class="stat-value" id="monthCost">--</span>
           </article>
         </section>
@@ -126,86 +126,84 @@
 
       </section>
 
-<section id="settingsView" class="view" hidden>
-
-        <div class="settings-heading">
-          <span class="settings-heading-label">Configurações</span>
-          <button class="btn-back" id="backButton">
+      <section id="settingsView" class="view settings-stack" hidden>
+        <div class="section-eyebrow">
+          <span data-i18n="settings.account">Account</span>
+          <button class="back-btn" id="backButton">
             <!-- Carbon: ArrowLeft -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 26L4 16 14 6l1.41 1.41L6.83 16l8.58 8.59z"/><path d="M5 15h23v2H5z"/></svg>
-            Back
+            <span data-i18n="settings.back">Back</span>
           </button>
         </div>
 
-        <div class="settings-card">
-          <span class="settings-group-label">Dados do Claude Code</span>
-          <div class="settings-path-row">
-            <span id="claudePath" class="settings-path-value">--</span>
-            <button class="icon-button" title="Editar caminho" aria-label="Editar caminho" tabindex="-1">
-              <!-- Carbon: Edit -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
-            </button>
-          </div>
-          <hr class="settings-sep" aria-hidden="true" />
+        <div class="account-card">
           <div class="settings-row">
-            <span class="settings-row-label">Notificação de reset</span>
+            <span class="settings-row-label" data-i18n="settings.fullName">Full name</span>
+            <span class="settings-row-value" id="settingsName">--</span>
+          </div>
+          <div class="settings-row" id="settingsEmailRow" hidden>
+            <span class="settings-row-label" data-i18n="settings.email">Email</span>
+            <span class="settings-row-value" id="settingsEmail">--</span>
+          </div>
+          <div class="settings-row" id="settingsPlanRow" hidden>
+            <span class="settings-row-label" data-i18n="settings.plan">Plan</span>
+            <span id="settingsPlan" class="plan-pill">--</span>
+          </div>
+          <button class="btn-secondary" id="signOutButton" data-i18n="settings.signOut">Sign out</button>
+        </div>
+
+        <div class="section-eyebrow settings-preferences-eyebrow">
+          <span data-i18n="settings.title">Settings</span>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.language">Language</span>
+            <select id="settingsLanguage" class="settings-select">
+              <option value="en" data-i18n="settings.languageEN">English</option>
+              <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.notifReset">Reset notification</span>
             <label class="switch" for="settingsNotificationsToggle">
               <input id="settingsNotificationsToggle" type="checkbox" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
-          <hr class="settings-sep" aria-hidden="true" />
           <div class="settings-row">
-            <span class="settings-row-label">Widget flutuante</span>
+            <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
             <label class="switch" for="settingsFloatingToggle">
               <input id="settingsFloatingToggle" type="checkbox" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
-        </div>
-
-        <div class="settings-section-header">
-          <span class="settings-section-title">Autenticação</span>
-          <span class="settings-section-desc">Para dados de uso do Claude AI</span>
-        </div>
-
-        <div class="settings-card" id="authCard">
-          <button class="btn-secondary" id="signOutButton">Sign out</button>
-        </div>
-
-        <div class="settings-section-header">
-          <span class="settings-section-title">Anthropic API Key</span>
-          <span class="settings-section-desc">Para dados de uso do Claude Code</span>
-        </div>
-
-        <div class="settings-card">
-          <div class="settings-input-group">
-            <!-- Carbon: api--key -->
-            <svg class="settings-input-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11,14a7,7,0,1,0,7,7A7,7,0,0,0,11,14Zm0,12a5,5,0,1,1,5-5A5,5,0,0,1,11,26Z"/><path d="M29.41,8,24,2.59,18.59,8,16.6,8.5a10.5,10.5,0,0,0-3.13-.46A11,11,0,1,0,22,18l0-.45V16.41L23.59,15,27,13.59,28,12.41,29,11Z"/></svg>
-            <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-••••••••" class="settings-key-input" autocomplete="off" spellcheck="false" />
-            <button class="icon-button" id="toggleKeyVisibility" title="Mostrar/ocultar chave" aria-label="Mostrar/ocultar chave">
-              <!-- Carbon: ViewOff -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5.24,22.51l1.43-1.42A14.06,14.06,0,0,1,2,16,14.18,14.18,0,0,1,16,4a13.65,13.65,0,0,1,7.4,2.15L24.83,4.72A15.94,15.94,0,0,0,16,2,16.18,16.18,0,0,0,0,16,16,16,0,0,0,5.24,22.51Z"/><path d="M12,10.22A6,6,0,0,1,21.78,20Zm-2.52,2.52A6,6,0,0,0,18,22a6.07,6.07,0,0,0,1.26-.14L11.4,13.74A5.77,5.77,0,0,0,9.52,12.74Z"/><path d="M29.99,15.67A16.07,16.07,0,0,0,26.67,9l4-4L29.24,3.55l-26,26L4.68,31l4-4A15.77,15.77,0,0,0,16,30,16.18,16.18,0,0,0,32,16c0-.11-.01-.22-.01-.33ZM16,28a13.72,13.72,0,0,1-7.38-2.14L11,23.45A6,6,0,0,0,19.75,14.7l2.64-2.64A14,14,0,0,1,30,16,14.18,14.18,0,0,1,16,28Z"/></svg>
-            </button>
+          <div class="settings-path-block">
+            <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
+            <div class="settings-path-row">
+              <span id="claudePath" class="settings-path-value">--</span>
+              <button class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath" tabindex="-1">
+                <!-- Carbon: Edit -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
+              </button>
+            </div>
           </div>
-          <button id="saveApiKeyButton">Save</button>
         </div>
-
       </section>
 
       <p id="errorText" class="error"></p>
     </main>
 
     <footer class="app-footer">
-      <a class="footer-link" id="openClaudeLink" href="#" title="Abrir claude.ai">
-        Open <span class="footer-link-domain">claude.ai</span>
+      <a class="footer-link" id="openClaudeLink" href="#" title="Open claude.ai" data-i18n-title="footer.openClaude">
+        <span data-i18n="footer.openClaude">Open claude.ai</span>
         <!-- Carbon: ArrowUpRight -->
         <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26 6L6 26 7.41 27.41 27.41 7.41 27 26h2V4H7v2h19z"/></svg>
       </a>
-      <button class="footer-quit-btn" id="footerQuitButton" title="Sair">
+      <button class="footer-quit-btn" id="footerQuitButton" title="Quit" data-i18n-title="footer.quit">
         <!-- Carbon: Logout -->
         <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 30h12v-2H8V4h10V2H6zM20 20l-1.41-1.41L22.17 15H10v-2h12.17l-3.58-3.59L20 8l6 6z"/></svg>
-        Sair
+        <span data-i18n="footer.quit">Quit</span>
       </button>
     </footer>
 

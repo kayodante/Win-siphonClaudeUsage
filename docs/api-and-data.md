@@ -154,6 +154,51 @@ Each becomes `{ percent: Number, resetsAt: Date | null }`.
 | 429    | Rate limited           | Read `Retry-After` (default 300s), throw `QuotaError('rate_limited', { retryAfter })`. The controller pauses quota refresh until then. |
 | Other  | Server error           | Throw `QuotaError('server', 'Server error (<status>)')`. |
 
+### Profile endpoint
+
+Used by `ProfileService.fetchProfile()` as a best-effort account lookup.
+It uses the same OAuth token and required headers as the usage endpoint:
+
+```
+GET https://api.anthropic.com/api/oauth/profile
+Authorization: Bearer <accessToken>
+Accept: application/json
+Content-Type: application/json
+anthropic-beta: oauth-2025-04-20
+User-Agent: claude-code/2.1.0
+```
+
+Observed response shapes vary, so Siphon accepts common aliases:
+
+```jsonc
+{
+  "name": "Ada Lovelace",
+  "full_name": "Ada Lovelace",
+  "display_name": "Ada",
+  "email": "ada@example.com",
+  "plan": "Pro",
+  "subscription": {
+    "tier": "Pro",
+    "plan": "Pro"
+  }
+}
+```
+
+The renderer receives a normalized object:
+
+```jsonc
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "plan": "Pro"
+}
+```
+
+Missing subfields are returned as `null`. `401` clears saved credentials;
+`404`, server errors, network failures, and aborts return `null` silently.
+The profile call never blocks sign-in, quota rendering, or local cost
+rendering.
+
 ## 3. OAuth PKCE flow
 
 `OAuthService` reuses Claude Code's client. The endpoint URLs and IDs are

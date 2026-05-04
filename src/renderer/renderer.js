@@ -6,6 +6,7 @@ import {
   formatResetDistance,
   levelForPercent
 } from '../shared/format.js';
+import { t } from '../shared/i18n.js';
 import { resolveView } from './viewState.js';
 
 const elements = {
@@ -33,6 +34,12 @@ const elements = {
   signOutButton: document.querySelector('#signOutButton'),
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
+  settingsName: document.querySelector('#settingsName'),
+  settingsEmailRow: document.querySelector('#settingsEmailRow'),
+  settingsEmail: document.querySelector('#settingsEmail'),
+  settingsPlanRow: document.querySelector('#settingsPlanRow'),
+  settingsPlan: document.querySelector('#settingsPlan'),
+  settingsLanguage: document.querySelector('#settingsLanguage'),
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   errorText: document.querySelector('#errorText')
@@ -71,7 +78,7 @@ elements.settingsNotificationsToggle.addEventListener('change', async event => {
   } catch (error) {
     console.error('Failed to save notification preference', error);
     event.target.checked = !event.target.checked;
-    elements.errorText.textContent = 'Could not save notification preference.';
+    elements.errorText.textContent = t('error.saveNotification', currentLanguage());
   }
 });
 elements.settingsFloatingToggle.addEventListener('change', async event => {
@@ -80,16 +87,18 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
   } catch (error) {
     console.error('Failed to save floating widget preference', error);
     event.target.checked = !event.target.checked;
-    elements.errorText.textContent = 'Could not save floating widget preference.';
+    elements.errorText.textContent = t('error.saveFloating', currentLanguage());
   }
 });
-document.querySelector('#toggleKeyVisibility').addEventListener('click', () => {
-  const input = document.querySelector('#apiKeyInput');
-  input.type = input.type === 'password' ? 'text' : 'password';
-});
-document.querySelector('#saveApiKeyButton').addEventListener('click', () => {
-  elements.errorText.textContent = 'API key saving not yet implemented.';
-  setTimeout(() => { elements.errorText.textContent = ''; }, 3000);
+elements.settingsLanguage.addEventListener('change', async event => {
+  const previousLanguage = currentLanguage();
+  try {
+    await window.siphon.setPreference('language', event.target.value);
+  } catch (error) {
+    console.error('Failed to save language preference', error);
+    event.target.value = previousLanguage;
+    elements.errorText.textContent = t('error.saveLanguage', previousLanguage);
+  }
 });
 elements.onboardCodeForm.addEventListener('submit', event => {
   event.preventDefault();
@@ -105,7 +114,7 @@ try {
 } catch (error) {
   console.error('Renderer bootstrap failed', error);
   if (elements.errorText) {
-    elements.errorText.textContent = 'Could not load app state. Try restarting Siphon.';
+    elements.errorText.textContent = t('error.loadState', 'en');
   }
 }
 
@@ -115,6 +124,8 @@ setInterval(updateLastUpdatedLine, 30_000);
 
 function render(state) {
   currentState = state;
+  const lang = currentLanguage();
+  applyTranslations(lang);
   if (!state.isSignedIn) {
     requestedView = 'main';
   }
@@ -130,10 +141,10 @@ function render(state) {
   elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
   renderSessionBar(sessionPercent);
   elements.sessionReset.textContent = session
-    ? `Resets in ${formatResetDistance(session.resetsAt)} · ${formatDayTime(session.resetsAt)}`
-    : 'Sign in to load plan limits';
+    ? `${t('home.reset.in', lang)} ${formatResetDistance(session.resetsAt, new Date(), lang)} · ${formatDayTime(session.resetsAt)}`
+    : t('home.signInPrompt', lang);
 
-  renderNotificationPill(notificationsEnabled);
+  renderNotificationPill(notificationsEnabled, lang);
 
   elements.weeklyAll.textContent = weeklyAll ? formatPercent(weeklyAll.percent) : '--';
   elements.weeklySonnet.textContent = weeklySonnet ? formatPercent(weeklySonnet.percent) : '--';
@@ -144,6 +155,7 @@ function render(state) {
   elements.signOutButton.hidden = !state.isSignedIn;
   elements.onboardSignInButton.hidden = state.awaitingCode;
   elements.onboardCodeForm.hidden = !state.awaitingCode;
+  elements.settingsLanguage.value = lang;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsFloatingToggle.checked = floatingEnabled;
 
@@ -151,18 +163,19 @@ function render(state) {
     .filter(Boolean)
     .join(' ');
 
-  renderSettings(state);
+  renderSettings(state, lang);
 }
 
 function updateLastUpdatedLine() {
   if (!currentState) return;
+  const lang = currentLanguage();
   elements.lastUpdated.textContent = currentState.lastUpdated
-    ? formatRelativeUpdated(new Date(currentState.lastUpdated))
+    ? formatRelativeUpdated(new Date(currentState.lastUpdated), new Date(), lang)
     : '--';
 }
 
-function renderNotificationPill(enabled) {
-  elements.notificationStateLabel.textContent = enabled ? 'Reset notification ON' : 'Reset notification OFF';
+function renderNotificationPill(enabled, lang) {
+  elements.notificationStateLabel.textContent = enabled ? t('home.notif.on', lang) : t('home.notif.off', lang);
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   elements.notificationIconOn.hidden = !enabled;
   elements.notificationIconOff.hidden = enabled;
@@ -194,7 +207,19 @@ function renderSessionBar(percent) {
   }
 }
 
-function renderSettings(_state) {
+function renderSettings(state, lang = currentLanguage()) {
+  const profile = state.profile ?? {};
+  elements.settingsName.textContent = profile.name ?? t('settings.signedInFallback', lang);
+
+  const hasEmail = Boolean(profile.email);
+  elements.settingsEmailRow.hidden = !hasEmail;
+  elements.settingsEmail.textContent = hasEmail ? profile.email : '';
+
+  const hasPlan = Boolean(profile.plan);
+  elements.settingsPlanRow.hidden = !hasPlan;
+  elements.settingsPlan.textContent = hasPlan ? profile.plan : '';
+
+  elements.settingsLanguage.value = lang;
   elements.claudePath.textContent = appInfo.claudeDir;
 }
 
@@ -213,4 +238,22 @@ function renderActiveView() {
   if (activeView === 'settings' && currentState) {
     renderSettings(currentState);
   }
+}
+
+function currentLanguage() {
+  return currentState?.preferences?.language === 'pt-BR' ? 'pt-BR' : 'en';
+}
+
+function applyTranslations(lang) {
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    element.textContent = t(element.dataset.i18n, lang);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(element => {
+    element.title = t(element.dataset.i18nTitle, lang);
+  });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+    element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel, lang));
+  });
 }
