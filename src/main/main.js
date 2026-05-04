@@ -89,7 +89,8 @@ function onReady() {
     BrowserWindow,
     htmlPath: path.join(projectRoot, 'src', 'renderer', 'floating.html'),
     preloadPath: path.join(__dirname, 'preload.cjs'),
-    preferences
+    preferences,
+    screen: electronScreen
   });
 
   console.log('[siphon] creating window');
@@ -138,6 +139,8 @@ app.on('before-quit', () => {
 });
 
 function createWindow() {
+  Menu.setApplicationMenu(null);
+
   window = new BrowserWindow({
     width: 400,
     height: 620,
@@ -145,8 +148,9 @@ function createWindow() {
     minHeight: 520,
     resizable: true,
     show: false,
+    frame: false,
     title: 'Siphon',
-    backgroundColor: '#0a0a0c',
+    backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -216,6 +220,12 @@ function registerIpc() {
     claudeDir: path.join(os.homedir(), '.claude'),
     notificationsSupported: Notification.isSupported()
   }));
+  ipcMain.handle('window:minimize', () => window?.minimize());
+  ipcMain.handle('window:close', () => {
+    if (!app.isQuitting) window?.hide();
+  });
+  ipcMain.handle('app:quit', () => quit());
+  ipcMain.handle('shell:open-external', (_event, url) => shell.openExternal(url));
 }
 
 function showMainWindow() {

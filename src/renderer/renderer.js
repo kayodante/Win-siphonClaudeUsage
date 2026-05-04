@@ -9,15 +9,12 @@ import {
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
-  historyButton: document.querySelector('#historyButton'),
   settingsButton: document.querySelector('#settingsButton'),
   backButton: document.querySelector('#backButton'),
-  backFromHistoryButton: document.querySelector('#backFromHistoryButton'),
   mainView: document.querySelector('#mainView'),
-  historyView: document.querySelector('#historyView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
-  sessionBar: document.querySelector('#sessionBar'),
+  sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateLabel: document.querySelector('#notificationStateLabel'),
@@ -33,11 +30,8 @@ const elements = {
   codeForm: document.querySelector('#codeForm'),
   codeInput: document.querySelector('#codeInput'),
   cancelAuthButton: document.querySelector('#cancelAuthButton'),
-  recentDays: document.querySelector('#recentDays'),
   lastUpdated: document.querySelector('#lastUpdated'),
-  configPath: document.querySelector('#configPath'),
   claudePath: document.querySelector('#claudePath'),
-  settingsLogin: document.querySelector('#settingsLogin'),
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   errorText: document.querySelector('#errorText')
@@ -52,12 +46,23 @@ let currentState = null;
 let currentView = 'main';
 
 elements.refreshButton.addEventListener('click', () => window.siphon.refresh());
-elements.historyButton.addEventListener('click', () => showLocalView('history'));
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
-elements.backFromHistoryButton.addEventListener('click', () => showLocalView('main'));
 elements.signInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
+
+// Window controls
+document.querySelector('#minimizeButton').addEventListener('click', () => window.siphon.minimize());
+document.querySelector('#closeButton').addEventListener('click', () => window.siphon.closeWindow());
+
+// Footer
+document.querySelector('#openClaudeLink').addEventListener('click', event => {
+  event.preventDefault();
+  window.siphon.openExternal('https://claude.ai/settings/usage');
+});
+document.querySelector('#footerQuitButton').addEventListener('click', () => {
+  window.siphon.quit();
+});
 elements.settingsNotificationsToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.sessionReset', event.target.checked);
@@ -77,6 +82,14 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
   }
 });
 elements.cancelAuthButton.addEventListener('click', () => window.siphon.cancelAuth());
+document.querySelector('#toggleKeyVisibility').addEventListener('click', () => {
+  const input = document.querySelector('#apiKeyInput');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+document.querySelector('#saveApiKeyButton').addEventListener('click', () => {
+  elements.errorText.textContent = 'API key saving not yet implemented.';
+  setTimeout(() => { elements.errorText.textContent = ''; }, 3000);
+});
 elements.codeForm.addEventListener('submit', event => {
   event.preventDefault();
   const code = elements.codeInput.value.trim();
@@ -109,10 +122,9 @@ function render(state) {
   const sessionPercent = clampPercent(session?.percent ?? 0);
 
   elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
-  elements.sessionBar.style.width = `${sessionPercent}%`;
-  elements.sessionBar.dataset.level = levelForPercent(sessionPercent);
+  renderSessionBar(sessionPercent);
   elements.sessionReset.textContent = session
-    ? `Resets ${formatResetDistance(session.resetsAt)} (${formatDayTime(session.resetsAt)})`
+    ? `Resets in ${formatResetDistance(session.resetsAt)} · ${formatDayTime(session.resetsAt)}`
     : 'Sign in to load plan limits';
 
   renderNotificationPill(notificationsEnabled);
@@ -138,7 +150,6 @@ function render(state) {
     .filter(Boolean)
     .join(' ');
 
-  renderDays(state.recentDays ?? []);
   renderSettings(state);
 }
 
@@ -150,30 +161,10 @@ function updateLastUpdatedLine() {
 }
 
 function renderNotificationPill(enabled) {
-  elements.notificationStateLabel.textContent = enabled ? 'On' : 'Off';
+  elements.notificationStateLabel.textContent = enabled ? 'Reset notification ON' : 'Reset notification OFF';
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   elements.notificationIconOn.hidden = !enabled;
   elements.notificationIconOff.hidden = enabled;
-}
-
-function renderDays(days) {
-  elements.recentDays.replaceChildren(
-    ...days.slice(0, 7).map(day => {
-      const row = document.createElement('div');
-      row.className = 'day-row';
-
-      const date = document.createElement('span');
-      date.className = 'date';
-      date.textContent = day.date.slice(5);
-
-      const cost = document.createElement('span');
-      cost.className = 'cost';
-      cost.textContent = formatCurrency(day.cost);
-
-      row.append(date, cost);
-      return row;
-    })
-  );
 }
 
 function hydrateSlot(slot) {
@@ -188,33 +179,30 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function renderSettings(state) {
-  elements.configPath.textContent = appInfo.configDir;
-  elements.claudePath.textContent = appInfo.claudeDir;
-  elements.settingsLogin.textContent = state.isSignedIn
-    ? 'Signed in'
-    : state.awaitingCode
-      ? 'Waiting for authorization'
-      : 'Not signed in';
+function renderSessionBar(percent) {
+  const total = 20;
+  const level = levelForPercent(percent);
+  const filled = Math.round((percent / 100) * total);
+  const meter = elements.sessionMeter;
+  meter.dataset.level = level;
+  meter.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const seg = document.createElement('div');
+    seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
+    meter.appendChild(seg);
+  }
 }
 
-// IPC-driven views: 'main' and 'settings'. Triggered by tray menu or main process.
+function renderSettings(_state) {
+  elements.claudePath.textContent = appInfo.claudeDir;
+}
+
 function showView(view) {
   currentView = view;
   const isSettings = view === 'settings';
   elements.mainView.hidden = isSettings;
-  elements.historyView.hidden = true;
   elements.settingsView.hidden = !isSettings;
   if (currentState) {
     renderSettings(currentState);
   }
-}
-
-// Renderer-only navigation. Used for views the main process doesn't manage,
-// like 'history'. Doesn't fire view-changed IPC.
-function showLocalView(view) {
-  currentView = view;
-  elements.mainView.hidden = view !== 'main';
-  elements.historyView.hidden = view !== 'history';
-  elements.settingsView.hidden = view !== 'settings';
 }

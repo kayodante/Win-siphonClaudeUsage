@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('siphon', {
   openMainWindowFromWidget: () => ipcRenderer.invoke('floating:open-main'),
   closeFloatingWidget: () => ipcRenderer.invoke('floating:close'),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
+  minimize: () => ipcRenderer.invoke('window:minimize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  quit: () => ipcRenderer.invoke('app:quit'),
+  openExternal: url => ipcRenderer.invoke('shell:open-external', url),
   onView: callback => {
     const listener = (_event, view) => callback(view);
     ipcRenderer.on('view-changed', listener);

@@ -1,3 +1,6 @@
+const WIDGET_WIDTH = 220;
+const WIDGET_MARGIN = 20;
+
 export class FloatingWindowController {
   constructor({
     BrowserWindow,
@@ -6,6 +9,7 @@ export class FloatingWindowController {
     htmlPath,
     preferences,
     preloadPath,
+    screen = null,
     setTimeout: setTimeoutFn = setTimeout
   }) {
     this.BrowserWindow = BrowserWindow;
@@ -14,6 +18,7 @@ export class FloatingWindowController {
     this.htmlPath = htmlPath;
     this.preferences = preferences;
     this.preloadPath = preloadPath;
+    this.screen = screen;
     this.setTimeout = setTimeoutFn;
     this.moveTimer = null;
     this.window = null;
@@ -94,9 +99,28 @@ export class FloatingWindowController {
   restorePosition() {
     const x = this.preferences.get('floating.x');
     const y = this.preferences.get('floating.y');
-    if (Number.isFinite(x) && Number.isFinite(y)) {
+    if (Number.isFinite(x) && Number.isFinite(y) && this.isOnAnyDisplay(x, y)) {
       this.window.setPosition(x, y, false);
+    } else if (this.screen) {
+      this.positionTopRight();
     }
+  }
+
+  isOnAnyDisplay(x, y) {
+    if (!this.screen) return true;
+    return this.screen.getAllDisplays().some(d => {
+      const b = d.bounds;
+      return x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+    });
+  }
+
+  positionTopRight() {
+    const { workArea } = this.screen.getPrimaryDisplay();
+    this.window.setPosition(
+      workArea.x + workArea.width - WIDGET_WIDTH - WIDGET_MARGIN,
+      workArea.y + WIDGET_MARGIN,
+      false
+    );
   }
 
   schedulePositionSave() {

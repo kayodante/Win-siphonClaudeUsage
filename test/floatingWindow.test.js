@@ -100,6 +100,42 @@ test('move persists the widget position after the debounce fires', async () => {
   ]);
 });
 
+test('restorePosition falls back to top-right when saved position is off all displays', async () => {
+  const windows = [];
+  const screen = createFakeScreen([{ bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]);
+  // position is on a second monitor that is no longer connected
+  const preferences = new MemoryPreferences({ floating: { enabled: true, x: 2500, y: 200 } });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences,
+    screen
+  });
+
+  await controller.show(sampleState());
+
+  // top-right of workArea: x = 0 + 1920 - 220 - 20 = 1680, y = 0 + 20 = 20
+  assert.deepEqual(windows[0].position, { x: 1680, y: 20 });
+});
+
+test('restorePosition uses saved position when it lies on a connected display', async () => {
+  const windows = [];
+  const screen = createFakeScreen([{ bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]);
+  const preferences = new MemoryPreferences({ floating: { enabled: true, x: 42, y: 84 } });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences,
+    screen
+  });
+
+  await controller.show(sampleState());
+
+  assert.deepEqual(windows[0].position, { x: 42, y: 84 });
+});
+
 test('hide destroys the active floating window', async () => {
   const windows = [];
   const controller = new FloatingWindowController({
@@ -204,4 +240,11 @@ function sampleState() {
 
 function pick(object, keys) {
   return Object.fromEntries(keys.map(key => [key, object[key]]));
+}
+
+function createFakeScreen(displays) {
+  return {
+    getAllDisplays: () => displays,
+    getPrimaryDisplay: () => displays[0]
+  };
 }

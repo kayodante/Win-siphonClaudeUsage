@@ -2,18 +2,41 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+// Fallback pricing (USD per million tokens) for when readout-pricing.json is absent.
+// Keys must match what pricingKey() produces (no "claude-" prefix, no date suffix).
+const BUNDLED_PRICING = {
+  models: {
+    'sonnet-4-6': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'sonnet-4-5': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'sonnet-4':   { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'opus-4-7':   { input: 15,   output: 75,   cacheRead: 1.50,  cacheWrite: 18.75 },
+    'opus-4':     { input: 15,   output: 75,   cacheRead: 1.50,  cacheWrite: 18.75 },
+    'haiku-4-5':  { input: 0.80, output: 4,    cacheRead: 0.08,  cacheWrite: 1.00  },
+    'haiku-4':    { input: 0.25, output: 1.25, cacheRead: 0.03,  cacheWrite: 0.30  },
+  }
+};
+
 export class LocalDataService {
   constructor(claudeDir = path.join(os.homedir(), '.claude')) {
+    this.claudeDir = claudeDir;
     this.cachePath = path.join(claudeDir, 'readout-cost-cache.json');
     this.pricingPath = path.join(claudeDir, 'readout-pricing.json');
+    this.projectsDir = path.join(claudeDir, 'projects');
   }
 
   async load(now = new Date()) {
-    const [cache, pricing] = await Promise.all([
+    const [cache, pricingFile] = await Promise.all([
       readJson(this.cachePath),
       readJson(this.pricingPath)
     ]);
-    return summarizeUsage(cache, pricing, now);
+
+    // Legacy path: older Claude Code versions write readout-cost-cache.json
+    if (cache) {
+      return summarizeUsage(cache, pricingFile, now);
+    }
+
+    // Modern path: token data lives in per-session JSONL files under ~/.claude/projects/
+    return summarizeFromJSONL(this.projectsDir, pricingFile ?? BUNDLED_PRICING, now);
   }
 }
 
@@ -170,6 +193,83 @@ function toLocalDateKey(date) {
 
 function roundCost(value) {
   return Math.round(value * 100_000_000) / 100_000_000;
+}
+
+async function summarizeFromJSONL(projectsDir, pricing, now) {
+  const LOOKBACK_MS = 35 * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(now.getTime() - LOOKBACK_MS);
+
+  // dayMap[dateKey][model] = { input, output, cacheRead, cacheWrite }
+  const dayMap = {};
+
+  let projectEntries;
+  try {
+    projectEntries = await fs.readdir(projectsDir, { withFileTypes: true });
+  } catch {
+    return summarizeUsage(null, null, now);
+  }
+
+  for (const entry of projectEntries) {
+    if (!entry.isDirectory()) continue;
+    const projectPath = path.join(projectsDir, entry.name);
+
+    let files;
+    try {
+      files = await fs.readdir(projectPath);
+    } catch {
+      continue;
+    }
+
+    for (const file of files) {
+      if (!file.endsWith('.jsonl')) continue;
+      const filePath = path.join(projectPath, file);
+
+      try {
+        const stat = await fs.stat(filePath);
+        if (stat.mtimeMs < cutoff.getTime()) continue;
+      } catch {
+        continue;
+      }
+
+      let content;
+      try {
+        content = await fs.readFile(filePath, 'utf8');
+      } catch {
+        continue;
+      }
+
+      for (const line of content.split('\n')) {
+        if (!line.trim()) continue;
+        let record;
+        try {
+          record = JSON.parse(line);
+        } catch {
+          continue;
+        }
+
+        if (record.type !== 'assistant' || !record.message?.usage || !record.timestamp) continue;
+
+        const entryTime = new Date(record.timestamp);
+        if (Number.isNaN(entryTime.getTime()) || entryTime < cutoff) continue;
+
+        const dateKey = toLocalDateKey(entryTime);
+        const model = record.message.model ?? 'unknown';
+        const u = record.message.usage;
+
+        if (!dayMap[dateKey]) dayMap[dateKey] = {};
+        if (!dayMap[dateKey][model]) {
+          dayMap[dateKey][model] = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+        }
+        const acc = dayMap[dateKey][model];
+        acc.input     += u.input_tokens                  ?? 0;
+        acc.output    += u.output_tokens                 ?? 0;
+        acc.cacheRead += u.cache_read_input_tokens       ?? 0;
+        acc.cacheWrite += u.cache_creation_input_tokens  ?? 0;
+      }
+    }
+  }
+
+  return summarizeUsage({ days: dayMap }, pricing, now);
 }
 
 async function readJson(filePath) {

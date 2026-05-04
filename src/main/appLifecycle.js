@@ -19,7 +19,7 @@ export function buildTrayMenuTemplate({
     },
     { type: 'separator' },
     {
-      label: 'Sair',
+      label: 'Desligar',
       click: quit
     }
   ];
