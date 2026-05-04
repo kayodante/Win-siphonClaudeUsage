@@ -34,6 +34,47 @@
         </div>
       </header>
 
+      <section id="onboardView" class="view onboard" hidden>
+        <div class="onboard-hero" aria-hidden="true">S</div>
+        <h2 data-i18n="onboarding.welcome">Welcome to Siphon</h2>
+        <p class="lead" data-i18n="onboarding.lead">
+          Track your Claude AI usage and Claude Code costs from your Windows tray. Get notified when your session resets.
+        </p>
+
+        <ul class="onboard-features">
+          <li>
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
+            <span data-i18n="onboarding.feature.session">Live session quota from your Claude AI plan</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
+            <span data-i18n="onboarding.feature.cost">Token cost read from your local Claude Code cache</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
+            <span data-i18n="onboarding.feature.notify">Reset notifications the moment a new session opens</span>
+          </li>
+        </ul>
+
+        <button class="btn-primary" id="onboardSignInButton">
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 21h-3v2h3a3 3 0 0 0 3-3v-3h-2v3a1 1 0 0 1-1 1zM7 11V8a1 1 0 0 1 1-1h3V5H8a3 3 0 0 0-3 3v3zM23 5h-3v2h3a1 1 0 0 1 1 1v3h2V8a3 3 0 0 0-3-3zM11 25H8a1 1 0 0 1-1-1v-3H5v3a3 3 0 0 0 3 3h3z"/><path d="M14 12h-2v8h2v-3h4v3h2v-8h-2v3h-4v-3z"/></svg>
+          <span data-i18n="onboarding.cta">Sign in with Claude</span>
+        </button>
+
+        <p class="onboard-secondary" data-i18n="onboarding.redirect">
+          You will be redirected to claude.ai. After authorizing, come back and paste the code.
+        </p>
+
+        <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
+          <label for="onboardCodeInput" data-i18n="onboarding.pasteLabel">Paste the full redirect URL or code</label>
+          <textarea id="onboardCodeInput" rows="3" spellcheck="false"></textarea>
+          <div class="button-row">
+            <button type="submit" data-i18n="onboarding.submit">Submit</button>
+            <button type="button" class="ghost" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancel</button>
+          </div>
+        </form>
+      </section>
+
       <section id="mainView" class="view">
         <section class="card quota-panel">
           <div class="card-eyebrow">
@@ -129,17 +170,7 @@
         </div>
 
         <div class="settings-card" id="authCard">
-          <p id="authStatus" class="settings-auth-status">Not signed in.</p>
-          <button id="signInButton">Sign in with Claude</button>
           <button class="btn-secondary" id="signOutButton">Sign out</button>
-          <form id="codeForm" class="code-form" hidden>
-            <label for="codeInput">Paste the full redirect URL or code</label>
-            <textarea id="codeInput" rows="3" spellcheck="false"></textarea>
-            <div class="button-row">
-              <button type="submit">Submit</button>
-              <button type="button" class="ghost" id="cancelAuthButton">Cancel</button>
-            </div>
-          </form>
         </div>
 
         <div class="settings-section-header">

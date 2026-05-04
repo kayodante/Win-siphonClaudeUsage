@@ -6,11 +6,17 @@ import {
   formatResetDistance,
   levelForPercent
 } from '../shared/format.js';
+import { resolveView } from './viewState.js';
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   settingsButton: document.querySelector('#settingsButton'),
   backButton: document.querySelector('#backButton'),
+  onboardView: document.querySelector('#onboardView'),
+  onboardSignInButton: document.querySelector('#onboardSignInButton'),
+  onboardCodeForm: document.querySelector('#onboardCodeForm'),
+  onboardCodeInput: document.querySelector('#onboardCodeInput'),
+  onboardCancelButton: document.querySelector('#onboardCancelButton'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
@@ -24,12 +30,7 @@ const elements = {
   weeklySonnet: document.querySelector('#weeklySonnet'),
   todayCost: document.querySelector('#todayCost'),
   monthCost: document.querySelector('#monthCost'),
-  authStatus: document.querySelector('#authStatus'),
-  signInButton: document.querySelector('#signInButton'),
   signOutButton: document.querySelector('#signOutButton'),
-  codeForm: document.querySelector('#codeForm'),
-  codeInput: document.querySelector('#codeInput'),
-  cancelAuthButton: document.querySelector('#cancelAuthButton'),
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
@@ -43,12 +44,13 @@ let appInfo = {
   notificationsSupported: false
 };
 let currentState = null;
-let currentView = 'main';
+let requestedView = 'main';
 
 elements.refreshButton.addEventListener('click', () => window.siphon.refresh());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
-elements.signInButton.addEventListener('click', () => window.siphon.startSignIn());
+elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
+elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 
 // Window controls
@@ -81,7 +83,6 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
     elements.errorText.textContent = 'Could not save floating widget preference.';
   }
 });
-elements.cancelAuthButton.addEventListener('click', () => window.siphon.cancelAuth());
 document.querySelector('#toggleKeyVisibility').addEventListener('click', () => {
   const input = document.querySelector('#apiKeyInput');
   input.type = input.type === 'password' ? 'text' : 'password';
@@ -90,9 +91,9 @@ document.querySelector('#saveApiKeyButton').addEventListener('click', () => {
   elements.errorText.textContent = 'API key saving not yet implemented.';
   setTimeout(() => { elements.errorText.textContent = ''; }, 3000);
 });
-elements.codeForm.addEventListener('submit', event => {
+elements.onboardCodeForm.addEventListener('submit', event => {
   event.preventDefault();
-  const code = elements.codeInput.value.trim();
+  const code = elements.onboardCodeInput.value.trim();
   if (code) window.siphon.submitCode(code);
 });
 
@@ -114,12 +115,17 @@ setInterval(updateLastUpdatedLine, 30_000);
 
 function render(state) {
   currentState = state;
+  if (!state.isSignedIn) {
+    requestedView = 'main';
+  }
   const session = hydrateSlot(state.quota?.session);
   const weeklyAll = hydrateSlot(state.quota?.weeklyAll);
   const weeklySonnet = hydrateSlot(state.quota?.weeklySonnet);
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const sessionPercent = clampPercent(session?.percent ?? 0);
+
+  renderActiveView();
 
   elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
   renderSessionBar(sessionPercent);
@@ -135,16 +141,11 @@ function render(state) {
   elements.monthCost.textContent = formatCurrency(state.monthStats?.cost);
   updateLastUpdatedLine();
 
-  elements.authStatus.textContent = state.isSignedIn
-    ? 'Signed in with Claude.'
-    : state.awaitingCode
-      ? 'Waiting for the authorization redirect.'
-      : 'Not signed in.';
-  elements.signInButton.hidden = state.isSignedIn || state.awaitingCode;
   elements.signOutButton.hidden = !state.isSignedIn;
+  elements.onboardSignInButton.hidden = state.awaitingCode;
+  elements.onboardCodeForm.hidden = !state.awaitingCode;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsFloatingToggle.checked = floatingEnabled;
-  elements.codeForm.hidden = !state.awaitingCode;
 
   elements.errorText.textContent = [state.localError, state.quotaError, state.authError]
     .filter(Boolean)
@@ -198,11 +199,18 @@ function renderSettings(_state) {
 }
 
 function showView(view) {
-  currentView = view;
-  const isSettings = view === 'settings';
-  elements.mainView.hidden = isSettings;
-  elements.settingsView.hidden = !isSettings;
-  if (currentState) {
+  if ((view === 'main' || view === 'settings') && (!currentState || currentState.isSignedIn)) {
+    requestedView = view;
+  }
+  renderActiveView();
+}
+
+function renderActiveView() {
+  const activeView = resolveView(currentState, requestedView);
+  elements.onboardView.hidden = activeView !== 'onboard';
+  elements.mainView.hidden = activeView !== 'main';
+  elements.settingsView.hidden = activeView !== 'settings';
+  if (activeView === 'settings' && currentState) {
     renderSettings(currentState);
   }
 }
