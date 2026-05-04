@@ -259,6 +259,28 @@ Written by `TokenStore.save()` with mode `0600`.
 Deleted by `TokenStore.clear()` on sign-out, on a `401`, or when refresh
 fails.
 
+### `%APPDATA%\Siphon\preferences.json`
+
+Written by `PreferencesService` over `JsonStore`. Missing fields are merged
+with defaults on load so old files remain valid.
+
+```jsonc
+{
+  "language": "en",
+  "notifications": {
+    "sessionReset": true
+  },
+  "floating": {
+    "enabled": false,
+    "x": null,
+    "y": null
+  }
+}
+```
+
+`language` supports `en` and `pt-BR`; unknown values fall back to English in
+the renderer.
+
 ### `%APPDATA%\Siphon\reset-notification.json`
 
 Written by `JsonStore.save()` from the reset scheduler with mode `0600`.

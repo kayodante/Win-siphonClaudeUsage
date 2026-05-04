@@ -1,0 +1,109 @@
+export const SUPPORTED_LANGUAGES = ['en', 'pt-BR'];
+
+const STRINGS = Object.freeze({
+  en: Object.freeze({
+    'topbar.refresh': 'Refresh now',
+    'topbar.settings': 'Settings',
+    'topbar.minimize': 'Minimize',
+    'topbar.close': 'Close',
+
+    'onboarding.welcome': 'Welcome to Siphon',
+    'onboarding.lead':
+      'Track your Claude AI usage and Claude Code costs from your Windows tray. Get notified when your session resets.',
+    'onboarding.feature.session': 'Live session quota from your Claude AI plan',
+    'onboarding.feature.cost': 'Token cost read from your local Claude Code cache',
+    'onboarding.feature.notify': 'Reset notifications the moment a new session opens',
+    'onboarding.cta': 'Sign in with Claude',
+    'onboarding.redirect': 'You will be redirected to claude.ai. After authorizing, come back and paste the code.',
+    'onboarding.pasteLabel': 'Paste the full redirect URL or code',
+    'onboarding.submit': 'Submit',
+    'onboarding.cancel': 'Cancel',
+
+    'home.session': 'Current Session',
+    'home.weeklyAll': 'Weekly All',
+    'home.weeklySonnet': 'Weekly Sonnet',
+    'home.today': 'Today',
+    'home.month': 'This Month',
+    'home.signInPrompt': 'Sign in to load plan limits',
+    'home.notif.on': 'Reset notification ON',
+    'home.notif.off': 'Reset notification OFF',
+    'home.reset.in': 'Resets in',
+    'home.reset.now': 'Reset soon',
+    'home.updated.now': 'updated just now',
+    'home.updated.minutes': 'updated {minutes}min ago',
+
+    'settings.account': 'Account',
+    'settings.fullName': 'Full name',
+    'settings.email': 'Email',
+    'settings.plan': 'Plan',
+    'settings.signOut': 'Sign out',
+    'settings.signedInFallback': 'Signed in with Claude',
+    'settings.title': 'Settings',
+    'settings.language': 'Language',
+    'settings.languageEN': 'English',
+    'settings.languagePT': 'Portuguese',
+    'settings.notifReset': 'Reset notification',
+    'settings.floating': 'Floating widget',
+    'settings.claudePath': 'Claude Code data',
+    'settings.editPath': 'Edit path',
+    'settings.back': 'Back',
+
+    'footer.openClaude': 'Open claude.ai',
+    'footer.quit': 'Quit'
+  }),
+  'pt-BR': Object.freeze({
+    'topbar.refresh': 'Atualizar agora',
+    'topbar.settings': 'Configurações',
+    'topbar.minimize': 'Minimizar',
+    'topbar.close': 'Fechar',
+
+    'onboarding.welcome': 'Boas-vindas ao Siphon',
+    'onboarding.lead':
+      'Acompanhe seu uso do Claude AI e os custos do Claude Code pela bandeja do Windows. Receba um aviso quando sua sessão reiniciar.',
+    'onboarding.feature.session': 'Cota da sessão em tempo real pelo seu plano Claude AI',
+    'onboarding.feature.cost': 'Custo de tokens lido do cache local do Claude Code',
+    'onboarding.feature.notify': 'Notificação de reset assim que uma nova sessão abrir',
+    'onboarding.cta': 'Entrar com Claude',
+    'onboarding.redirect': 'Você será redirecionado ao claude.ai. Após autorizar, volte e cole o código.',
+    'onboarding.pasteLabel': 'Cole a URL de redirecionamento completa ou o código',
+    'onboarding.submit': 'Enviar',
+    'onboarding.cancel': 'Cancelar',
+
+    'home.session': 'Sessão Atual',
+    'home.weeklyAll': 'Semanal total',
+    'home.weeklySonnet': 'Semanal Sonnet',
+    'home.today': 'Hoje',
+    'home.month': 'Este mês',
+    'home.signInPrompt': 'Entre para carregar os limites do plano',
+    'home.notif.on': 'Notificação de reset ligada',
+    'home.notif.off': 'Notificação de reset desligada',
+    'home.reset.in': 'Reseta em',
+    'home.reset.now': 'Reset em breve',
+    'home.updated.now': 'atualizado agora mesmo',
+    'home.updated.minutes': 'atualizado há {minutes}min',
+
+    'settings.account': 'Conta',
+    'settings.fullName': 'Nome completo',
+    'settings.email': 'E-mail',
+    'settings.plan': 'Plano',
+    'settings.signOut': 'Sair da conta',
+    'settings.signedInFallback': 'Conectado com Claude',
+    'settings.title': 'Configurações',
+    'settings.language': 'Idioma',
+    'settings.languageEN': 'Inglês',
+    'settings.languagePT': 'Português',
+    'settings.notifReset': 'Notificação de reset',
+    'settings.floating': 'Widget flutuante',
+    'settings.claudePath': 'Dados do Claude Code',
+    'settings.editPath': 'Editar caminho',
+    'settings.back': 'Voltar',
+
+    'footer.openClaude': 'Abrir claude.ai',
+    'footer.quit': 'Sair'
+  })
+});
+
+export function t(key, lang) {
+  const dictionary = STRINGS[SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en'];
+  return dictionary[key] ?? STRINGS.en[key] ?? key;
+}

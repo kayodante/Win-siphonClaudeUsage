@@ -40,6 +40,7 @@ test('controller state includes preferences snapshot', () => {
   const controller = createController({ preferences, scheduler: new SchedulerSpy() });
 
   assert.deepEqual(controller.getState().preferences, {
+    language: 'en',
     notifications: { sessionReset: false },
     floating: { enabled: false, x: null, y: null }
   });

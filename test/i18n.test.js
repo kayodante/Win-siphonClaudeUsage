@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { SUPPORTED_LANGUAGES, t } from '../src/shared/i18n.js';
+
+test('SUPPORTED_LANGUAGES lists English and Brazilian Portuguese', () => {
+  assert.deepEqual(SUPPORTED_LANGUAGES, ['en', 'pt-BR']);
+});
+
+test('known key in English returns English string', () => {
+  assert.equal(t('settings.language', 'en'), 'Language');
+});
+
+test('known key in Portuguese returns Portuguese string', () => {
+  assert.equal(t('settings.language', 'pt-BR'), 'Idioma');
+});
+
+test('unknown language falls back to English', () => {
+  assert.equal(t('settings.language', 'fr'), 'Language');
+});
+
+test('missing key returns the key', () => {
+  assert.equal(t('missing.translation.key', 'pt-BR'), 'missing.translation.key');
+});

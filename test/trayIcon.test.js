@@ -27,6 +27,7 @@ function runProbe(level) {
   return spawnSync(electronPath, [probePath, level], {
     cwd: path.resolve(__dirname, '..'),
     encoding: 'utf8',
+    timeout: 10_000,
     env: {
       ...process.env,
       ELECTRON_ENABLE_LOGGING: '0'

@@ -17,9 +17,22 @@ test('load merges partial stored preferences with defaults', () => {
   );
 
   assert.deepEqual(preferences.load(), {
+    language: 'en',
     notifications: { sessionReset: false },
     floating: { enabled: false, x: null, y: null }
   });
+});
+
+test('language defaults to English and survives set', () => {
+  const store = new MemoryStore(null);
+  const preferences = new PreferencesService(store);
+
+  assert.equal(preferences.load().language, 'en');
+
+  const snapshot = preferences.set('language', 'pt-BR');
+
+  assert.equal(snapshot.language, 'pt-BR');
+  assert.equal(store.value.language, 'pt-BR');
 });
 
 test('get reads a nested preference path', () => {
@@ -39,6 +52,7 @@ test('set persists a nested change and returns the full snapshot', () => {
   const snapshot = preferences.set('notifications.sessionReset', false);
 
   assert.deepEqual(snapshot, {
+    language: 'en',
     notifications: { sessionReset: false },
     floating: { enabled: false, x: null, y: null }
   });
@@ -52,6 +66,7 @@ test('set creates deep paths without dropping sibling defaults', () => {
   const snapshot = preferences.set('floating.x', 120);
 
   assert.deepEqual(snapshot, {
+    language: 'en',
     notifications: { sessionReset: true },
     floating: { enabled: false, x: 120, y: null }
   });
@@ -70,6 +85,7 @@ test('set emits one change event after persisting', () => {
     path: 'notifications.sessionReset',
     value: false,
     preferences: {
+      language: 'en',
       notifications: { sessionReset: false },
       floating: { enabled: false, x: null, y: null }
     }

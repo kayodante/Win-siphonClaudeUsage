@@ -10,18 +10,25 @@ if (!process.versions.electron) {
 
 const { app } = electron;
 
-await app.whenReady();
+let exitCode = 0;
 
-try {
-  const level = process.argv.at(-1);
-  const image = createTrayIcon(level);
-  const size = image.getSize();
+app
+  .whenReady()
+  .then(() => {
+    const level = process.argv.at(-1);
+    const image = createTrayIcon(level);
+    const size = image.getSize();
 
-  assert.equal(image.isEmpty(), false);
-  assert.ok(size.width > 0);
-  assert.ok(size.height > 0);
+    assert.equal(image.isEmpty(), false);
+    assert.ok(size.width > 0);
+    assert.ok(size.height > 0);
 
-  process.stdout.write(JSON.stringify({ isEmpty: image.isEmpty(), size }));
-} finally {
-  app.quit();
-}
+    process.stdout.write(JSON.stringify({ isEmpty: image.isEmpty(), size }));
+  })
+  .catch(error => {
+    exitCode = 1;
+    console.error(error);
+  })
+  .finally(() => {
+    app.exit(exitCode);
+  });
