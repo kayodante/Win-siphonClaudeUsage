@@ -3,12 +3,14 @@ import EventEmitter from 'node:events';
 import { LocalDataService } from './localDataService.js';
 import { OAuthService } from './oauthService.js';
 import { DEFAULT_PREFERENCES } from './preferencesService.js';
+import { ProfileService } from './profileService.js';
 import { QuotaError, QuotaService } from './quotaService.js';
 
 export class UsageController extends EventEmitter {
   constructor({
     localService = new LocalDataService(),
     quotaService,
+    profileService,
     oauthService = new OAuthService(),
     preferences = createDefaultPreferences(),
     tokenStore,
@@ -21,6 +23,7 @@ export class UsageController extends EventEmitter {
     this.preferences = preferences;
     this.tokenStore = tokenStore;
     this.quotaService = quotaService ?? new QuotaService({ tokenStore });
+    this.profileService = profileService ?? new ProfileService({ tokenStore });
     this.resetScheduler = resetScheduler;
     this.openExternal = openExternal;
     this.authFlow = null;
@@ -38,6 +41,7 @@ export class UsageController extends EventEmitter {
       localError: null,
       quotaError: null,
       authError: null,
+      profile: null,
       preferences: this.preferences.load(),
       isSignedIn: false,
       awaitingCode: false,
@@ -51,6 +55,7 @@ export class UsageController extends EventEmitter {
     this.resetScheduler.restore();
     await this.refreshLocal();
     if (this.state.isSignedIn) {
+      await this.refreshProfile();
       await this.refreshQuota();
     }
     this.localTimer = setInterval(() => this.refreshLocal(), 30_000);
@@ -150,6 +155,7 @@ export class UsageController extends EventEmitter {
       this.state.awaitingCode = false;
       this.state.isSignedIn = true;
       this.state.authError = null;
+      await this.refreshProfile();
       await this.refreshQuota();
     } catch (error) {
       this.state.authError = error.message;
@@ -163,6 +169,7 @@ export class UsageController extends EventEmitter {
     this.state.awaitingCode = false;
     this.state.isSignedIn = false;
     this.state.quota = null;
+    this.state.profile = null;
     this.state.authError = null;
     this.state.quotaError = null;
     this.#emit();
@@ -173,6 +180,15 @@ export class UsageController extends EventEmitter {
     this.state.awaitingCode = false;
     this.state.authError = null;
     this.#emit();
+  }
+
+  async refreshProfile() {
+    try {
+      this.state.profile = await this.profileService.fetchProfile();
+    } catch (error) {
+      console.error('[profile] refresh failed', error);
+      this.state.profile = null;
+    }
   }
 
   #handlePreferenceChange(event) {

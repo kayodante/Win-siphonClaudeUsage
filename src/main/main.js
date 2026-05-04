@@ -28,6 +28,7 @@ import { buildTrayMenuTemplate, startApplication } from './appLifecycle.js';
 import { FloatingWindowController } from './floatingWindow.js';
 import { JsonStore } from './jsonStore.js';
 import { PreferencesService } from './preferencesService.js';
+import { ProfileService } from './profileService.js';
 import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { createTrayIcon } from './trayIcon.js';
@@ -66,6 +67,7 @@ function onReady() {
   console.log('[siphon] app ready');
 
   const tokenStore = new TokenStore();
+  const profileService = new ProfileService({ tokenStore });
   const resetStore = new JsonStore(path.join(configDir(), 'reset-notification.json'));
   const preferences = new PreferencesService(
     new JsonStore(path.join(configDir(), 'preferences.json'))
@@ -80,6 +82,7 @@ function onReady() {
 
   controller = new UsageController({
     preferences,
+    profileService,
     tokenStore,
     resetScheduler,
     openExternal: url => shell.openExternal(url)
