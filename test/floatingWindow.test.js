@@ -24,6 +24,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
       'resizable',
       'frame',
       'transparent',
+      'backgroundMaterial',
       'alwaysOnTop',
       'skipTaskbar',
       'show'
@@ -34,6 +35,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
       resizable: false,
       frame: false,
       transparent: true,
+      backgroundMaterial: 'acrylic',
       alwaysOnTop: true,
       skipTaskbar: true,
       show: false

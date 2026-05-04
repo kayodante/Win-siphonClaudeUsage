@@ -81,6 +81,7 @@ export class FloatingWindowController {
       show: false,
       title: 'Siphon Widget',
       backgroundColor: '#00000000',
+      backgroundMaterial: 'acrylic',
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
