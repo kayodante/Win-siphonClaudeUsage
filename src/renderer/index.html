@@ -44,17 +44,17 @@
               <svg viewBox="0 0 24 24"><path d="M5 7h8v2H7v2h5a4 4 0 0 1 0 8H5v-2h7a2 2 0 0 0 0-4H5V7Zm11 0h3v2h-3V7Zm0 5h3v2h-3v-2Zm0 5h3v2h-3v-2Z"/></svg>
             </span>
             <span class="copy-strong" data-i18n="onboarding.copy.sessionStrong">Live session quota</span>
-            <span data-i18n="onboarding.copy.sessionMuted">from your Claude AI plan.</span>
+            <span class="copy-muted" data-i18n="onboarding.copy.sessionMuted">from your Claude AI plan.</span>
             <span class="copy-strong" data-i18n="onboarding.copy.costStrong">Token cost</span>
             <span class="feature-chip feature-chip-currency" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm1 14h-2v-2H8v-2h5a1 1 0 0 0 0-2h-2a3 3 0 0 1 0-6h1V3h2v2h2v2h-5a1 1 0 0 0 0 2h2a3 3 0 0 1 0 6v2Z"/></svg>
             </span>
-            <span data-i18n="onboarding.copy.costMuted">read from your local Claude Code cache.</span>
+            <span class="copy-muted" data-i18n="onboarding.copy.costMuted">read from your local Claude Code cache.</span>
             <span class="copy-strong" data-i18n="onboarding.copy.notifyStrong">Reset notifications</span>
             <span class="feature-chip feature-chip-bullhorn" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4 10v4h3l7 4V6l-7 4H4Zm12-1.6v7.2a4 4 0 0 0 0-7.2Zm0-2.2a6 6 0 0 1 0 11.6v-2.1a4 4 0 0 0 0-7.4V6.2Z"/></svg>
             </span>
-            <span data-i18n="onboarding.copy.notifyMuted">the moment a new session opens.</span>
+            <span class="copy-muted" data-i18n="onboarding.copy.notifyMuted">the moment a new session opens.</span>
           </p>
         </div>
 
@@ -69,11 +69,13 @@
           </p>
 
           <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
-            <label for="onboardCodeInput" data-i18n="onboarding.pasteLabel">Paste the full redirect URL or code</label>
-            <textarea id="onboardCodeInput" rows="3" spellcheck="false"></textarea>
-            <div class="button-row">
-              <button type="submit" data-i18n="onboarding.submit">Submit</button>
-              <button type="button" class="ghost" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancel</button>
+            <p class="auth-title" data-i18n="onboarding.authTitle">Código de autenticação</p>
+            <div class="auth-form-fields">
+              <textarea id="onboardCodeInput" rows="2" spellcheck="false" data-i18n-placeholder="onboarding.pasteLabel" placeholder="Cole a URL de redirecionamento completa ou o código"></textarea>
+              <div class="auth-button-stack">
+                <button type="submit" class="btn-save" data-i18n="onboarding.submit">Salvar</button>
+                <button type="button" class="btn-cancel" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancelar</button>
+              </div>
             </div>
           </form>
         </div>

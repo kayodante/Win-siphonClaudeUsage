@@ -18,6 +18,7 @@ const elements = {
   onboardCodeForm: document.querySelector('#onboardCodeForm'),
   onboardCodeInput: document.querySelector('#onboardCodeInput'),
   onboardCancelButton: document.querySelector('#onboardCancelButton'),
+  onboardSecondary: document.querySelector('.onboard-secondary'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
@@ -174,6 +175,7 @@ function render(state) {
 
   elements.signOutButton.hidden = !state.isSignedIn;
   elements.onboardSignInButton.hidden = state.awaitingCode;
+  elements.onboardSecondary.hidden = state.awaitingCode;
   elements.onboardCodeForm.hidden = !state.awaitingCode;
   elements.settingsLanguage.value = lang;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
@@ -276,6 +278,9 @@ function applyTranslations(lang) {
   });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
     element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel, lang));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+    element.setAttribute('placeholder', t(element.dataset.i18nPlaceholder, lang));
   });
 }
 

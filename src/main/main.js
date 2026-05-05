@@ -156,9 +156,9 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 
   window = new BrowserWindow({
-    width: 400,
+    width: 320,
     height: 620,
-    minWidth: 360,
+    minWidth: 320,
     minHeight: 520,
     resizable: true,
     show: false,

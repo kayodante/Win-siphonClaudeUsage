@@ -21,8 +21,9 @@ const STRINGS = Object.freeze({
     'onboarding.copy.notifyMuted': 'the moment a new session opens.',
     'onboarding.cta': 'Log in with Claude AI',
     'onboarding.redirect': 'You will be redirected to claude.ai. After authorizing, come back and paste the code.',
+    'onboarding.authTitle': 'Authentication code',
     'onboarding.pasteLabel': 'Paste the full redirect URL or code',
-    'onboarding.submit': 'Submit',
+    'onboarding.submit': 'Save',
     'onboarding.cancel': 'Cancel',
 
     'home.session': 'Current Session',
@@ -85,8 +86,9 @@ const STRINGS = Object.freeze({
     'onboarding.copy.notifyMuted': 'no momento em que uma nova sessão se abre.',
     'onboarding.cta': 'Logar com Claude AI',
     'onboarding.redirect': 'Você será redirecionado ao claude.ai. Após autorizar, volte e cole o código.',
+    'onboarding.authTitle': 'Código de autenticação',
     'onboarding.pasteLabel': 'Cole a URL de redirecionamento completa ou o código',
-    'onboarding.submit': 'Enviar',
+    'onboarding.submit': 'Salvar',
     'onboarding.cancel': 'Cancelar',
 
     'home.session': 'Sessão Atual',
