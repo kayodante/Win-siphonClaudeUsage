@@ -1,27 +1,44 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 out/
-graphify-out/
+
+# Logs
 *.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tooling / local
 .claude/
 .graphifyignore
+graphify-out/
+coverage/
+.nyc_output/
 
 # Docs (local only)
 ARCHITECTURE.md
 CLAUDE.md
-ROADMAP.md
 
-# Secrets
+# Secrets / credentials
 .env
 .env.*
 .npmrc
+credentials.json
 *.pem
 *.key
 *.p12
 *.pfx
+*.cer
+*.crt
 
-# Editor
+# Editors
 .vscode/
+.idea/
+.vs/
+*.local
 
 # OS
 .DS_Store
