@@ -4,6 +4,7 @@ out/
 graphify-out/
 *.log
 .claude/
+.graphifyignore
 
 # Docs (local only)
 ARCHITECTURE.md

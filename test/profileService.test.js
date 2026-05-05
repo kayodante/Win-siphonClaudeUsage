@@ -35,13 +35,28 @@ test('fetchProfile returns null subfields for missing profile fields', async () 
       jsonResponse(200, {
         display_name: 'Designer',
         subscription: { tier: 'Max' }
-      })
+      }),
+    localLoader: async () => ({ name: null, email: null, plan: null })
   });
 
   assert.deepEqual(await service.fetchProfile(), {
     name: 'Designer',
     email: null,
     plan: 'Max'
+  });
+});
+
+test('fetchProfile fills missing name and email from local credentials', async () => {
+  const service = new ProfileService({
+    tokenStore: tokenStoreWithCredentials(),
+    fetchImpl: async () => jsonResponse(200, { plan: 'Pro' }),
+    localLoader: async () => ({ name: 'Kayo Dante', email: 'kayo@example.com', plan: null })
+  });
+
+  assert.deepEqual(await service.fetchProfile(), {
+    name: 'Kayo Dante',
+    email: 'kayo@example.com',
+    plan: 'Pro'
   });
 });
 

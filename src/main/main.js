@@ -209,9 +209,14 @@ function registerIpc() {
   ipcMain.handle('auth:cancel', () => controller.cancelAuth());
   ipcMain.handle('auth:sign-out', () => controller.signOut());
   ipcMain.handle('prefs:get', () => controller.preferences.load());
-  ipcMain.handle('prefs:set', (_event, { path: preferencePath, value }) =>
-    controller.preferences.set(preferencePath, value)
-  );
+  ipcMain.handle('prefs:set', (_event, { path: preferencePath, value }) => {
+    const ALLOWED = new Set([
+      'language', 'notifications.sessionReset', 'notifications.sound',
+      'floating.enabled', 'floating.x', 'floating.y'
+    ]);
+    if (!ALLOWED.has(preferencePath)) return;
+    controller.preferences.set(preferencePath, value);
+  });
   ipcMain.handle('view:show-main', () => showMainWindow());
   ipcMain.handle('view:show-settings', () => showSettingsWindow());
   ipcMain.handle('floating:open-main', () => showMainWindow());
@@ -228,7 +233,13 @@ function registerIpc() {
     if (!app.isQuitting) window?.hide();
   });
   ipcMain.handle('app:quit', () => quit());
-  ipcMain.handle('shell:open-external', (_event, url) => shell.openExternal(url));
+  ipcMain.handle('shell:open-external', (_event, url) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
+      shell.openExternal(url);
+    } catch { /* invalid URL */ }
+  });
 }
 
 function showMainWindow() {

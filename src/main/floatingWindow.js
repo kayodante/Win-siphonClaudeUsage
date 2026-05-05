@@ -66,11 +66,11 @@ export class FloatingWindowController {
     this.loaded = false;
     this.window = new this.BrowserWindow({
       width: 220,
-      height: 80,
+      height: 88,
       minWidth: 220,
-      minHeight: 80,
+      minHeight: 88,
       maxWidth: 220,
-      maxHeight: 80,
+      maxHeight: 88,
       resizable: false,
       movable: true,
       frame: false,

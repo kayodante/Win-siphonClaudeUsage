@@ -24,7 +24,6 @@ const elements = {
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   notificationState: document.querySelector('#notificationState'),
-  notificationStateLabel: document.querySelector('#notificationStateLabel'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
   notificationIconOff: document.querySelector('#notificationIconOff'),
   weeklyAll: document.querySelector('#weeklyAll'),
@@ -35,12 +34,12 @@ const elements = {
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
   settingsName: document.querySelector('#settingsName'),
-  settingsEmailRow: document.querySelector('#settingsEmailRow'),
   settingsEmail: document.querySelector('#settingsEmail'),
   settingsPlanRow: document.querySelector('#settingsPlanRow'),
   settingsPlan: document.querySelector('#settingsPlan'),
   settingsLanguage: document.querySelector('#settingsLanguage'),
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
+  settingsSoundToggle: document.querySelector('#settingsSoundToggle'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   errorText: document.querySelector('#errorText')
 };
@@ -79,6 +78,14 @@ elements.settingsNotificationsToggle.addEventListener('change', async event => {
     console.error('Failed to save notification preference', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveNotification', currentLanguage());
+  }
+});
+elements.settingsSoundToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('notifications.sound', event.target.checked);
+  } catch (error) {
+    console.error('Failed to save sound preference', error);
+    event.target.checked = !event.target.checked;
   }
 });
 elements.settingsFloatingToggle.addEventListener('change', async event => {
@@ -133,6 +140,7 @@ function render(state) {
   const weeklyAll = hydrateSlot(state.quota?.weeklyAll);
   const weeklySonnet = hydrateSlot(state.quota?.weeklySonnet);
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
+  const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const sessionPercent = clampPercent(session?.percent ?? 0);
 
@@ -140,13 +148,16 @@ function render(state) {
 
   elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
   renderSessionBar(sessionPercent);
-  elements.sessionReset.textContent = session
-    ? `${t('home.reset.in', lang)} ${formatResetDistance(session.resetsAt, new Date(), lang)} · ${formatDayTime(session.resetsAt)}`
-    : t('home.signInPrompt', lang);
+  elements.sessionReset.textContent = !session
+    ? t('home.signInPrompt', lang)
+    : sessionPercent === 0
+    ? t('home.reset.sessionInactive', lang)
+    : `${t('home.reset.in', lang)} ${formatResetDistance(session.resetsAt, new Date(), lang)} · ${formatDayTime(session.resetsAt)}`;
 
-  renderNotificationPill(notificationsEnabled, lang);
+  renderNotificationPill(notificationsEnabled);
 
   elements.weeklyAll.textContent = weeklyAll ? formatPercent(weeklyAll.percent) : '--';
+  elements.weeklyAll.dataset.level = weeklyAll ? levelForPercent(weeklyAll.percent) : '';
   elements.weeklySonnet.textContent = weeklySonnet ? formatPercent(weeklySonnet.percent) : '--';
   elements.todayCost.textContent = formatCurrency(state.todayStats?.cost);
   elements.monthCost.textContent = formatCurrency(state.monthStats?.cost);
@@ -157,6 +168,7 @@ function render(state) {
   elements.onboardCodeForm.hidden = !state.awaitingCode;
   elements.settingsLanguage.value = lang;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
+  elements.settingsSoundToggle.checked = soundEnabled;
   elements.settingsFloatingToggle.checked = floatingEnabled;
 
   elements.errorText.textContent = [state.localError, state.quotaError, state.authError]
@@ -174,8 +186,7 @@ function updateLastUpdatedLine() {
     : '--';
 }
 
-function renderNotificationPill(enabled, lang) {
-  elements.notificationStateLabel.textContent = enabled ? t('home.notif.on', lang) : t('home.notif.off', lang);
+function renderNotificationPill(enabled) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   elements.notificationIconOn.hidden = !enabled;
   elements.notificationIconOff.hidden = enabled;
@@ -212,7 +223,7 @@ function renderSettings(state, lang = currentLanguage()) {
   elements.settingsName.textContent = profile.name ?? t('settings.signedInFallback', lang);
 
   const hasEmail = Boolean(profile.email);
-  elements.settingsEmailRow.hidden = !hasEmail;
+  elements.settingsEmail.hidden = !hasEmail;
   elements.settingsEmail.textContent = hasEmail ? profile.email : '';
 
   const hasPlan = Boolean(profile.plan);

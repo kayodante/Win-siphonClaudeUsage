@@ -29,6 +29,7 @@ const STRINGS = Object.freeze({
     'home.notif.off': 'Reset notification OFF',
     'home.reset.in': 'Resets in',
     'home.reset.now': 'Reset soon',
+    'home.reset.sessionInactive': 'Starts when a message is sent',
     'home.updated.now': 'updated just now',
     'home.updated.minutes': 'updated {minutes}min ago',
 
@@ -43,6 +44,7 @@ const STRINGS = Object.freeze({
     'settings.languageEN': 'English',
     'settings.languagePT': 'Português',
     'settings.notifReset': 'Reset notification',
+    'settings.sound': 'Sound alert',
     'settings.floating': 'Floating widget',
     'settings.claudePath': 'Claude Code data',
     'settings.editPath': 'Edit path',
@@ -84,6 +86,7 @@ const STRINGS = Object.freeze({
     'home.notif.off': 'Notificação de reset desligada',
     'home.reset.in': 'Reseta em',
     'home.reset.now': 'Reset em breve',
+    'home.reset.sessionInactive': 'Inicia quando uma mensagem é enviada',
     'home.updated.now': 'atualizado agora mesmo',
     'home.updated.minutes': 'atualizado há {minutes}min',
 
@@ -98,6 +101,7 @@ const STRINGS = Object.freeze({
     'settings.languageEN': 'English',
     'settings.languagePT': 'Português',
     'settings.notifReset': 'Notificação de reset',
+    'settings.sound': 'Aviso sonoro',
     'settings.floating': 'Widget flutuante',
     'settings.claudePath': 'Dados do Claude Code',
     'settings.editPath': 'Editar caminho',
