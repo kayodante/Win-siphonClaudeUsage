@@ -79,6 +79,10 @@ export class UsageController extends EventEmitter {
     if (this.state.isSignedIn) await this.refreshQuota();
   }
 
+  updateClaudePath(claudeDir) {
+    this.localService = new LocalDataService(claudeDir);
+  }
+
   async refreshLocal() {
     if (this.localInFlight) return;
     this.localInFlight = true;

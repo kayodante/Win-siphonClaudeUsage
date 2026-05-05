@@ -19,7 +19,8 @@ test('load merges partial stored preferences with defaults', () => {
   assert.deepEqual(preferences.load(), {
     language: 'en',
     notifications: { sessionReset: false },
-    floating: { enabled: false, x: null, y: null }
+    floating: { enabled: false, x: null, y: null },
+    claudePath: null
   });
 });
 
@@ -54,7 +55,8 @@ test('set persists a nested change and returns the full snapshot', () => {
   assert.deepEqual(snapshot, {
     language: 'en',
     notifications: { sessionReset: false },
-    floating: { enabled: false, x: null, y: null }
+    floating: { enabled: false, x: null, y: null },
+    claudePath: null
   });
   assert.deepEqual(store.value, snapshot);
 });
@@ -68,7 +70,8 @@ test('set creates deep paths without dropping sibling defaults', () => {
   assert.deepEqual(snapshot, {
     language: 'en',
     notifications: { sessionReset: true },
-    floating: { enabled: false, x: 120, y: null }
+    floating: { enabled: false, x: 120, y: null },
+    claudePath: null
   });
 });
 
@@ -87,7 +90,8 @@ test('set emits one change event after persisting', () => {
     preferences: {
       language: 'en',
       notifications: { sessionReset: false },
-      floating: { enabled: false, x: null, y: null }
+      floating: { enabled: false, x: null, y: null },
+      claudePath: null
     }
   });
 });

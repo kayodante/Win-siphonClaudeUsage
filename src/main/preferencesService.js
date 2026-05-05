@@ -9,7 +9,8 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     enabled: false,
     x: null,
     y: null
-  })
+  }),
+  claudePath: null
 });
 
 export class PreferencesService extends EventEmitter {

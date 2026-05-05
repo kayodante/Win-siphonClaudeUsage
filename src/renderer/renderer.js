@@ -33,6 +33,7 @@ const elements = {
   signOutButton: document.querySelector('#signOutButton'),
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
+  editClaudePathButton: document.querySelector('#editClaudePathButton'),
   settingsName: document.querySelector('#settingsName'),
   settingsEmail: document.querySelector('#settingsEmail'),
   settingsPlanRow: document.querySelector('#settingsPlanRow'),
@@ -58,6 +59,13 @@ elements.backButton.addEventListener('click', () => window.siphon.showMainView()
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
+elements.editClaudePathButton.addEventListener('click', async () => {
+  const selected = await window.siphon.pickFolder();
+  if (!selected) return;
+  await window.siphon.setPreference('claudePath', selected);
+  appInfo = await window.siphon.getAppInfo();
+  elements.claudePath.textContent = appInfo.claudeDir;
+});
 
 // Window controls
 document.querySelector('#minimizeButton').addEventListener('click', () => window.siphon.minimize());
@@ -117,6 +125,7 @@ try {
   appInfo = await window.siphon.getAppInfo();
   window.siphon.onView(showView);
   window.siphon.onState(render);
+  window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
 } catch (error) {
   console.error('Renderer bootstrap failed', error);
@@ -228,7 +237,7 @@ function renderSettings(state, lang = currentLanguage()) {
 
   const hasPlan = Boolean(profile.plan);
   elements.settingsPlanRow.hidden = !hasPlan;
-  elements.settingsPlan.textContent = hasPlan ? profile.plan : '';
+  elements.settingsPlan.textContent = hasPlan ? t('settings.planPrefix', lang) + profile.plan : '';
 
   elements.settingsLanguage.value = lang;
   elements.claudePath.textContent = appInfo.claudeDir;
@@ -243,6 +252,7 @@ function showView(view) {
 
 function renderActiveView() {
   const activeView = resolveView(currentState, requestedView);
+  document.body.dataset.view = activeView;
   elements.onboardView.hidden = activeView !== 'onboard';
   elements.mainView.hidden = activeView !== 'main';
   elements.settingsView.hidden = activeView !== 'settings';
@@ -267,4 +277,9 @@ function applyTranslations(lang) {
   document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
     element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel, lang));
   });
+}
+
+function playResetSound() {
+  const audio = new Audio('../../assets/notification.mp3');
+  audio.play().catch(error => console.warn('Could not play reset sound', error));
 }

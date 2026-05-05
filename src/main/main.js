@@ -14,6 +14,7 @@ process.on('unhandledRejection', err => {
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   Notification,
@@ -75,6 +76,9 @@ function onReady() {
   const resetScheduler = new ResetNotificationScheduler({
     notify: ({ title, body }) => {
       new Notification({ title, body, silent: false }).show();
+      if (preferences.get('notifications.sound')) {
+        window?.webContents.send('play-reset-sound');
+      }
     },
     loadState: () => resetStore.load(),
     saveState: state => resetStore.save(state)
@@ -111,11 +115,17 @@ function onReady() {
   });
 
   preferences.on('change', ({ path: preferencePath, value }) => {
-    if (preferencePath !== 'floating.enabled') return;
-    if (value) {
-      openFloatingWidget(controller.getState());
-    } else {
-      floatingWindow?.hide();
+    if (preferencePath === 'floating.enabled') {
+      if (value) {
+        openFloatingWidget(controller.getState());
+      } else {
+        floatingWindow?.hide();
+      }
+    }
+    if (preferencePath === 'claudePath') {
+      const effectiveDir = value || path.join(os.homedir(), '.claude');
+      controller.updateClaudePath(effectiveDir);
+      void controller.refreshLocal();
     }
   });
 
@@ -212,7 +222,7 @@ function registerIpc() {
   ipcMain.handle('prefs:set', (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
-      'floating.enabled', 'floating.x', 'floating.y'
+      'floating.enabled', 'floating.x', 'floating.y', 'claudePath'
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     controller.preferences.set(preferencePath, value);
@@ -225,9 +235,17 @@ function registerIpc() {
   });
   ipcMain.handle('app:info', () => ({
     configDir: configDir(),
-    claudeDir: path.join(os.homedir(), '.claude'),
+    claudeDir: preferences.get('claudePath') || path.join(os.homedir(), '.claude'),
     notificationsSupported: Notification.isSupported()
   }));
+  ipcMain.handle('dialog:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(window, {
+      properties: ['openDirectory'],
+      defaultPath: preferences.get('claudePath') || path.join(os.homedir(), '.claude')
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
   ipcMain.handle('window:minimize', () => window?.minimize());
   ipcMain.handle('window:close', () => {
     if (!app.isQuitting) window?.hide();

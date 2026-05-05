@@ -27,5 +27,11 @@ contextBridge.exposeInMainWorld('siphon', {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('state-changed', listener);
     return () => ipcRenderer.removeListener('state-changed', listener);
+  },
+  pickFolder: () => ipcRenderer.invoke('dialog:pick-folder'),
+  onResetSound: callback => {
+    const listener = () => callback();
+    ipcRenderer.on('play-reset-sound', listener);
+    return () => ipcRenderer.removeListener('play-reset-sound', listener);
   }
 });

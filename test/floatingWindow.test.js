@@ -31,7 +31,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
     ]),
     {
       width: 220,
-      height: 80,
+      height: 88,
       resizable: false,
       frame: false,
       transparent: true,

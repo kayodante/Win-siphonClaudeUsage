@@ -42,7 +42,8 @@ test('controller state includes preferences snapshot', () => {
   assert.deepEqual(controller.getState().preferences, {
     language: 'en',
     notifications: { sessionReset: false },
-    floating: { enabled: false, x: null, y: null }
+    floating: { enabled: false, x: null, y: null },
+    claudePath: null
   });
 });
 

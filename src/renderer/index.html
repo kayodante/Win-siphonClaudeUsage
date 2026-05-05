@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'none';" />
     <title>Siphon</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -36,44 +36,47 @@
       </header>
 
       <section id="onboardView" class="view onboard" hidden>
-        <div class="onboard-hero" aria-hidden="true">S</div>
-        <h2 data-i18n="onboarding.welcome">Welcome to Siphon</h2>
-        <p class="lead" data-i18n="onboarding.lead">
-          Track your Claude AI usage and Claude Code costs from your Windows tray. Get notified when your session resets.
-        </p>
+        <div class="onboard-center">
+          <img class="onboard-logo" src="../../assets/Logo.png" alt="Siphon" />
 
-        <ul class="onboard-features">
-          <li>
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
-            <span data-i18n="onboarding.feature.session">Live session quota from your Claude AI plan</span>
-          </li>
-          <li>
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
-            <span data-i18n="onboarding.feature.cost">Token cost read from your local Claude Code cache</span>
-          </li>
-          <li>
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9 13 24z"/></svg>
-            <span data-i18n="onboarding.feature.notify">Reset notifications the moment a new session opens</span>
-          </li>
-        </ul>
+          <p class="onboard-copy">
+            <span class="feature-chip feature-chip-roadmap" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 7h8v2H7v2h5a4 4 0 0 1 0 8H5v-2h7a2 2 0 0 0 0-4H5V7Zm11 0h3v2h-3V7Zm0 5h3v2h-3v-2Zm0 5h3v2h-3v-2Z"/></svg>
+            </span>
+            <span class="copy-strong" data-i18n="onboarding.copy.sessionStrong">Live session quota</span>
+            <span data-i18n="onboarding.copy.sessionMuted">from your Claude AI plan.</span>
+            <span class="copy-strong" data-i18n="onboarding.copy.costStrong">Token cost</span>
+            <span class="feature-chip feature-chip-currency" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm1 14h-2v-2H8v-2h5a1 1 0 0 0 0-2h-2a3 3 0 0 1 0-6h1V3h2v2h2v2h-5a1 1 0 0 0 0 2h2a3 3 0 0 1 0 6v2Z"/></svg>
+            </span>
+            <span data-i18n="onboarding.copy.costMuted">read from your local Claude Code cache.</span>
+            <span class="copy-strong" data-i18n="onboarding.copy.notifyStrong">Reset notifications</span>
+            <span class="feature-chip feature-chip-bullhorn" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 10v4h3l7 4V6l-7 4H4Zm12-1.6v7.2a4 4 0 0 0 0-7.2Zm0-2.2a6 6 0 0 1 0 11.6v-2.1a4 4 0 0 0 0-7.4V6.2Z"/></svg>
+            </span>
+            <span data-i18n="onboarding.copy.notifyMuted">the moment a new session opens.</span>
+          </p>
+        </div>
 
-        <button class="btn-primary" id="onboardSignInButton">
-          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 21h-3v2h3a3 3 0 0 0 3-3v-3h-2v3a1 1 0 0 1-1 1zM7 11V8a1 1 0 0 1 1-1h3V5H8a3 3 0 0 0-3 3v3zM23 5h-3v2h3a1 1 0 0 1 1 1v3h2V8a3 3 0 0 0-3-3zM11 25H8a1 1 0 0 1-1-1v-3H5v3a3 3 0 0 0 3 3h3z"/><path d="M14 12h-2v8h2v-3h4v3h2v-8h-2v3h-4v-3z"/></svg>
-          <span data-i18n="onboarding.cta">Sign in with Claude</span>
-        </button>
+        <div class="onboard-auth-card">
+          <button class="btn-primary" id="onboardSignInButton">
+            <img src="../../assets/claude-icon.svg" alt="" aria-hidden="true" />
+            <span data-i18n="onboarding.cta">Log in with Claude AI</span>
+          </button>
 
-        <p class="onboard-secondary" data-i18n="onboarding.redirect">
-          You will be redirected to claude.ai. After authorizing, come back and paste the code.
-        </p>
+          <p class="onboard-secondary" data-i18n="onboarding.redirect">
+            You will be redirected to claude.ai. After authorizing, come back and paste the code.
+          </p>
 
-        <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
-          <label for="onboardCodeInput" data-i18n="onboarding.pasteLabel">Paste the full redirect URL or code</label>
-          <textarea id="onboardCodeInput" rows="3" spellcheck="false"></textarea>
-          <div class="button-row">
-            <button type="submit" data-i18n="onboarding.submit">Submit</button>
-            <button type="button" class="ghost" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancel</button>
-          </div>
-        </form>
+          <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
+            <label for="onboardCodeInput" data-i18n="onboarding.pasteLabel">Paste the full redirect URL or code</label>
+            <textarea id="onboardCodeInput" rows="3" spellcheck="false"></textarea>
+            <div class="button-row">
+              <button type="submit" data-i18n="onboarding.submit">Submit</button>
+              <button type="button" class="ghost" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <section id="mainView" class="view">
@@ -140,7 +143,7 @@
             <p class="account-name" id="settingsName">--</p>
             <p class="account-email" id="settingsEmail">--</p>
             <div id="settingsPlanRow" class="account-badge-row" hidden>
-              <span id="settingsPlan" class="plan-pill">--</span>
+              <span id="settingsPlan" class="plan-pill">Plano - </span>
             </div>
           </div>
           <div class="account-divider"></div>
@@ -180,7 +183,7 @@
             <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
             <div class="settings-path-row">
               <span id="claudePath" class="settings-path-value">--</span>
-              <button class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath" tabindex="-1">
+              <button id="editClaudePathButton" class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath">
                 <!-- Carbon: Edit -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
               </button>
