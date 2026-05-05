@@ -43,6 +43,7 @@ let tray = null;
 let window = null;
 let floatingWindow = null;
 let controller = null;
+let preferences = null;
 let trayIconLevel = 'ok';
 
 app.setAppUserModelId('com.siphon.windows');
@@ -70,7 +71,7 @@ function onReady() {
   const tokenStore = new TokenStore();
   const profileService = new ProfileService({ tokenStore });
   const resetStore = new JsonStore(path.join(configDir(), 'reset-notification.json'));
-  const preferences = new PreferencesService(
+  preferences = new PreferencesService(
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
   const resetScheduler = new ResetNotificationScheduler({
