@@ -18,7 +18,11 @@ The Windows-specific addition is reset scheduling: when the current five-hour se
 
 ## Installation
 
-Download the latest Windows installer from the eventual GitHub release for this project.
+Download the latest Windows installer (`Siphon Setup <version>.exe`) from the eventual GitHub release for this project. Run it and follow the wizard:
+
+- The installer is a per-user NSIS package — no admin elevation required.
+- A Start Menu entry is created under a **Siphon** folder (Windows → All apps → Siphon → Siphon).
+- The final wizard page offers an opt-in **"Criar atalho na area de trabalho"** checkbox (checked by default). Uncheck it to skip the desktop shortcut.
 
 Microsoft Defender SmartScreen pode bloquear o instalador na primeira execução. Clique em "Mais informações" e depois "Executar mesmo assim".
 

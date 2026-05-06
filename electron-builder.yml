@@ -25,3 +25,7 @@ nsis:
   installerSidebar: assets/installer/installer-sidebar.bmp
   installerHeader: assets/installer/installer-header.bmp
   shortcutName: Siphon
+  createStartMenuShortcut: true
+  menuCategory: Siphon
+  createDesktopShortcut: false
+  include: assets/installer/installer.nsh

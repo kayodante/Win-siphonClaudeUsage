@@ -10,7 +10,7 @@ Feature-by-feature comparison against the macOS Swift original.
 
 | Feature                                           | macOS | Windows | Notes |
 | ------------------------------------------------- | :---: | :-----: | ----- |
-| Tray / menu-bar icon                              |   ✓   |    ✓    | Final assets in `assets/tray*.png` ready; wiring scheduled in *Now / 1*. |
+| Tray / menu-bar icon                              |   ✓   |    ✓    | Final assets in `assets/tray*.png` wired through `trayIcon.js`. |
 | Click tray to open popover                        |   ✓   |    ✓    | Windows wires **double-click** instead (more conventional on Windows). |
 | Right-click tray menu                             |   ✓   |    ✓    | Items: *Mostrar aplicativo*, *Configurações*, *Sair*. |
 | Session % + reset countdown                       |   ✓   |    ✓    |  |
@@ -25,10 +25,10 @@ Feature-by-feature comparison against the macOS Swift original.
 | Credentials persisted at `0600`                   |   ✓   |    ✓    | `%APPDATA%\Siphon\credentials.json`. |
 | Bundled display font                              | Inter |  Geist  | Geist + Geist Mono + Geist Pixel Line, loaded via `@font-face`. |
 | Polished UI (post visual-polish pass)             |   ✓   |    ✓    | Carbon icons, `#000` background, borderless cards, pixel numerals. |
+| Tray icon color-coded by usage level              |   ✓   |    ✓    | `updateTray()` swaps `tray.png` / `tray-warn.png` / `tray-danger.png` via `levelForPercent`. |
+| Packaged installer                                |  DMG  |   NSIS  | `electron-builder.yml` configured (`npm run build:win`). Code signing deferred. |
 | **Reset notification when session hits 100%**     |   —   |    ✓    | Windows-only addition (the reason this fork exists). |
 | **Missed-reset notification on next launch**      |   —   |    ✓    | Fires once if the stored reset has already passed. |
-| Tray icon color-coded by usage level              |   ✓   |    ✗    | Bar in the window has `data-level`; tray icon itself doesn't change yet. |
-| Packaged installer                                |  DMG  |    ✗    | No `electron-builder` config yet — see *Now*. |
 | Code signing                                      |   ✓   |    ✗    | No certificate yet — deferred. |
 | Autostart on login                                |   ✓   |    ✗    | Not implemented. |
 
@@ -74,94 +74,81 @@ Shipped. Captured here so it's not re-litigated:
 - UI strings externalized through `src/shared/i18n.js` with English and
   Brazilian Portuguese, live-switched from Settings via `preferences.json`.
 
+**Real tray icon + color-coded levels**
+
+- `trayIcon.js` loads `tray.png` / `tray-warn.png` / `tray-danger.png`
+  (plus `@2x` variants) via `nativeImage.createFromPath`.
+- `updateTray()` in `main.js` swaps the image based on `levelForPercent`
+  of the session percent (ok < 80%, warn ≥ 80%, danger ≥ 95%).
+
+**Packaging — `.exe` installer**
+
+- `electron-builder` wired as devDependency, `npm run build:win` outputs
+  to `dist/` via `electron-builder.yml`.
+- NSIS, per-user, `oneClick: false`, `allowToChangeInstallationDirectory: true`.
+- Installer icon, sidebar BMP, header BMP all wired from `assets/installer/`.
+- Files included: `src/`, `assets/`, `package.json`. Excluded: `test/`,
+  `scripts/`, `docs/`, `mockup.html`, `ROADMAP.md`, `ARCHITECTURE.md`.
+- Code signing intentionally deferred (see *Next*).
+
 ## Now
 
-Approved scope, in suggested execution order.
+Quick wins ordered by speed-to-ship. Each is small, scoped to existing
+modules, no new infrastructure.
 
-### 1. Real tray icon
+### 1. Click-through from reset notification
 
-Replace the placeholder `GREEN_S_PNG` in `trayIcon.js` with the final
-asset. Both standard and HiDPI variants are already on disk:
+When the reset toast fires, clicking it should open the main window.
+Wire the toast's `click` event in `resetNotificationScheduler.js` (or
+the consumer in `main.js`) to `window.show()` + `window.focus()`. Few
+lines; no new IPC.
 
-- `assets/tray.png` (16×16, level=ok)
-- `assets/tray@2x.png` (32×32, level=ok)
-- `assets/tray-warn.png` + `assets/tray-warn@2x.png` (level=warn)
-- `assets/tray-danger.png` + `assets/tray-danger@2x.png` (level=danger)
+### 2. Offline / no-network banner
 
-Use `nativeImage.createFromPath(...)` and load `tray.png` by default;
-Electron picks `@2x` automatically on HiDPI when both files share the
-same prefix.
+Surface a clean banner in the renderer instead of the raw `quotaError`
+string. Detect network errors in `quotaService.js` (caught fetch /
+`ENOTFOUND` / `ECONNREFUSED`), mark them on state, and render a
+dismissable banner above the cards. i18n keys: `error.offline.title`,
+`error.offline.body`. Renderer-only beyond one new state field.
 
-### 2. Color-coded tray icon
+### 3. Friendlier `LocalDataService` empty-state
 
-Mirror the macOS behavior — swap the tray icon based on session %:
+Today, a missing `~/.claude/readout-cost-cache.json` collapses to
+"Could not read". Distinguish *file missing* (Claude Code never ran)
+from *parse error* (corrupted) and surface a localized copy. One
+branch in `localDataService.js` + two i18n keys.
 
-- `< 80%` → `tray.png` (ok)
-- `>= 80%` → `tray-warn.png`
-- `>= 95%` → `tray-danger.png`
+### 4. Window show animation
 
-Implement inside `updateTray()` in `main.js`. Reuse `levelForPercent`
-logic from the renderer (or extract it into `src/shared/`). Calling
-`tray.setImage(...)` with the path is enough; no recompositing needed.
-
-### 3. Packaging — `.exe` installer
-
-Decided scope:
-
-- `electron-builder` as devDependency. Config in `electron-builder.yml`
-  (more readable than inline `package.json`).
-- App ID: `com.kayodante.siphon`.
-- Product name: `Siphon`.
-- Format: **NSIS only** (`.exe`). No MSI for now.
-- Install scope: **per-user** (no admin prompt, fewer SmartScreen issues).
-- NSIS options: `oneClick: false`, `perMachine: false`,
-  `allowToChangeInstallationDirectory: true`.
-- Windows icon: `assets/installer/icon.ico` (multi-resolution: 16, 24,
-  32, 48, 64, 128, 256). Use it for the executable, the installer, and
-  shortcuts.
-- NSIS sidebar / header art: `assets/installer/installer-sidebar.bmp`
-  (164×314) and `assets/installer/installer-header.bmp` (150×57). Wire
-  them via `nsis.installerSidebar` and `nsis.installerHeader`.
-- Code signing: **deferred**. README will document the SmartScreen
-  workaround ("More info → Run anyway").
-- Auto-update: **deferred** — depends on signing.
-- Files included: `src/`, `assets/`, `package.json`. Excluded: `test/`,
-  `scripts/`, `docs/`, `mockup.html`.
-- New script: `npm run build:win`. Output to `dist/`.
+Add a short fade/slide on `window.show()` from the tray. CSS-only
+(opacity + transform on the renderer root, triggered by a `body` data
+attribute set on first paint). No native window APIs needed.
 
 ## Next
 
-After the *Now* block ships.
+After the *Now* block ships. These need real work — new IPC, new
+modules, or external dependencies.
 
-- **Code signing.** Acquire and integrate an EV / OV certificate so the
-  installer doesn't trip SmartScreen.
 - **Autostart on login.** `app.setLoginItemSettings({ openAtLogin: true,
-  openAsHidden: true })` plus a checkbox in *Configurações*.
-- **In-app OAuth redirect handler.** Today the user pastes the redirect
-  URL back into Siphon. A small local HTTP listener on `127.0.0.1` (or
-  a custom protocol handler) would let the browser hand the code back
-  automatically.
-- **Click-through from notification.** When the reset toast fires,
-  clicking it should open the main window.
-- **Offline / no-network state.** Surface a clean banner instead of the
-  generic `quotaError` string.
+  openAsHidden: true })` plus a `startup.openAtLogin` preference, a new
+  toggle in *Configurações*, and IPC plumbing through
+  `preferencesService`. Medium effort, all in-tree.
+- **Code signing.** Acquire and integrate an EV / OV certificate so the
+  installer doesn't trip SmartScreen. Blocks auto-update.
 
 ## Later
 
 Lower priority.
 
 - **Auto-update** with `electron-updater`. Needs signed builds first.
-- **Linux build.** Same Electron stack should work; tray UX differs and
-  notifications use libnotify.
 - **Anthropic API Key cost ingestion.** Considered and dropped; it requires
   an admin key, so it is out of scope for this tray app.
 
 ## Known issues / paper cuts
 
-- The placeholder "S" icon doesn't render well at 16×16 on high-DPI
-  displays — final asset will fix this.
 - No window animation when showing from tray; the macOS app's popover
-  feels nicer.
+  feels nicer (covered in *Now / 4*).
 - `LocalDataService` errors collapse to a single string; if the user has
   never run Claude Code the message is technically "Could not read"
-  rather than "Claude Code hasn't created the cache yet."
+  rather than "Claude Code hasn't created the cache yet" (covered in
+  *Now / 3*).
