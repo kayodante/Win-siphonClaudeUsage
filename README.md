@@ -1,43 +1,116 @@
-# Siphon Windows
+<div align="center">
+  <img src="assets/Logo.png" alt="Siphon" height="40" />
+  <br/>
+  <br/>
+  <p>A Windows tray app that tracks your Claude Code usage in real time.</p>
 
-A Windows tray version of [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage). It keeps the core behavior of the macOS app:
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+  [![Node](https://img.shields.io/badge/Node-22%2B-5FA04E?logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+</div>
 
-- Reads Claude Code token cost files from `~/.claude/readout-cost-cache.json` and `~/.claude/readout-pricing.json`.
-- Uses the Claude Code OAuth PKCE flow to read session and weekly plan usage.
-- Shows session, weekly, daily cost, and monthly cost in a compact tray window.
-- Refreshes local cost data every 30 seconds and quota data every 2 minutes.
+---
 
-The Windows-specific addition is reset scheduling: when the current five-hour session reaches 100% and the API returns a future `resets_at`, Siphon stores that reset time and schedules a Windows notification for when the session should be available again. If the app is opened after the reset time has already passed, it immediately sends the missed reset notification once.
+Siphon sits quietly in your system tray and shows session quota, weekly limits, and daily/monthly costs — all pulled directly from Claude Code's local files and the Anthropic OAuth usage endpoint. No API keys, no configuration: if you use Claude Code, it just works.
+
+The Windows-specific addition is a **reset notification**: when your five-hour session quota hits 100%, Siphon schedules a Windows toast for the exact moment it becomes available again. If the app was closed during that window, it fires the missed notification on the next launch.
+
+This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
+
+## Features
+
+| | |
+|---|---|
+| **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown |
+| **Weekly limits** | Tracks all-model and Sonnet-specific weekly caps |
+| **Cost tracking** | Today's and this month's spend in USD, computed from Claude Code's local pricing files |
+| **Usage history** | Recent days breakdown in a dedicated history view |
+| **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened |
+| **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen |
+| **Color-coded tray icon** | Icon shifts from neutral → warning → danger as quota fills up |
+| **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings |
+
+## Screenshots
+
+> _Coming soon._
 
 ## Requirements
 
-- Windows 10 or later.
-- Node.js 22 or later.
-- Claude Code installed and used at least once.
-- A Claude account with OAuth access to usage data.
+- Windows 10 or later
+- Node.js 22 or later (development only)
+- [Claude Code](https://claude.ai/code) installed and used at least once
 
 ## Installation
 
-Download the latest Windows installer (`Siphon Setup <version>.exe`) from the eventual GitHub release for this project. Run it and follow the wizard:
+### From the installer (recommended)
 
-- The installer is a per-user NSIS package — no admin elevation required.
-- A Start Menu entry is created under a **Siphon** folder (Windows → All apps → Siphon → Siphon).
-- The final wizard page offers an opt-in **"Criar atalho na area de trabalho"** checkbox (checked by default). Uncheck it to skip the desktop shortcut.
+Download the latest `Siphon Setup <version>.exe` from [Releases](../../releases) and run it. The installer is per-user — no admin elevation required. A Start Menu entry is created under **Siphon**, and an optional desktop shortcut is offered on the final page.
 
-Microsoft Defender SmartScreen pode bloquear o instalador na primeira execução. Clique em "Mais informações" e depois "Executar mesmo assim".
+> [!NOTE]
+> Microsoft Defender SmartScreen may show a warning the first time you run the installer since the app isn't code-signed yet. Click **More info → Run anyway** to proceed.
 
-Building from source: clone the repository, run `npm install`, then `npm run build:win`; the installer output will be in `dist/`.
+### From source
+
+```powershell
+git clone https://github.com/appariciojunior/siphon-windows.git
+cd siphon-windows
+npm install
+npm start
+```
+
+To build the installer yourself:
+
+```powershell
+npm run build:win
+# Output: dist/Siphon Setup <version>.exe
+```
+
+## How it works
+
+Siphon runs as three isolated Electron contexts:
+
+```
+Main process (Node, ESM)
+  ├── UsageController
+  │     ├── LocalDataService   — reads ~/.claude/readout-*.json every 30 s
+  │     ├── QuotaService       — polls api.anthropic.com/api/oauth/usage every 2 min
+  │     ├── OAuthService       — PKCE sign-in flow (same client ID as Claude Code)
+  │     └── ResetNotificationScheduler — arms Windows toasts on quota exhaustion
+  └── IPC bridge
+Preload (CJS)       — exposes window.siphon.* to the renderer
+Renderer (ESM)      — vanilla JS + CSS, no framework
+```
+
+Cost figures are computed locally by joining Claude Code's token cache (`readout-cost-cache.json`) against its pricing file (`readout-pricing.json`) — no data leaves your machine for cost calculations.
+
+### Data stored on disk
+
+| File | Purpose |
+|------|---------|
+| `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
+| `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
+| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position |
+
+### Sign-in
+
+Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a browser tab opens to Anthropic's auth page. After authorizing, paste the redirect URL back into the app. Tokens are refreshed automatically 30 seconds before expiry.
 
 ## Development
 
 ```powershell
-npm install
-npm test
-npm start
+npm test    # node --test (built-in Node test runner)
+npm run lint  # syntax-only check
 ```
 
-Credentials are stored under `%APPDATA%\Siphon\credentials.json`. Reset notification state is stored under `%APPDATA%\Siphon\reset-notification.json`.
+Tests live in `test/` and mirror the `src/main/` module structure. The test for `resetNotificationScheduler.test.js` covers the tricky timer-clamp and persistence paths — run it whenever you touch the scheduler.
 
-## Notes
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagrams, and [ROADMAP.md](ROADMAP.md) for what's planned next.
 
-The app must be running in the tray to deliver a future reset notification at the exact reset time. If it was closed during the reset window, it will still notify once on the next launch if a pending reset was saved.
+## Tech stack
+
+- **[Electron 41](https://www.electronjs.org/)** — `type: "module"` (main process is ESM, preload is CJS)
+- **No bundler** — renderer loads `index.html` directly via `loadFile`
+- **No UI framework** — vanilla JS and hand-written CSS
+- **[Geist](https://vercel.com/font)** — display font (Geist, Geist Mono, Geist Pixel Line)
+- **[Carbon Icons](https://carbondesignsystem.com/elements/icons/library/)** — UI iconography

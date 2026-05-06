@@ -14,7 +14,7 @@ Feature-by-feature comparison against the macOS Swift original.
 | Click tray to open popover                        |   ✓   |    ✓    | Windows wires **double-click** instead (more conventional on Windows). |
 | Right-click tray menu                             |   ✓   |    ✓    | Items: *Mostrar aplicativo*, *Configurações*, *Sair*. |
 | Session % + reset countdown                       |   ✓   |    ✓    |  |
-| Weekly all + weekly Sonnet                        |   ✓   |    ✓    |  |
+| Weekly all + weekly Sonnet                        |   ✓   |    ✓    | Surfaces `extra_usage` credits when weekly Sonnet data is absent. |
 | Today's USD cost                                  |   ✓   |    ✓    |  |
 | This month's USD cost                             |   ✓   |    ✓    |  |
 | Recent days breakdown                             |   ✓   |    ✓    | Now in a dedicated history view, opened via the topbar history button. |
@@ -89,6 +89,7 @@ Shipped. Captured here so it's not re-litigated:
 - Installer icon, sidebar BMP, header BMP all wired from `assets/installer/`.
 - Files included: `src/`, `assets/`, `package.json`. Excluded: `test/`,
   `scripts/`, `docs/`, `mockup.html`, `ROADMAP.md`, `ARCHITECTURE.md`.
+- Start Menu shortcut placed inside a `Siphon` folder; optional desktop shortcut is opt-in during install.
 - Code signing intentionally deferred (see *Next*).
 
 ## Now

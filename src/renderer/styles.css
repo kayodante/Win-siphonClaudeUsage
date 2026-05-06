@@ -34,8 +34,9 @@
   --muted: oklch(20% 0.006 270);
   --muted-foreground: oklch(62% 0.01 270);
   --subtle-foreground: oklch(48% 0.008 270);
-  --border: oklch(1 0 0 / 0.00);
+  --border: oklch(1 0 0 / 0.00); /* zero-alpha — use --border-strong for visible borders */
   --border-strong: oklch(28% 0.01 270);
+  --border-subtle: oklch(100% 0 0 / 0.02);
   --input: oklch(18% 0.008 270);
   --ring: oklch(84.1% 0.238 128.85);
   --accent: oklch(84.1% 0.238 128.85);
@@ -47,6 +48,10 @@
   --success-soft: oklch(0.6959 0.1491 162.48 / 0.08);
   --warning: oklch(0.7686 0.1647 70.08);
   --warning-soft: oklch(0.7686 0.1647 70.08 / 0.16);
+
+  --surface-raised: #0F0F0F;
+  --ring-soft: oklch(84.1% 0.238 128.85 / 0.18);
+  --chip-currency: #a855f7;
 
   --radius: 12px;
   --radius-xs: 4px;
@@ -109,7 +114,7 @@ h3 {
   padding: 12px 8px;
   flex: 1 0 0;
   min-height: 0;
-  overflow-y: overlay;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
@@ -206,7 +211,7 @@ body[data-view="onboard"] .shell {
   height: 24px;
   margin: 0 2px;
   padding: 4px 6px;
-  color: #171717;
+  color: var(--accent-foreground);
   vertical-align: middle;
 }
 
@@ -217,18 +222,18 @@ body[data-view="onboard"] .shell {
 }
 
 .feature-chip-roadmap {
-  background: #f59e0b;
+  background: var(--warning);
   border-radius: 10px 4px 10px 4px;
 }
 
 .feature-chip-currency {
-  background: #a855f7;
+  background: var(--chip-currency);
   border-radius: 6px;
 }
 
 .feature-chip-bullhorn {
   padding-inline: 8px;
-  background: #f43f5e;
+  background: var(--destructive);
   border-radius: var(--radius-pill);
 }
 
@@ -346,7 +351,7 @@ body[data-view="onboard"] .shell {
 /* Topbar */
 
 .topbar {
-  padding: 0px 0px 4px;
+  padding: 0 0 4px;
   flex-shrink: 0;
   -webkit-app-region: drag;
 }
@@ -357,7 +362,7 @@ body[data-view="onboard"] .shell {
   justify-content: space-between;
   gap: 2px;
   padding: 16px;
-  background: #0F0F0F;
+  background: var(--surface-raised);
   border-radius: var(--radius-sm);
   -webkit-app-region: drag;
 }
@@ -650,8 +655,13 @@ body[data-view="onboard"] .window-control-btn svg {
   color: var(--muted-foreground);
   font-family: var(--font-sans);
   font-size: 14px;
-  outline: none;
   cursor: pointer;
+}
+
+.settings-select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .settings-select option {
@@ -713,10 +723,16 @@ body[data-view="onboard"] .window-control-btn svg {
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: #737373;
+  color: var(--muted-foreground);
   text-decoration: none;
   transition: color 120ms ease;
   flex-shrink: 0;
+}
+
+.settings-github-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .settings-github-link:hover {
@@ -761,7 +777,7 @@ body[data-view="onboard"] .window-control-btn svg {
 .quota-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   padding: 16px 18px;
 }
 
@@ -799,19 +815,23 @@ body[data-view="onboard"] .window-control-btn svg {
   background: var(--success);
 }
 
-.meter[data-level="warn"] .meter-segment {
+.meter[data-level="warn"] .meter-segment,
+.floating-meter-bar[data-level="warn"] .meter-segment {
   background: var(--warning-soft);
 }
 
-.meter[data-level="danger"] .meter-segment {
+.meter[data-level="danger"] .meter-segment,
+.floating-meter-bar[data-level="danger"] .meter-segment {
   background: var(--destructive-soft);
 }
 
-.meter[data-level="warn"] .meter-segment.active {
+.meter[data-level="warn"] .meter-segment.active,
+.floating-meter-bar[data-level="warn"] .meter-segment.active {
   background: var(--warning);
 }
 
-.meter[data-level="danger"] .meter-segment.active {
+.meter[data-level="danger"] .meter-segment.active,
+.floating-meter-bar[data-level="danger"] .meter-segment.active {
   background: var(--destructive);
 }
 
@@ -841,7 +861,7 @@ body[data-view="onboard"] .window-control-btn svg {
   align-items: center;
   gap: 5px;
   padding: 2px 0;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -990,7 +1010,7 @@ textarea {
 
 textarea:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px oklch(84.1% 0.238 128.85 / 0.18);
+  box-shadow: 0 0 0 3px var(--ring-soft);
 }
 
 /* Buttons */
@@ -1205,7 +1225,7 @@ button.compact {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: #0F0F0F;
+  background: var(--surface-raised);
   border-radius: var(--radius-sm);
 }
 
@@ -1226,6 +1246,12 @@ body[data-view="onboard"] .app-footer {
 
 .footer-link:hover {
   color: var(--foreground);
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .footer-link-domain {
@@ -1300,7 +1326,7 @@ body[data-view="onboard"] .app-footer {
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
   box-shadow: 0 10px 28px oklch(0% 0 0 / 0.38);
   display: flex;
   flex-direction: column;
@@ -1399,23 +1425,23 @@ body[data-view="onboard"] .app-footer {
   line-height: 1;
   letter-spacing: -0.06em;
   font-variant-numeric: tabular-nums;
-  color: white;
+  color: var(--foreground);
 }
 
 .floating-reset {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 400;
   line-height: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .floating-reset-label {
-  color: #737373;
+  color: var(--muted-foreground);
 }
 
 .floating-reset-time {
-  color: #a3a3a3;
+  color: var(--muted-foreground);
 }
 
 .floating-meter-bar {
@@ -1429,25 +1455,14 @@ body[data-view="onboard"] .app-footer {
   flex: 1;
   height: 4px;
   border-radius: 1px;
-  background: var(--success-soft);
 }
 
-.floating-meter-bar[data-level="warn"] .meter-segment {
-  background: var(--warning-soft);
-}
-
-.floating-meter-bar[data-level="danger"] .meter-segment {
-  background: var(--destructive-soft);
-}
-
-.floating-meter-bar .meter-segment.active {
-  background: var(--success);
-}
-
-.floating-meter-bar[data-level="warn"] .meter-segment.active {
-  background: var(--warning);
-}
-
-.floating-meter-bar[data-level="danger"] .meter-segment.active {
-  background: var(--destructive);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
