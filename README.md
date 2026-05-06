@@ -32,7 +32,20 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Screenshots
 
-> _Coming soon._
+<div align="center">
+
+| Login | Dashboard | Settings |
+|:---:|:---:|:---:|
+| ![Login screen](screenshots/screenshotApp-1.png) | ![Main dashboard](screenshots/screenshotApp-2.png) | ![Settings](screenshots/screenshotApp-3.png) |
+| Sign in with Claude AI | Session quota, costs, and weekly limits | Language, notifications, and widget |
+
+<br/>
+
+![Floating widget](screenshots/screenshotWidget-1.png)
+
+*Floating mini widget — always on top, drag anywhere*
+
+</div>
 
 ## Requirements
 
