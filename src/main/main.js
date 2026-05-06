@@ -17,6 +17,7 @@ import {
   dialog,
   ipcMain,
   Menu,
+  nativeImage,
   Notification,
   screen as electronScreen,
   shell,
@@ -35,9 +36,11 @@ import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { createTrayIcon } from './trayIcon.js';
 import { UsageController } from './usageController.js';
 import { levelForPercent } from '../shared/format.js';
+import { t } from '../shared/i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
+const appIcon = nativeImage.createFromPath(path.join(projectRoot, 'assets', 'installer', 'icon.ico'));
 
 let tray = null;
 let window = null;
@@ -75,8 +78,13 @@ function onReady() {
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
   const resetScheduler = new ResetNotificationScheduler({
-    notify: ({ title, body }) => {
-      new Notification({ title, body, silent: false }).show();
+    notify: () => {
+      const lang = preferences.get('language') || 'en';
+      new Notification({
+        title: t('notification.resetTitle', lang),
+        body: t('notification.resetBody', lang),
+        silent: false
+      }).show();
       if (preferences.get('notifications.sound')) {
         window?.webContents.send('play-reset-sound');
       }
@@ -156,14 +164,15 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 
   window = new BrowserWindow({
-    width: 320,
+    width: 336,
     height: 620,
-    minWidth: 320,
+    minWidth: 336,
     minHeight: 520,
     resizable: true,
     show: false,
     frame: false,
     title: 'Siphon',
+    icon: appIcon,
     backgroundColor: '#000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -237,7 +246,8 @@ function registerIpc() {
   ipcMain.handle('app:info', () => ({
     configDir: configDir(),
     claudeDir: preferences.get('claudePath') || path.join(os.homedir(), '.claude'),
-    notificationsSupported: Notification.isSupported()
+    notificationsSupported: Notification.isSupported(),
+    version: app.getVersion()
   }));
   ipcMain.handle('dialog:pick-folder', async () => {
     const result = await dialog.showOpenDialog(window, {
@@ -298,11 +308,12 @@ function syncFloatingWindow(state) {
 }
 
 function showWindow() {
-  positionWindow();
+  if (!window.isVisible()) positionWindow();
   if (window.isMinimized()) {
     window.restore();
   }
   window.show();
+  window.setIcon(appIcon);
   window.focus();
 }
 

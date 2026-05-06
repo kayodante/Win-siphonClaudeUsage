@@ -44,7 +44,9 @@ const elements = {
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
   settingsSoundToggle: document.querySelector('#settingsSoundToggle'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
-  errorText: document.querySelector('#errorText')
+  errorText: document.querySelector('#errorText'),
+  appVersionText: document.querySelector('#appVersionText'),
+  githubLink: document.querySelector('#githubLink')
 };
 
 let appInfo = {
@@ -123,8 +125,18 @@ elements.onboardCodeForm.addEventListener('submit', event => {
   if (code) window.siphon.submitCode(code);
 });
 
+elements.githubLink.addEventListener('click', event => {
+  event.preventDefault();
+  window.siphon.openExternal('https://github.com/kayodante/siphonClaudeUsage');
+});
+
+initDotMatrix();
+
 try {
   appInfo = await window.siphon.getAppInfo();
+  if (appInfo.version && elements.appVersionText) {
+    elements.appVersionText.textContent = `Siphon - Claude Usage  —  v ${appInfo.version}`;
+  }
   window.siphon.onView(showView);
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
@@ -263,15 +275,44 @@ function showView(view) {
   renderActiveView();
 }
 
+let _transitioning = false;
+
 function renderActiveView() {
   const activeView = resolveView(currentState, requestedView);
   document.body.dataset.view = activeView;
-  elements.onboardView.hidden = activeView !== 'onboard';
-  elements.mainView.hidden = activeView !== 'main';
-  elements.settingsView.hidden = activeView !== 'settings';
-  if (activeView === 'settings' && currentState) {
-    renderSettings(currentState);
+
+  const viewMap = { onboard: elements.onboardView, main: elements.mainView, settings: elements.settingsView };
+  const incoming = viewMap[activeView];
+  const outgoing = Object.values(viewMap).find(v => !v.hidden && v !== incoming);
+
+  if (!outgoing || _transitioning) {
+    elements.onboardView.hidden = activeView !== 'onboard';
+    elements.mainView.hidden = activeView !== 'main';
+    elements.settingsView.hidden = activeView !== 'settings';
+    if (activeView === 'settings' && currentState) renderSettings(currentState);
+    return;
   }
+
+  _transitioning = true;
+  outgoing.style.opacity = '0';
+  outgoing.style.transform = 'translateY(-6px)';
+
+  setTimeout(() => {
+    outgoing.hidden = true;
+    outgoing.style.opacity = '';
+    outgoing.style.transform = '';
+
+    incoming.hidden = false;
+    incoming.style.opacity = '0';
+    incoming.style.transform = 'translateY(6px)';
+    if (activeView === 'settings' && currentState) renderSettings(currentState);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      incoming.style.opacity = '';
+      incoming.style.transform = '';
+      _transitioning = false;
+    }));
+  }, 150);
 }
 
 function currentLanguage() {
@@ -298,4 +339,48 @@ function applyTranslations(lang) {
 function playResetSound() {
   const audio = new Audio('../../assets/notification.mp3');
   audio.play().catch(error => console.warn('Could not play reset sound', error));
+}
+
+function initDotMatrix() {
+  const wrap = document.getElementById('lastUpdatedDot');
+  if (!wrap) return;
+
+  const N = 5;
+  const CENTER = 2;
+  const CORNERS = new Set(['0,0', '0,4', '4,0', '4,4']);
+  const CYCLE_MS = 1400;
+
+  const dots = [];
+  for (let row = 0; row < N; row++) {
+    for (let col = 0; col < N; col++) {
+      const span = document.createElement('span');
+      if (CORNERS.has(`${row},${col}`)) {
+        span.className = 'dmx-dot dmx-inactive';
+      } else {
+        const r = Math.hypot(col - CENTER, row - CENTER);
+        span.className = 'dmx-dot';
+        span.dataset.zone = r < 0.55 ? 'c' : r < 1.65 ? 'i' : 'o';
+      }
+      wrap.appendChild(span);
+      dots.push(span);
+    }
+  }
+
+  function tick() {
+    const phase = (performance.now() % CYCLE_MS) / CYCLE_MS;
+    const beat = Math.sin(phase * Math.PI * 2);
+    const spike = Math.sin(phase * Math.PI * 4);
+    const pulse = Math.max(0, beat) + Math.max(0, spike) * 0.55;
+
+    for (const dot of dots) {
+      const z = dot.dataset.zone;
+      if (!z) continue;
+      dot.style.opacity =
+        z === 'c' ? Math.min(1, 0.35 + pulse * 0.95) :
+        z === 'i' ? 0.16 + pulse * 0.44 :
+                    0.08 + pulse * 0.08;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }

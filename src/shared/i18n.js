@@ -62,6 +62,9 @@ const STRINGS = Object.freeze({
     'footer.openClaude': 'Open claude.ai',
     'footer.quit': 'Quit',
 
+    'notification.resetTitle': 'Claude session reset',
+    'notification.resetBody': 'Your Claude session limit should be available again.',
+
     'error.saveNotification': 'Could not save notification preference.',
     'error.saveFloating': 'Could not save floating widget preference.',
     'error.saveLanguage': 'Could not save language preference.',
@@ -127,6 +130,9 @@ const STRINGS = Object.freeze({
 
     'footer.openClaude': 'Abrir claude.ai',
     'footer.quit': 'Sair',
+
+    'notification.resetTitle': 'Sessão do Claude reiniciada',
+    'notification.resetBody': 'Seu limite de sessão do Claude deve estar disponível novamente.',
 
     'error.saveNotification': 'Não foi possível salvar a preferência de notificação.',
     'error.saveFloating': 'Não foi possível salvar a preferência do widget flutuante.',
