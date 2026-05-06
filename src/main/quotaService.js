@@ -47,6 +47,9 @@ export class QuotaService {
       if (error?.name === 'AbortError') {
         throw new QuotaError('server', 'Quota request timed out.');
       }
+      if (error instanceof TypeError) {
+        throw new QuotaError('network', 'Network unavailable.');
+      }
       throw error;
     } finally {
       clearTimeout(timer);

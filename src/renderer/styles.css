@@ -1308,6 +1308,64 @@ body[data-view="onboard"] .app-footer {
   display: none;
 }
 
+/* Offline banner */
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--warning-soft);
+  border-radius: var(--radius-sm);
+}
+
+.offline-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.offline-banner-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.offline-banner-body {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.offline-banner-dismiss {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.offline-banner-dismiss:hover {
+  background: var(--muted);
+  color: var(--foreground);
+  filter: none;
+}
+
+.offline-banner-dismiss svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
 /* Floating widget */
 
 .floating-body {
@@ -1455,6 +1513,23 @@ body[data-view="onboard"] .app-footer {
   flex: 1;
   height: 4px;
   border-radius: 1px;
+}
+
+/* Window show animation */
+
+@keyframes windowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body[data-entering] {
+  animation: windowEnter 220ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

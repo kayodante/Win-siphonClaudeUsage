@@ -105,6 +105,16 @@
           </div>
         </section>
 
+        <div id="offlineBanner" class="offline-banner" hidden>
+          <div class="offline-banner-text">
+            <span class="offline-banner-title" data-i18n="error.offline.title">No connection</span>
+            <span class="offline-banner-body" data-i18n="error.offline.body">Quota data unavailable. Check your internet connection.</span>
+          </div>
+          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
         <section class="grid">
           <article class="card">
             <span class="card-eyebrow" data-i18n="home.weeklyAll">Weekly All</span>

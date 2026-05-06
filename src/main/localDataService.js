@@ -205,7 +205,12 @@ async function summarizeFromJSONL(projectsDir, pricing, now) {
   let projectEntries;
   try {
     projectEntries = await fs.readdir(projectsDir, { withFileTypes: true });
-  } catch {
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      const err = new Error('No Claude Code data found');
+      err.code = 'ENODATA';
+      throw err;
+    }
     return summarizeUsage(null, null, now);
   }
 

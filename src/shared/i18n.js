@@ -68,7 +68,12 @@ const STRINGS = Object.freeze({
     'error.saveNotification': 'Could not save notification preference.',
     'error.saveFloating': 'Could not save floating widget preference.',
     'error.saveLanguage': 'Could not save language preference.',
-    'error.loadState': 'Could not load app state. Try restarting Siphon.'
+    'error.loadState': 'Could not load app state. Try restarting Siphon.',
+
+    'error.local.missing': 'No usage data yet. Run Claude Code to generate data.',
+    'error.local.corrupted': 'Usage cache is corrupted. Try restarting Claude Code.',
+    'error.offline.title': 'No connection',
+    'error.offline.body': 'Quota data unavailable. Check your internet connection.'
   }),
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
@@ -137,7 +142,12 @@ const STRINGS = Object.freeze({
     'error.saveNotification': 'Não foi possível salvar a preferência de notificação.',
     'error.saveFloating': 'Não foi possível salvar a preferência do widget flutuante.',
     'error.saveLanguage': 'Não foi possível salvar a preferência de idioma.',
-    'error.loadState': 'Não foi possível carregar o estado do app. Reinicie o Siphon.'
+    'error.loadState': 'Não foi possível carregar o estado do app. Reinicie o Siphon.',
+
+    'error.local.missing': 'Sem dados de uso ainda. Execute o Claude Code para gerar dados.',
+    'error.local.corrupted': 'Cache de uso corrompido. Tente reiniciar o Claude Code.',
+    'error.offline.title': 'Sem conexão',
+    'error.offline.body': 'Dados de cota indisponíveis. Verifique sua conexão.'
   })
 });
 

@@ -45,7 +45,8 @@ export class UsageController extends EventEmitter {
       preferences: this.preferences.load(),
       isSignedIn: false,
       awaitingCode: false,
-      lastUpdated: null
+      lastUpdated: null,
+      isOffline: false
     };
     this.preferences.on?.('change', event => this.#handlePreferenceChange(event));
   }
@@ -97,7 +98,9 @@ export class UsageController extends EventEmitter {
       console.error('refreshLocal failed', error);
       this.state.localError =
         error instanceof SyntaxError
-          ? 'Claude Code usage cache is corrupted.'
+          ? 'error.local.corrupted'
+          : error.code === 'ENODATA'
+          ? 'error.local.missing'
           : 'Could not read ~/.claude usage files.';
     } finally {
       this.localInFlight = false;
@@ -115,6 +118,7 @@ export class UsageController extends EventEmitter {
       this.state.quota = serializeQuota(quota);
       this.state.quotaError = null;
       this.state.isSignedIn = true;
+      this.state.isOffline = false;
       if (this.preferences.get('notifications.sessionReset')) {
         this.resetScheduler.updateFromQuota(quota);
       } else {
@@ -127,6 +131,9 @@ export class UsageController extends EventEmitter {
       } else if (error instanceof QuotaError && error.code === 'not_signed_in') {
         this.state.isSignedIn = false;
         this.state.quota = null;
+      } else if (error instanceof QuotaError && error.code === 'network') {
+        this.state.isOffline = true;
+        this.state.quotaError = null;
       } else {
         console.error('refreshQuota failed', error);
         this.state.quotaError = error.message;

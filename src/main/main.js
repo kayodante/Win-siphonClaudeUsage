@@ -49,7 +49,7 @@ let controller = null;
 let preferences = null;
 let trayIconLevel = 'ok';
 
-app.setAppUserModelId('com.siphon.windows');
+app.setAppUserModelId('com.kayodantes.siphon');
 
 console.log('[siphon] requesting single instance lock');
 if (!app.requestSingleInstanceLock()) {
@@ -80,11 +80,13 @@ function onReady() {
   const resetScheduler = new ResetNotificationScheduler({
     notify: () => {
       const lang = preferences.get('language') || 'en';
-      new Notification({
+      const notif = new Notification({
         title: t('notification.resetTitle', lang),
         body: t('notification.resetBody', lang),
         silent: false
-      }).show();
+      });
+      notif.on('click', () => showMainWindow());
+      notif.show();
       if (preferences.get('notifications.sound')) {
         window?.webContents.send('play-reset-sound');
       }

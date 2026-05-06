@@ -69,6 +69,13 @@ Shipped. Captured here so it's not re-litigated:
 - Consumes the existing `state-changed` channel; no duplicate controller.
 - Drag region on the background; click on percent area opens the main window.
 
+**UX polish (v0.2)**
+
+- Reset toast click → `showMainWindow()`. `notif.on('click', ...)` in `main.js` notify callback.
+- Offline banner: `QuotaError('network')` in `quotaService.js` on `TypeError` from fetch; `state.isOffline` flag in controller; dismissable `#offlineBanner` in renderer with `error.offline.title/body` i18n.
+- Friendlier local data empty-state: `summarizeFromJSONL` throws `{ code: 'ENODATA' }` on ENOENT projectsDir; controller maps to `error.local.missing` / `error.local.corrupted` i18n keys; renderer translates via `t()`.
+- Window show animation: CSS `@keyframes windowEnter` (opacity + translateY) on `body[data-entering]`; toggled by `visibilitychange` listener in renderer.
+
 **Localization**
 
 - UI strings externalized through `src/shared/i18n.js` with English and
@@ -94,36 +101,7 @@ Shipped. Captured here so it's not re-litigated:
 
 ## Now
 
-Quick wins ordered by speed-to-ship. Each is small, scoped to existing
-modules, no new infrastructure.
-
-### 1. Click-through from reset notification
-
-When the reset toast fires, clicking it should open the main window.
-Wire the toast's `click` event in `resetNotificationScheduler.js` (or
-the consumer in `main.js`) to `window.show()` + `window.focus()`. Few
-lines; no new IPC.
-
-### 2. Offline / no-network banner
-
-Surface a clean banner in the renderer instead of the raw `quotaError`
-string. Detect network errors in `quotaService.js` (caught fetch /
-`ENOTFOUND` / `ECONNREFUSED`), mark them on state, and render a
-dismissable banner above the cards. i18n keys: `error.offline.title`,
-`error.offline.body`. Renderer-only beyond one new state field.
-
-### 3. Friendlier `LocalDataService` empty-state
-
-Today, a missing `~/.claude/readout-cost-cache.json` collapses to
-"Could not read". Distinguish *file missing* (Claude Code never ran)
-from *parse error* (corrupted) and surface a localized copy. One
-branch in `localDataService.js` + two i18n keys.
-
-### 4. Window show animation
-
-Add a short fade/slide on `window.show()` from the tray. CSS-only
-(opacity + transform on the renderer root, triggered by a `body` data
-attribute set on first paint). No native window APIs needed.
+(empty — all items shipped)
 
 ## Next
 

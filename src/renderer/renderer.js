@@ -46,7 +46,9 @@ const elements = {
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   errorText: document.querySelector('#errorText'),
   appVersionText: document.querySelector('#appVersionText'),
-  githubLink: document.querySelector('#githubLink')
+  githubLink: document.querySelector('#githubLink'),
+  offlineBanner: document.querySelector('#offlineBanner'),
+  offlineBannerDismiss: document.querySelector('#offlineBannerDismiss')
 };
 
 let appInfo = {
@@ -56,6 +58,7 @@ let appInfo = {
 };
 let currentState = null;
 let requestedView = 'main';
+let offlineDismissed = false;
 
 elements.refreshButton.addEventListener('click', () => window.siphon.refresh());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
@@ -128,6 +131,10 @@ elements.onboardCodeForm.addEventListener('submit', event => {
 elements.githubLink.addEventListener('click', event => {
   event.preventDefault();
   window.siphon.openExternal('https://github.com/kayodante/siphonClaudeUsage');
+});
+elements.offlineBannerDismiss.addEventListener('click', () => {
+  offlineDismissed = true;
+  elements.offlineBanner.hidden = true;
 });
 
 initDotMatrix();
@@ -205,9 +212,13 @@ function render(state) {
   elements.settingsSoundToggle.checked = soundEnabled;
   elements.settingsFloatingToggle.checked = floatingEnabled;
 
-  elements.errorText.textContent = [state.localError, state.quotaError, state.authError]
-    .filter(Boolean)
-    .join(' ');
+  if (!state.isOffline) offlineDismissed = false;
+  elements.offlineBanner.hidden = !state.isOffline || offlineDismissed;
+  elements.errorText.textContent = [
+    state.localError ? t(state.localError, lang) : null,
+    state.quotaError,
+    state.authError
+  ].filter(Boolean).join(' ');
 
   renderSettings(state, lang);
 }
@@ -384,3 +395,12 @@ function initDotMatrix() {
   }
   requestAnimationFrame(tick);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    document.body.dataset.entering = '1';
+    document.body.addEventListener('animationend', () => {
+      delete document.body.dataset.entering;
+    }, { once: true });
+  }
+});

@@ -1,22 +1,14 @@
-!include "nsDialogs.nsh"
-!include "LogicLib.nsh"
+ShowInstDetails show
+InstallColors 40F589 000000
 
 !macro customFinishPage
-  !define MUI_PAGE_CUSTOMFUNCTION_SHOW siphonFinishShow
-  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE siphonFinishLeave
+  !define MUI_FINISHPAGE_SHOWREADME ""
+  !define MUI_FINISHPAGE_SHOWREADME_TEXT "Criar atalho na area de trabalho"
+  !define MUI_FINISHPAGE_SHOWREADME_FUNCTION siphonCreateDesktopShortcut
   !insertmacro MUI_PAGE_FINISH
 
-  Function siphonFinishShow
-    ${NSD_CreateCheckbox} 120u 110u 180u 10u "Criar atalho na area de trabalho"
-    Pop $R8
-    ${NSD_Check} $R8
-  FunctionEnd
-
-  Function siphonFinishLeave
-    ${NSD_GetState} $R8 $R9
-    ${If} $R9 == ${BST_CHECKED}
-      CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
-    ${EndIf}
+  Function siphonCreateDesktopShortcut
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
   FunctionEnd
 !macroend
 
