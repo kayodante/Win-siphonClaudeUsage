@@ -29,6 +29,7 @@ const elements = {
   notificationIconOff: document.querySelector('#notificationIconOff'),
   weeklyAll: document.querySelector('#weeklyAll'),
   weeklySonnet: document.querySelector('#weeklySonnet'),
+  weeklySonnetLabel: document.querySelector('#weeklySonnetLabel'),
   todayCost: document.querySelector('#todayCost'),
   monthCost: document.querySelector('#monthCost'),
   signOutButton: document.querySelector('#signOutButton'),
@@ -149,6 +150,8 @@ function render(state) {
   const session = hydrateSlot(state.quota?.session);
   const weeklyAll = hydrateSlot(state.quota?.weeklyAll);
   const weeklySonnet = hydrateSlot(state.quota?.weeklySonnet);
+  const extraUsage = state.quota?.extraUsage ?? null;
+  const showExtraUsage = !weeklySonnet && extraUsage?.isEnabled;
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
@@ -168,7 +171,15 @@ function render(state) {
 
   elements.weeklyAll.textContent = weeklyAll ? formatPercent(weeklyAll.percent) : '--';
   elements.weeklyAll.dataset.level = weeklyAll ? levelForPercent(weeklyAll.percent) : '';
-  elements.weeklySonnet.textContent = weeklySonnet ? formatPercent(weeklySonnet.percent) : '--';
+  if (showExtraUsage) {
+    elements.weeklySonnetLabel.textContent = t('home.extraUsage', lang);
+    elements.weeklySonnet.textContent = formatPercent(extraUsage.percent);
+    elements.weeklySonnet.title = `${formatCurrency(extraUsage.usedCredits)} / ${formatCurrency(extraUsage.monthlyLimit)}`;
+  } else {
+    elements.weeklySonnetLabel.textContent = t('home.weeklySonnet', lang);
+    elements.weeklySonnet.textContent = weeklySonnet ? formatPercent(weeklySonnet.percent) : '--';
+    elements.weeklySonnet.title = '';
+  }
   elements.todayCost.textContent = formatCurrency(state.todayStats?.cost);
   elements.monthCost.textContent = formatCurrency(state.monthStats?.cost);
   updateLastUpdatedLine();

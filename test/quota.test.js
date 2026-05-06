@@ -32,6 +32,33 @@ test('parseUsageResponse returns nulls when buckets are missing', () => {
   assert.equal(quota.weeklyAll, null);
   assert.equal(quota.weeklySonnet, null);
   assert.equal(quota.weeklyOpus, null);
+  assert.equal(quota.extraUsage, null);
+});
+
+test('parseUsageResponse maps enabled extra_usage bucket', () => {
+  const quota = parseUsageResponse({
+    extra_usage: {
+      is_enabled: true,
+      monthly_limit: 2000,
+      used_credits: 27,
+      utilization: 1.35,
+      currency: 'USD'
+    }
+  });
+  assert.deepEqual(quota.extraUsage, {
+    isEnabled: true,
+    percent: 1.35,
+    monthlyLimit: 2000,
+    usedCredits: 27,
+    currency: 'USD'
+  });
+});
+
+test('parseUsageResponse ignores extra_usage when disabled', () => {
+  const quota = parseUsageResponse({
+    extra_usage: { is_enabled: false, monthly_limit: 0, used_credits: 0, utilization: 0 }
+  });
+  assert.equal(quota.extraUsage, null);
 });
 
 test('parseUsageResponse tolerates null payload', () => {

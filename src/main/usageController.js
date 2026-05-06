@@ -224,7 +224,8 @@ function serializeQuota(quota) {
     session: serializeSlot(quota.session),
     weeklyAll: serializeSlot(quota.weeklyAll),
     weeklySonnet: serializeSlot(quota.weeklySonnet),
-    weeklyOpus: serializeSlot(quota.weeklyOpus)
+    weeklyOpus: serializeSlot(quota.weeklyOpus),
+    extraUsage: serializeExtra(quota.extraUsage)
   };
 }
 
@@ -233,6 +234,17 @@ function serializeSlot(slot) {
   return {
     percent: slot.percent,
     resetsAt: slot.resetsAt?.toISOString() ?? null
+  };
+}
+
+function serializeExtra(extra) {
+  if (!extra) return null;
+  return {
+    isEnabled: extra.isEnabled,
+    percent: extra.percent,
+    monthlyLimit: extra.monthlyLimit,
+    usedCredits: extra.usedCredits,
+    currency: extra.currency
   };
 }
 
