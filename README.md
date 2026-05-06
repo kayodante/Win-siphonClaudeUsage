@@ -25,7 +25,6 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 | **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown |
 | **Weekly limits** | Tracks all-model and Sonnet-specific weekly caps |
 | **Cost tracking** | Today's and this month's spend in USD, computed from Claude Code's local pricing files |
-| **Usage history** | Recent days breakdown in a dedicated history view |
 | **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened |
 | **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen |
 | **Color-coded tray icon** | Icon shifts from neutral → warning → danger as quota fills up |
@@ -53,8 +52,8 @@ Download the latest `Siphon Setup <version>.exe` from [Releases](../../releases)
 ### From source
 
 ```powershell
-git clone https://github.com/appariciojunior/siphon-windows.git
-cd siphon-windows
+git clone https://github.com/kayodante/siphonClaudeUsage.git
+cd siphonClaudeUsage
 npm install
 npm start
 ```
