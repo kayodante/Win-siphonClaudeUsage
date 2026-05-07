@@ -41,9 +41,10 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 <br/>
 
-![Floating widget](screenshots/screenshotWidget-1.png)
-
-*Floating mini widget — always on top, drag anywhere*
+| Widget |
+|:---:|
+| ![Floating widget](screenshots/screenshotWidget-1.png) |
+| Floating mini widget — always on top, drag anywhere |
 
 </div>
 

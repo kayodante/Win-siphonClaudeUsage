@@ -12,58 +12,24 @@ test('parseUsageResponse maps API buckets to display quota slots', () => {
     seven_day: {
       utilization: 42.5,
       resets_at: '2026-04-30T12:00:00Z'
-    },
-    seven_day_sonnet: {
-      utilization: 77,
-      resets_at: null
     }
   });
 
   assert.equal(quota.session.percent, 100);
   assert.equal(quota.session.resetsAt.toISOString(), '2026-04-27T18:30:00.000Z');
   assert.equal(quota.weeklyAll.percent, 42.5);
-  assert.equal(quota.weeklySonnet.percent, 77);
-  assert.equal(quota.weeklyOpus, null);
 });
 
 test('parseUsageResponse returns nulls when buckets are missing', () => {
   const quota = parseUsageResponse({});
   assert.equal(quota.session, null);
   assert.equal(quota.weeklyAll, null);
-  assert.equal(quota.weeklySonnet, null);
-  assert.equal(quota.weeklyOpus, null);
-  assert.equal(quota.extraUsage, null);
-});
-
-test('parseUsageResponse maps enabled extra_usage bucket', () => {
-  const quota = parseUsageResponse({
-    extra_usage: {
-      is_enabled: true,
-      monthly_limit: 2000,
-      used_credits: 27,
-      utilization: 1.35,
-      currency: 'USD'
-    }
-  });
-  assert.deepEqual(quota.extraUsage, {
-    isEnabled: true,
-    percent: 1.35,
-    monthlyLimit: 2000,
-    usedCredits: 27,
-    currency: 'USD'
-  });
-});
-
-test('parseUsageResponse ignores extra_usage when disabled', () => {
-  const quota = parseUsageResponse({
-    extra_usage: { is_enabled: false, monthly_limit: 0, used_credits: 0, utilization: 0 }
-  });
-  assert.equal(quota.extraUsage, null);
 });
 
 test('parseUsageResponse tolerates null payload', () => {
   const quota = parseUsageResponse(null);
   assert.equal(quota.session, null);
+  assert.equal(quota.weeklyAll, null);
 });
 
 test('QuotaService.fetchQuota maps malformed JSON to QuotaError("server")', async () => {

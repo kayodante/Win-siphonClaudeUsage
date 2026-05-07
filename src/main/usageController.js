@@ -36,7 +36,6 @@ export class UsageController extends EventEmitter {
     this.state = {
       todayStats: emptyStats(),
       monthStats: emptyStats(),
-      recentDays: [],
       quota: null,
       localError: null,
       quotaError: null,
@@ -91,7 +90,6 @@ export class UsageController extends EventEmitter {
       const summary = await this.localService.load();
       this.state.todayStats = summary.todayStats;
       this.state.monthStats = summary.monthStats;
-      this.state.recentDays = summary.recentDays.slice(0, 7);
       this.state.lastUpdated = summary.lastUpdated.toISOString();
       this.state.localError = null;
     } catch (error) {
@@ -176,6 +174,7 @@ export class UsageController extends EventEmitter {
 
   async signOut() {
     await this.tokenStore.clear();
+    this.resetScheduler.clear();
     this.authFlow = null;
     this.state.awaitingCode = false;
     this.state.isSignedIn = false;
@@ -200,6 +199,7 @@ export class UsageController extends EventEmitter {
       console.error('[profile] refresh failed', error);
       this.state.profile = null;
     }
+    this.#emit();
   }
 
   #handlePreferenceChange(event) {
@@ -229,10 +229,7 @@ function createDefaultPreferences() {
 function serializeQuota(quota) {
   return {
     session: serializeSlot(quota.session),
-    weeklyAll: serializeSlot(quota.weeklyAll),
-    weeklySonnet: serializeSlot(quota.weeklySonnet),
-    weeklyOpus: serializeSlot(quota.weeklyOpus),
-    extraUsage: serializeExtra(quota.extraUsage)
+    weeklyAll: serializeSlot(quota.weeklyAll)
   };
 }
 
@@ -241,17 +238,6 @@ function serializeSlot(slot) {
   return {
     percent: slot.percent,
     resetsAt: slot.resetsAt?.toISOString() ?? null
-  };
-}
-
-function serializeExtra(extra) {
-  if (!extra) return null;
-  return {
-    isEnabled: extra.isEnabled,
-    percent: extra.percent,
-    monthlyLimit: extra.monthlyLimit,
-    usedCredits: extra.usedCredits,
-    currency: extra.currency
   };
 }
 

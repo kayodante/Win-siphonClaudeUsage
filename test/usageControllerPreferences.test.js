@@ -41,7 +41,7 @@ test('controller state includes preferences snapshot', () => {
 
   assert.deepEqual(controller.getState().preferences, {
     language: 'en',
-    notifications: { sessionReset: false },
+    notifications: { sessionReset: false, sound: false },
     floating: { enabled: false, x: null, y: null },
     claudePath: null
   });
@@ -62,16 +62,13 @@ function createController({ preferences, scheduler }) {
           percent: 100,
           resetsAt: new Date('2026-04-29T18:00:00Z')
         },
-        weeklyAll: null,
-        weeklySonnet: null,
-        weeklyOpus: null
+        weeklyAll: null
       })
     },
     localService: {
       load: async () => ({
         todayStats: {},
         monthStats: {},
-        recentDays: [],
         lastUpdated: new Date('2026-04-29T12:00:00Z')
       })
     },

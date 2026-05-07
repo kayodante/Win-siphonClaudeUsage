@@ -1,4 +1,5 @@
-import { formatPercent, formatResetDistance, levelForPercent } from '../shared/format.js';
+import { formatClockTime, formatPercent, levelForPercent } from '../shared/format.js';
+import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 20;
 
@@ -6,11 +7,14 @@ const elements = {
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
   refreshButton: document.querySelector('#floatingRefreshButton'),
+  titleLabel: document.querySelector('#floatingTitleLabel'),
   percent: document.querySelector('#floatingPercent'),
   resetLabel: document.querySelector('#floatingResetLabel'),
   resetTime: document.querySelector('#floatingResetTime'),
   meter: document.querySelector('#floatingMeter')
 };
+
+let currentLang = 'en';
 
 elements.openButton.addEventListener('click', () => {
   window.siphon.openMainWindowFromWidget();
@@ -32,25 +36,41 @@ try {
 } catch (error) {
   console.error('Floating widget bootstrap failed', error);
   elements.percent.textContent = '--';
-  elements.resetLabel.textContent = 'Could not load state';
+  elements.resetLabel.textContent = t('floating.error', currentLang);
   elements.resetTime.textContent = '';
 }
 
 function render(state) {
+  currentLang = languageOf(state);
+  applyStaticLabels();
+
   const session = hydrateSlot(state.quota?.session);
   const percent = clampPercent(session?.percent ?? 0);
 
   elements.percent.textContent = session ? formatPercent(session.percent) : '--';
 
-  if (session) {
-    elements.resetLabel.textContent = 'Reset ';
-    elements.resetTime.textContent = formatResetDistance(session.resetsAt);
-  } else {
-    elements.resetLabel.textContent = 'Sign in';
-    elements.resetTime.textContent = '';
-  }
+  elements.resetLabel.textContent = buildFloatingReset(session, currentLang);
+  elements.resetTime.textContent = '';
 
   renderMeter(percent);
+}
+
+function buildFloatingReset(session, lang) {
+  if (!session) return t('floating.signIn', lang);
+  const percent = clampPercent(session.percent ?? 0);
+  if (percent === 0) return t('session.reset.empty', lang);
+  return tFormat('reset.connector.at', lang, { time: formatClockTime(session.resetsAt) });
+}
+
+function applyStaticLabels() {
+  elements.titleLabel.textContent = t('floating.title', currentLang);
+  elements.refreshButton.setAttribute('aria-label', t('floating.refresh', currentLang));
+  elements.closeButton.setAttribute('aria-label', t('floating.close', currentLang));
+  elements.openButton.setAttribute('aria-label', t('floating.openMain', currentLang));
+}
+
+function languageOf(state) {
+  return state?.preferences?.language === 'pt-BR' ? 'pt-BR' : 'en';
 }
 
 function renderMeter(percent) {

@@ -12,25 +12,25 @@
       <header class="floating-header">
         <div class="floating-title">
           <img class="floating-logo" src="../../assets/tray.png" alt="" aria-hidden="true" />
-          <span class="floating-label">Sessão Atual</span>
+          <span class="floating-label" id="floatingTitleLabel"></span>
         </div>
         <div class="floating-actions">
-          <button id="floatingRefreshButton" class="floating-action-btn" aria-label="Atualizar">
+          <button id="floatingRefreshButton" class="floating-action-btn">
             <!-- Carbon: Restart -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
           </button>
-          <button id="floatingCloseButton" class="floating-action-btn" aria-label="Fechar widget">
+          <button id="floatingCloseButton" class="floating-action-btn">
             <!-- Carbon: Close -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 9.4 22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6L24 9.4z"/></svg>
           </button>
         </div>
       </header>
       <div class="floating-info">
-        <button id="floatingOpenButton" class="floating-percent-button" aria-label="Abrir Siphon">
+        <button id="floatingOpenButton" class="floating-percent-button">
           <span class="floating-percent" id="floatingPercent">--</span>
         </button>
         <span class="floating-reset" aria-live="polite">
-          <span id="floatingResetLabel" class="floating-reset-label">Sign in</span><span id="floatingResetTime" class="floating-reset-time"></span>
+          <span id="floatingResetLabel" class="floating-reset-label"></span><span id="floatingResetTime" class="floating-reset-time"></span>
         </span>
       </div>
       <div id="floatingMeter" class="floating-meter-bar" aria-hidden="true"></div>

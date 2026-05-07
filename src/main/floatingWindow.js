@@ -80,7 +80,7 @@ export class FloatingWindowController {
       skipTaskbar: true,
       show: false,
       title: 'Siphon Widget',
-      backgroundColor: '#00000000',
+      backgroundColor: '#000000bf',
       backgroundMaterial: 'acrylic',
       webPreferences: {
         preload: this.preloadPath,

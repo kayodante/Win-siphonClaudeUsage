@@ -11,6 +11,8 @@ const assetRoot = path.resolve(__dirname, '..', '..', 'assets');
 const ICONS = {
   ok: 'tray.png',
   warn: 'tray-warn.png',
+  high: 'tray-high.png',
+  critical: 'tray-danger.png',
   danger: 'tray-danger.png'
 };
 

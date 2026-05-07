@@ -26,6 +26,7 @@ import {
 
 console.log('[siphon] electron imported');
 
+import { createAppIcon } from './appIcon.js';
 import { buildTrayMenuTemplate, startApplication } from './appLifecycle.js';
 import { FloatingWindowController } from './floatingWindow.js';
 import { JsonStore } from './jsonStore.js';
@@ -40,7 +41,7 @@ import { t } from '../shared/i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
-const appIcon = nativeImage.createFromPath(path.join(projectRoot, 'assets', 'installer', 'icon.ico'));
+const appIcon = createAppIcon(nativeImage, projectRoot);
 
 let tray = null;
 let window = null;
@@ -167,9 +168,9 @@ function createWindow() {
 
   window = new BrowserWindow({
     width: 336,
-    height: 620,
+    height: 660,
     minWidth: 336,
-    minHeight: 520,
+    minHeight: 600,
     resizable: true,
     show: false,
     frame: false,
@@ -196,6 +197,16 @@ function createTray() {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('Siphon');
   tray.on('double-click', () => showMainWindow());
+  tray.setContextMenu(
+    Menu.buildFromTemplate(
+      buildTrayMenuTemplate({
+        showMainWindow,
+        showFloatingWidget: enableFloatingWidget,
+        showSettingsWindow,
+        quit
+      })
+    )
+  );
   updateTray(controller.getState());
 }
 
@@ -211,16 +222,6 @@ function updateTray(state) {
 
   const sessionText = session == null ? '--' : `${Math.round(session)}%`;
   tray.setToolTip(`Siphon - session ${sessionText}`);
-  tray.setContextMenu(
-    Menu.buildFromTemplate(
-      buildTrayMenuTemplate({
-        showMainWindow,
-        showFloatingWidget: enableFloatingWidget,
-        showSettingsWindow,
-        quit
-      })
-    )
-  );
 }
 
 function registerIpc() {
@@ -315,7 +316,6 @@ function showWindow() {
     window.restore();
   }
   window.show();
-  window.setIcon(appIcon);
   window.focus();
 }
 

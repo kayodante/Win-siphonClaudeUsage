@@ -3,7 +3,8 @@ import EventEmitter from 'node:events';
 export const DEFAULT_PREFERENCES = Object.freeze({
   language: 'en',
   notifications: Object.freeze({
-    sessionReset: true
+    sessionReset: true,
+    sound: false
   }),
   floating: Object.freeze({
     enabled: false,

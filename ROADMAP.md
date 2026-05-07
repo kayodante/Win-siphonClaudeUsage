@@ -17,7 +17,7 @@ Feature-by-feature comparison against the macOS Swift original.
 | Weekly all + weekly Sonnet                        |   ✓   |    ✓    | Surfaces `extra_usage` credits when weekly Sonnet data is absent. |
 | Today's USD cost                                  |   ✓   |    ✓    |  |
 | This month's USD cost                             |   ✓   |    ✓    |  |
-| Recent days breakdown                             |   ✓   |    ✓    | Now in a dedicated history view, opened via the topbar history button. |
+| Recent days breakdown                             |   ✓   |    ✗    | Removed; backing data dropped. May return as a dedicated view later. |
 | Local cost data refresh (~30 s)                   |   ✓   |    ✓    |  |
 | OAuth quota refresh                               |   ✓   |    ✓    | Every 120 s on Windows. |
 | OAuth PKCE sign-in (paste-redirect flow)          |   ✓   |    ✓    | Same client ID and endpoints as Claude Code. |
@@ -43,9 +43,6 @@ Shipped. Captured here so it's not re-litigated:
   `Lightning`, `Notification`, `NotificationOff`, `Close`, `ArrowLeft`, `Locked`).
 - Quota panel renamed to *Sessão Atual*. Headline in `GeistPixel-Line` 56px.
 - Stat grid is 2×2 (Weekly all · Weekly Sonnet · Hoje · Este mês). Pixel numerals at 24px.
-- Recent days moved out of the main view into a dedicated *History* view,
-  reached via the new history button in the topbar (renderer-only navigation,
-  no IPC).
 - *Updated just now* line under the grid, centered, dot pulsing
   (`formatRelativeUpdated` in `src/shared/format.js`, refreshed every 30 s).
 - Brand mark replaced by `assets/Logo.png` lockup (logo + wordmark in one

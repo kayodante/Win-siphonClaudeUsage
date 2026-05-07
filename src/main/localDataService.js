@@ -46,15 +46,12 @@ export function summarizeUsage(cache, pricing, now = new Date()) {
   const days = cache?.days ?? {};
   const todayModels = new Map();
   const monthModels = new Map();
-  const recentDays = [];
 
   for (const [date, modelMap] of Object.entries(days)) {
-    let dayCost = 0;
     for (const [model, rawTokens] of Object.entries(modelMap ?? {})) {
       const tokens = normalizeTokens(rawTokens);
       const price = findPrice(pricing, model);
       const cost = price ? tokenCost(tokens, price) : 0;
-      dayCost += cost;
 
       if (date === today) {
         todayModels.set(model, { tokens, cost });
@@ -65,13 +62,11 @@ export function summarizeUsage(cache, pricing, now = new Date()) {
         monthModels.set(model, addTokens(current, tokens, cost));
       }
     }
-    recentDays.push({ date, cost: roundCost(dayCost) });
   }
 
   return {
     todayStats: aggregateToday(todayModels),
     monthStats: aggregateMonth(monthModels),
-    recentDays: recentDays.sort((a, b) => b.date.localeCompare(a.date)),
     lastUpdated: now
   };
 }

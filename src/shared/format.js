@@ -14,8 +14,9 @@ export function formatPercent(value) {
 }
 
 export function levelForPercent(value) {
-  if (value >= 95) return 'danger';
-  if (value >= 80) return 'warn';
+  if (value >= 85) return 'critical';
+  if (value >= 70) return 'high';
+  if (value >= 40) return 'warn';
   return 'ok';
 }
 
@@ -37,6 +38,46 @@ export function formatDayTime(date) {
     hour: 'numeric',
     minute: '2-digit'
   }).format(date);
+}
+
+export function formatClockTime(date) {
+  if (!date) return '--:--';
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+export function formatTimeRemaining(date, now = new Date(), lang = 'en') {
+  if (!date) return '';
+  const diffMs = date.getTime() - now.getTime();
+  if (diffMs <= 0) return lang === 'pt-BR' ? '0min restantes' : '0min remaining';
+  const totalMinutes = Math.ceil(diffMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return lang === 'pt-BR'
+      ? `${hours}h ${minutes}min restantes`
+      : `${hours}h ${minutes}min remaining`;
+  }
+  return lang === 'pt-BR' ? `${minutes}min restantes` : `${minutes}min remaining`;
+}
+
+export function formatDaysRemaining(date, now = new Date(), lang = 'en') {
+  if (!date) return '';
+  const diffMs = date.getTime() - now.getTime();
+  if (diffMs <= 0) return lang === 'pt-BR' ? 'Reseta em breve' : 'Resets soon';
+  const days = Math.max(1, Math.ceil(diffMs / 86_400_000));
+  if (days === 1) return lang === 'pt-BR' ? 'Reseta em 1 dia' : 'Resets in 1 day';
+  return lang === 'pt-BR' ? `Reseta em ${days} dias` : `Resets in ${days} days`;
+}
+
+export function formatWeekdayClock(date, lang = 'en') {
+  if (!date) return '--';
+  const locale = lang === 'pt-BR' ? 'pt-BR' : 'en-US';
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+  const cleaned = weekday.replace('.', '');
+  const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return `${capitalized}, ${formatClockTime(date)}`;
 }
 
 export function formatRelativeUpdated(date, now = new Date(), lang = 'en') {

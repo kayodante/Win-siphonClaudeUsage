@@ -16,8 +16,15 @@ test('createTrayIcon returns a non-empty warn icon', () => {
   assert.match(result.stdout, /"isEmpty":false/);
 });
 
-test('createTrayIcon returns a non-empty danger icon', () => {
-  const result = runProbe('danger');
+test('createTrayIcon returns a non-empty high icon', () => {
+  const result = runProbe('high');
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /"isEmpty":false/);
+});
+
+test('createTrayIcon returns a non-empty critical icon', () => {
+  const result = runProbe('critical');
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /"isEmpty":false/);

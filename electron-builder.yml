@@ -10,9 +10,10 @@ files:
   - "!test/**"
   - "!scripts/**"
   - "!docs/**"
-  - "!mockup.html"
   - "!ROADMAP.md"
   - "!ARCHITECTURE.md"
+asarUnpack:
+  - assets/installer/icon.ico
 win:
   target: nsis
   icon: assets/installer/icon.ico
@@ -26,6 +27,5 @@ nsis:
   installerHeader: assets/installer/installer-header.bmp
   shortcutName: Siphon
   createStartMenuShortcut: true
-  menuCategory: Siphon
   createDesktopShortcut: false
   include: assets/installer/installer.nsh

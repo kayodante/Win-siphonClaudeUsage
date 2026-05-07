@@ -10,10 +10,7 @@ export class QuotaError extends Error {
 export function parseUsageResponse(raw) {
   return {
     session: parseBucket(raw?.five_hour),
-    weeklyAll: parseBucket(raw?.seven_day),
-    weeklySonnet: parseBucket(raw?.seven_day_sonnet),
-    weeklyOpus: parseBucket(raw?.seven_day_opus),
-    extraUsage: parseExtraUsage(raw?.extra_usage)
+    weeklyAll: parseBucket(raw?.seven_day)
   };
 }
 
@@ -104,17 +101,6 @@ function parseBucket(bucket) {
   return {
     percent: Number(bucket.utilization ?? 0),
     resetsAt: parseDate(bucket.resets_at)
-  };
-}
-
-function parseExtraUsage(bucket) {
-  if (!bucket || bucket.is_enabled !== true) return null;
-  return {
-    isEnabled: true,
-    percent: Number(bucket.utilization ?? 0),
-    monthlyLimit: Number(bucket.monthly_limit ?? 0),
-    usedCredits: Number(bucket.used_credits ?? 0),
-    currency: bucket.currency ?? 'USD'
   };
 }
 

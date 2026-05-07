@@ -1,12 +1,11 @@
 import {
   formatCurrency,
-  formatDayTime,
   formatPercent,
   formatRelativeUpdated,
-  formatResetDistance,
   levelForPercent
 } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
+import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
 const elements = {
@@ -24,12 +23,13 @@ const elements = {
   sessionPercent: document.querySelector('#sessionPercent'),
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
+  weeklyPercent: document.querySelector('#weeklyPercent'),
+  weeklyMeter: document.querySelector('#weeklyMeter'),
+  weeklyReset: document.querySelector('#weeklyReset'),
   notificationState: document.querySelector('#notificationState'),
+  notificationStateText: document.querySelector('#notificationStateText'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
   notificationIconOff: document.querySelector('#notificationIconOff'),
-  weeklyAll: document.querySelector('#weeklyAll'),
-  weeklySonnet: document.querySelector('#weeklySonnet'),
-  weeklySonnetLabel: document.querySelector('#weeklySonnetLabel'),
   todayCost: document.querySelector('#todayCost'),
   monthCost: document.querySelector('#monthCost'),
   signOutButton: document.querySelector('#signOutButton'),
@@ -137,6 +137,16 @@ elements.offlineBannerDismiss.addEventListener('click', () => {
   elements.offlineBanner.hidden = true;
 });
 
+elements.notificationState.addEventListener('click', async () => {
+  const enabled = currentState?.preferences?.notifications?.sessionReset ?? true;
+  try {
+    await window.siphon.setPreference('notifications.sessionReset', !enabled);
+  } catch (error) {
+    console.error('Failed to toggle notifications', error);
+    elements.errorText.textContent = t('error.saveNotification', currentLanguage());
+  }
+});
+
 initDotMatrix();
 
 try {
@@ -166,41 +176,29 @@ function render(state) {
   if (!state.isSignedIn) {
     requestedView = 'main';
   }
+  const now = new Date();
   const session = hydrateSlot(state.quota?.session);
-  const weeklyAll = hydrateSlot(state.quota?.weeklyAll);
-  const weeklySonnet = hydrateSlot(state.quota?.weeklySonnet);
-  const extraUsage = state.quota?.extraUsage ?? null;
-  const showExtraUsage = !weeklySonnet && extraUsage?.isEnabled;
+  const weekly = hydrateSlot(state.quota?.weeklyAll);
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const sessionPercent = clampPercent(session?.percent ?? 0);
+  const weeklyPercent = clampPercent(weekly?.percent ?? 0);
 
   renderActiveView();
 
   elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
-  renderSessionBar(sessionPercent);
-  elements.sessionReset.textContent = !session
-    ? t('home.signInPrompt', lang)
-    : sessionPercent === 0
-    ? t('home.reset.sessionInactive', lang)
-    : `${t('home.reset.in', lang)} ${formatResetDistance(session.resetsAt, new Date(), lang)} · ${formatDayTime(session.resetsAt)}`;
+  renderMeter(elements.sessionMeter, sessionPercent);
+  elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
 
-  renderNotificationPill(notificationsEnabled);
+  elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
+  renderMeter(elements.weeklyMeter, weeklyPercent);
+  elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
 
-  elements.weeklyAll.textContent = weeklyAll ? formatPercent(weeklyAll.percent) : '--';
-  elements.weeklyAll.dataset.level = weeklyAll ? levelForPercent(weeklyAll.percent) : '';
-  if (showExtraUsage) {
-    elements.weeklySonnetLabel.textContent = t('home.extraUsage', lang);
-    elements.weeklySonnet.textContent = formatPercent(extraUsage.percent);
-    elements.weeklySonnet.title = `${formatCurrency(extraUsage.usedCredits)} / ${formatCurrency(extraUsage.monthlyLimit)}`;
-  } else {
-    elements.weeklySonnetLabel.textContent = t('home.weeklySonnet', lang);
-    elements.weeklySonnet.textContent = weeklySonnet ? formatPercent(weeklySonnet.percent) : '--';
-    elements.weeklySonnet.title = '';
-  }
-  elements.todayCost.textContent = formatCurrency(state.todayStats?.cost);
-  elements.monthCost.textContent = formatCurrency(state.monthStats?.cost);
+  renderNotificationPill(notificationsEnabled, lang);
+
+  setCostValue(elements.todayCost, state.todayStats?.cost);
+  setCostValue(elements.monthCost, state.monthStats?.cost);
   updateLastUpdatedLine();
 
   elements.signOutButton.hidden = !state.isSignedIn;
@@ -231,10 +229,13 @@ function updateLastUpdatedLine() {
     : '--';
 }
 
-function renderNotificationPill(enabled) {
+function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
+  elements.notificationStateText.textContent =
+    t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
   elements.notificationIconOn.hidden = !enabled;
   elements.notificationIconOff.hidden = enabled;
+  elements.notificationState.setAttribute('aria-pressed', String(enabled));
 }
 
 function hydrateSlot(slot) {
@@ -249,11 +250,32 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function renderSessionBar(percent) {
+function setCostValue(element, cost) {
+  element.replaceChildren();
+  if (cost == null || Number.isNaN(cost)) {
+    element.textContent = '--';
+    return;
+  }
+  const formatted = formatCurrency(cost);
+  const match = formatted.match(/^([^\d.\-]+)(.*)$/);
+  if (!match) {
+    element.textContent = formatted;
+    return;
+  }
+  const [, symbol, amount] = match;
+  const symbolSpan = document.createElement('span');
+  symbolSpan.className = 'cost-symbol';
+  symbolSpan.textContent = symbol;
+  const amountSpan = document.createElement('span');
+  amountSpan.className = 'cost-amount';
+  amountSpan.textContent = amount;
+  element.append(symbolSpan, amountSpan);
+}
+
+function renderMeter(meter, percent) {
   const total = 20;
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
-  const meter = elements.sessionMeter;
   meter.dataset.level = level;
   meter.innerHTML = '';
   for (let i = 0; i < total; i++) {

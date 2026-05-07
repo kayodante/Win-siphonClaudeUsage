@@ -53,7 +53,6 @@ test('summarizeUsage handles missing cache (ENOENT path) without throwing', () =
   assert.equal(summary.todayStats.isEmpty, true);
   assert.equal(summary.todayStats.cost, 0);
   assert.equal(summary.monthStats.cost, 0);
-  assert.deepEqual(summary.recentDays, []);
 });
 
 test('summarizeUsage handles missing pricing entry by counting tokens with cost 0', () => {
@@ -75,22 +74,3 @@ test('summarizeUsage handles missing pricing entry by counting tokens with cost 
   assert.equal(summary.todayStats.cost, 0);
 });
 
-test('summarizeUsage recentDays no longer leaks raw model map', () => {
-  const cache = {
-    days: {
-      '2026-04-27': {
-        'claude-sonnet-4-5-20250929': { input: 100, output: 100 }
-      }
-    }
-  };
-  const pricing = {
-    models: {
-      'sonnet-4-5': { input: 3, output: 15 }
-    }
-  };
-  const summary = summarizeUsage(cache, pricing, new Date('2026-04-27T10:00:00Z'));
-  assert.equal(summary.recentDays.length, 1);
-  assert.equal(summary.recentDays[0].date, '2026-04-27');
-  assert.ok(typeof summary.recentDays[0].cost === 'number');
-  assert.equal(summary.recentDays[0].models, undefined);
-});

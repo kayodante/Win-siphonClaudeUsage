@@ -10,9 +10,6 @@ const STRINGS = Object.freeze({
     'onboarding.welcome': 'Welcome to Siphon',
     'onboarding.lead':
       'Track your Claude AI usage and Claude Code costs from your Windows tray. Get notified when your session resets.',
-    'onboarding.feature.session': 'Live session quota from your Claude AI plan',
-    'onboarding.feature.cost': 'Token cost read from your local Claude Code cache',
-    'onboarding.feature.notify': 'Reset notifications the moment a new session opens',
     'onboarding.copy.sessionStrong': 'Live session quota',
     'onboarding.copy.sessionMuted': 'from your Claude AI plan.',
     'onboarding.copy.costStrong': 'Token cost',
@@ -27,19 +24,28 @@ const STRINGS = Object.freeze({
     'onboarding.cancel': 'Cancel',
 
     'home.session': 'Current Session',
-    'home.weeklyAll': 'Weekly All',
-    'home.weeklySonnet': 'Weekly Sonnet',
-    'home.extraUsage': 'Extra credits',
+    'home.weekly': 'Weekly Limit',
     'home.today': 'Today',
     'home.month': 'This Month',
-    'home.signInPrompt': 'Sign in to load plan limits',
-    'home.notif.on': 'Reset notification ON',
-    'home.notif.off': 'Reset notification OFF',
-    'home.reset.in': 'Resets in',
-    'home.reset.now': 'Reset soon',
-    'home.reset.sessionInactive': 'Starts when a message is sent',
-    'home.updated.now': 'updated just now',
-    'home.updated.minutes': 'updated {minutes}min ago',
+    'home.notif.on': 'Notify reset',
+    'home.notif.off': "Don't notify reset",
+    'home.costEstimate': 'Estimated cost',
+    'home.costTooltip': 'Computed from local Claude Code cache × pricing table. May differ from actual billing.',
+
+    'session.reset.empty': 'Send a message to start',
+    'session.reset.full': 'Session full',
+    'weekly.reset.empty': 'Send a message to start',
+    'weekly.reset.full': 'Limit reached',
+    'reset.connector.at': 'Resets at {time}',
+    'reset.connector.day': 'Resets {weekday}',
+    'reset.connector.dayShort': '{weekday}',
+
+    'floating.title': 'Current Session',
+    'floating.refresh': 'Refresh',
+    'floating.close': 'Close widget',
+    'floating.openMain': 'Open Siphon',
+    'floating.signIn': 'Sign in',
+    'floating.error': 'Could not load state',
 
     'settings.account': 'Account',
     'settings.fullName': 'Full name',
@@ -52,15 +58,15 @@ const STRINGS = Object.freeze({
     'settings.language': 'Language',
     'settings.languageEN': 'English',
     'settings.languagePT': 'Português',
-    'settings.notifReset': 'Reset notification',
-    'settings.sound': 'Sound alert',
+    'settings.notifReset': 'Notify session reset',
+    'settings.sound': 'Sound alert on reset',
     'settings.floating': 'Floating widget',
     'settings.claudePath': 'Claude Code data',
     'settings.editPath': 'Edit path',
     'settings.back': 'Back',
 
     'footer.openClaude': 'Open claude.ai',
-    'footer.quit': 'Quit',
+    'footer.quit': 'Shut down',
 
     'notification.resetTitle': 'Claude session reset',
     'notification.resetBody': 'Your Claude session limit should be available again.',
@@ -84,9 +90,6 @@ const STRINGS = Object.freeze({
     'onboarding.welcome': 'Boas-vindas ao Siphon',
     'onboarding.lead':
       'Acompanhe seu uso do Claude AI e os custos do Claude Code pela bandeja do Windows. Receba um aviso quando sua sessão reiniciar.',
-    'onboarding.feature.session': 'Cota da sessão em tempo real pelo seu plano Claude AI',
-    'onboarding.feature.cost': 'Custo de tokens lido do cache local do Claude Code',
-    'onboarding.feature.notify': 'Notificação de reset assim que uma nova sessão abrir',
     'onboarding.copy.sessionStrong': 'Cota de sessão ao vivo',
     'onboarding.copy.sessionMuted': 'do seu plano Claude AI.',
     'onboarding.copy.costStrong': 'Custo do token',
@@ -101,19 +104,28 @@ const STRINGS = Object.freeze({
     'onboarding.cancel': 'Cancelar',
 
     'home.session': 'Sessão Atual',
-    'home.weeklyAll': 'Semanal total',
-    'home.weeklySonnet': 'Semanal Sonnet',
-    'home.extraUsage': 'Créditos extras',
+    'home.weekly': 'Limite Semanal',
     'home.today': 'Hoje',
     'home.month': 'Este mês',
-    'home.signInPrompt': 'Entre para carregar os limites do plano',
-    'home.notif.on': 'Notificação de reset ligada',
-    'home.notif.off': 'Notificação de reset desligada',
-    'home.reset.in': 'Reseta em',
-    'home.reset.now': 'Reset em breve',
-    'home.reset.sessionInactive': 'Inicia quando uma mensagem é enviada',
-    'home.updated.now': 'atualizado agora mesmo',
-    'home.updated.minutes': 'atualizado há {minutes}min',
+    'home.notif.on': 'Notificar reset',
+    'home.notif.off': 'Não notificar reset',
+    'home.costEstimate': 'Custo estimado',
+    'home.costTooltip': 'Calculado a partir do cache local do Claude Code × tabela de preços. Pode divergir da fatura real.',
+
+    'session.reset.empty': 'Envie uma mensagem para iniciar',
+    'session.reset.full': 'Sessão esgotada',
+    'weekly.reset.empty': 'Envie uma mensagem para iniciar',
+    'weekly.reset.full': 'Limite atingido',
+    'reset.connector.at': 'Reseta às {time}',
+    'reset.connector.day': 'Reseta {weekday}',
+    'reset.connector.dayShort': '{weekday}',
+
+    'floating.title': 'Sessão Atual',
+    'floating.refresh': 'Atualizar',
+    'floating.close': 'Fechar widget',
+    'floating.openMain': 'Abrir Siphon',
+    'floating.signIn': 'Entrar',
+    'floating.error': 'Não foi possível carregar',
 
     'settings.account': 'Conta',
     'settings.fullName': 'Nome completo',
@@ -126,15 +138,15 @@ const STRINGS = Object.freeze({
     'settings.language': 'Idioma',
     'settings.languageEN': 'English',
     'settings.languagePT': 'Português',
-    'settings.notifReset': 'Notificação de reset',
-    'settings.sound': 'Aviso sonoro',
+    'settings.notifReset': 'Notificar reset de sessão',
+    'settings.sound': 'Aviso sonoro no reset',
     'settings.floating': 'Widget flutuante',
     'settings.claudePath': 'Dados do Claude Code',
     'settings.editPath': 'Editar caminho',
     'settings.back': 'Voltar',
 
     'footer.openClaude': 'Abrir claude.ai',
-    'footer.quit': 'Sair',
+    'footer.quit': 'Desligar',
 
     'notification.resetTitle': 'Sessão do Claude reiniciada',
     'notification.resetBody': 'Seu limite de sessão do Claude deve estar disponível novamente.',
@@ -154,4 +166,11 @@ const STRINGS = Object.freeze({
 export function t(key, lang) {
   const dictionary = STRINGS[SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en'];
   return dictionary[key] ?? STRINGS.en[key] ?? key;
+}
+
+export function tFormat(key, lang, params = {}) {
+  const template = t(key, lang);
+  return template.replace(/\{(\w+)\}/g, (match, name) =>
+    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+  );
 }

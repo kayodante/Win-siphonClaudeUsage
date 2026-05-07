@@ -53,16 +53,13 @@ function createController(overrides = {}) {
     quotaService: {
       fetchQuota: async () => ({
         session: null,
-        weeklyAll: null,
-        weeklySonnet: null,
-        weeklyOpus: null
+        weeklyAll: null
       })
     },
     localService: {
       load: async () => ({
         todayStats: {},
         monthStats: {},
-        recentDays: [],
         lastUpdated: new Date('2026-04-29T12:00:00Z')
       })
     },
