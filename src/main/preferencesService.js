@@ -43,6 +43,7 @@ function mergePreferences(stored) {
 
 function deepMerge(target, source) {
   for (const [key, value] of Object.entries(source)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
     if (isPlainObject(value) && isPlainObject(target[key])) {
       deepMerge(target[key], value);
     } else {
@@ -60,12 +61,16 @@ function setPath(object, path, value) {
   const parts = path.split('.');
   let current = object;
   for (const part of parts.slice(0, -1)) {
+    if (part === '__proto__' || part === 'constructor' || part === 'prototype') return;
     if (!isPlainObject(current[part])) {
       current[part] = {};
     }
     current = current[part];
   }
-  current[parts.at(-1)] = value;
+  const lastPart = parts.at(-1);
+  if (lastPart !== '__proto__' && lastPart !== 'constructor' && lastPart !== 'prototype') {
+    current[lastPart] = value;
+  }
 }
 
 function clone(value) {

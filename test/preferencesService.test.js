@@ -109,3 +109,14 @@ class MemoryStore {
     this.value = value;
   }
 }
+
+test('setPath blocks prototype pollution', () => {
+  const store = new MemoryStore(null);
+  const preferences = new PreferencesService(store);
+
+  preferences.set('__proto__.polluted', 'YES');
+  assert.equal(({}).polluted, undefined);
+
+  preferences.set('constructor.prototype.polluted2', 'YES');
+  assert.equal(({}).polluted2, undefined);
+});
