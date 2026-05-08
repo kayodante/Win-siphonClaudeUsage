@@ -277,7 +277,7 @@ function renderMeter(meter, percent) {
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
   meter.dataset.level = level;
-  meter.innerHTML = '';
+  meter.replaceChildren();
   for (let i = 0; i < total; i++) {
     const seg = document.createElement('div');
     seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
