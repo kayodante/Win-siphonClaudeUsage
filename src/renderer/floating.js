@@ -1,4 +1,4 @@
-import { formatClockTime, formatPercent, levelForPercent } from '../shared/format.js';
+import { formatClockTime, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 20;
@@ -84,14 +84,6 @@ function renderMeter(percent) {
     seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
     meter.appendChild(seg);
   }
-}
-
-function hydrateSlot(slot) {
-  if (!slot) return null;
-  return {
-    percent: slot.percent,
-    resetsAt: slot.resetsAt ? new Date(slot.resetsAt) : null
-  };
 }
 
 function clampPercent(value) {

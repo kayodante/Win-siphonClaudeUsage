@@ -2,6 +2,7 @@ import {
   formatCurrency,
   formatPercent,
   formatRelativeUpdated,
+  hydrateSlot,
   levelForPercent
 } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
@@ -236,14 +237,6 @@ function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationIconOn.hidden = !enabled;
   elements.notificationIconOff.hidden = enabled;
   elements.notificationState.setAttribute('aria-pressed', String(enabled));
-}
-
-function hydrateSlot(slot) {
-  if (!slot) return null;
-  return {
-    percent: slot.percent,
-    resetsAt: slot.resetsAt ? new Date(slot.resetsAt) : null
-  };
 }
 
 function clampPercent(value) {

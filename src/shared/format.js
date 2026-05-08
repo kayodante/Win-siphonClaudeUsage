@@ -96,3 +96,11 @@ export function formatRelativeUpdated(date, now = new Date(), lang = 'en') {
   const days = Math.round(hours / 24);
   return lang === 'pt-BR' ? `atualizado há ${days}d` : `updated ${days}d ago`;
 }
+
+export function hydrateSlot(slot) {
+  if (!slot) return null;
+  return {
+    percent: slot.percent,
+    resetsAt: slot.resetsAt ? new Date(slot.resetsAt) : null
+  };
+}
