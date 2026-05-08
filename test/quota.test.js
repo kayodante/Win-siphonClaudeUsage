@@ -59,6 +59,30 @@ test('QuotaService.fetchQuota maps malformed JSON to QuotaError("server")', asyn
   });
 });
 
+test('QuotaService.fetchQuota maps TypeError to QuotaError("network")', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => {
+      throw new TypeError('Failed to fetch');
+    }
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'network');
+    assert.equal(error.message, 'Network unavailable.');
+    return true;
+  });
+});
+
 test('QuotaService.fetchQuota maps abort to QuotaError("server") timeout', async () => {
   const service = new QuotaService({
     tokenStore: {
