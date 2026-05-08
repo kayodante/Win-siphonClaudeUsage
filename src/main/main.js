@@ -79,8 +79,8 @@ function onReady() {
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
   const resetScheduler = new ResetNotificationScheduler({
-    notify: () => {
-      const lang = preferences.get('language') || 'en';
+    notify: async () => {
+      const lang = (await preferences.get('language')) || 'en';
       const notif = new Notification({
         title: t('notification.resetTitle', lang),
         body: t('notification.resetBody', lang),
@@ -88,7 +88,7 @@ function onReady() {
       });
       notif.on('click', () => showMainWindow());
       notif.show();
-      if (preferences.get('notifications.sound')) {
+      if (await preferences.get('notifications.sound')) {
         window?.webContents.send('play-reset-sound');
       }
     },
@@ -232,30 +232,30 @@ function registerIpc() {
   ipcMain.handle('auth:cancel', () => controller.cancelAuth());
   ipcMain.handle('auth:sign-out', () => controller.signOut());
   ipcMain.handle('prefs:get', () => controller.preferences.load());
-  ipcMain.handle('prefs:set', (_event, { path: preferencePath, value }) => {
+  ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
       'floating.enabled', 'floating.x', 'floating.y', 'claudePath'
     ]);
     if (!ALLOWED.has(preferencePath)) return;
-    controller.preferences.set(preferencePath, value);
+    await controller.preferences.set(preferencePath, value);
   });
   ipcMain.handle('view:show-main', () => showMainWindow());
   ipcMain.handle('view:show-settings', () => showSettingsWindow());
   ipcMain.handle('floating:open-main', () => showMainWindow());
-  ipcMain.handle('floating:close', () => {
-    controller.preferences.set('floating.enabled', false);
+  ipcMain.handle('floating:close', async () => {
+    await controller.preferences.set('floating.enabled', false);
   });
-  ipcMain.handle('app:info', () => ({
+  ipcMain.handle('app:info', async () => ({
     configDir: configDir(),
-    claudeDir: preferences.get('claudePath') || path.join(os.homedir(), '.claude'),
+    claudeDir: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude'),
     notificationsSupported: Notification.isSupported(),
     version: app.getVersion()
   }));
   ipcMain.handle('dialog:pick-folder', async () => {
     const result = await dialog.showOpenDialog(window, {
       properties: ['openDirectory'],
-      defaultPath: preferences.get('claudePath') || path.join(os.homedir(), '.claude')
+      defaultPath: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude')
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
@@ -284,8 +284,8 @@ function showSettingsWindow() {
   sendView('settings');
 }
 
-function enableFloatingWidget() {
-  controller.preferences.set('floating.enabled', true);
+async function enableFloatingWidget() {
+  await controller.preferences.set('floating.enabled', true);
 }
 
 function openFloatingWidget(state = controller?.getState()) {

@@ -20,18 +20,18 @@ export class PreferencesService extends EventEmitter {
     this.store = store;
   }
 
-  load() {
-    return mergePreferences(this.store.load());
+  async load() {
+    return mergePreferences(await this.store.load());
   }
 
-  get(path) {
-    return getPath(this.load(), path);
+  async get(path) {
+    return getPath(await this.load(), path);
   }
 
-  set(path, value) {
-    const preferences = this.load();
+  async set(path, value) {
+    const preferences = await this.load();
     setPath(preferences, path, value);
-    this.store.save(preferences);
+    await this.store.save(preferences);
     this.emit('change', { path, value, preferences });
     return preferences;
   }

@@ -41,7 +41,7 @@ export class UsageController extends EventEmitter {
       quotaError: null,
       authError: null,
       profile: null,
-      preferences: this.preferences.load(),
+      preferences: structuredClone(DEFAULT_PREFERENCES),
       isSignedIn: false,
       awaitingCode: false,
       lastUpdated: null,
@@ -52,7 +52,8 @@ export class UsageController extends EventEmitter {
 
   async start() {
     this.state.isSignedIn = Boolean(await this.tokenStore.load());
-    this.resetScheduler.restore();
+    this.state.preferences = await this.preferences.load();
+    await this.resetScheduler.restore();
     await this.refreshLocal();
     if (this.state.isSignedIn) {
       await this.refreshProfile();
@@ -117,10 +118,10 @@ export class UsageController extends EventEmitter {
       this.state.quotaError = null;
       this.state.isSignedIn = true;
       this.state.isOffline = false;
-      if (this.preferences.get('notifications.sessionReset')) {
-        this.resetScheduler.updateFromQuota(quota);
+      if (await this.preferences.get('notifications.sessionReset')) {
+        await this.resetScheduler.updateFromQuota(quota);
       } else {
-        this.resetScheduler.clear();
+        await this.resetScheduler.clear();
       }
     } catch (error) {
       if (error instanceof QuotaError && error.code === 'rate_limited') {
@@ -174,7 +175,7 @@ export class UsageController extends EventEmitter {
 
   async signOut() {
     await this.tokenStore.clear();
-    this.resetScheduler.clear();
+    await this.resetScheduler.clear();
     this.authFlow = null;
     this.state.awaitingCode = false;
     this.state.isSignedIn = false;
@@ -202,10 +203,10 @@ export class UsageController extends EventEmitter {
     this.#emit();
   }
 
-  #handlePreferenceChange(event) {
+  async #handlePreferenceChange(event) {
     this.state.preferences = event.preferences;
     if (event.path === 'notifications.sessionReset' && event.value === false) {
-      this.resetScheduler.clear();
+      await this.resetScheduler.clear();
     }
     this.#emit();
   }
@@ -220,8 +221,8 @@ export class UsageController extends EventEmitter {
 
 function createDefaultPreferences() {
   return {
-    load: () => structuredClone(DEFAULT_PREFERENCES),
-    get: path => path.split('.').reduce((current, key) => current?.[key], DEFAULT_PREFERENCES),
+    load: async () => structuredClone(DEFAULT_PREFERENCES),
+    get: async path => path.split('.').reduce((current, key) => current?.[key], DEFAULT_PREFERENCES),
     on: () => {}
   };
 }

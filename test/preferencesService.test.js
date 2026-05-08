@@ -3,20 +3,20 @@ import test from 'node:test';
 
 import { DEFAULT_PREFERENCES, PreferencesService } from '../src/main/preferencesService.js';
 
-test('load returns defaults when store is missing', () => {
+test('load returns defaults when store is missing', async () => {
   const preferences = new PreferencesService(new MemoryStore(null));
 
-  assert.deepEqual(preferences.load(), DEFAULT_PREFERENCES);
+  assert.deepEqual(await preferences.load(), DEFAULT_PREFERENCES);
 });
 
-test('load merges partial stored preferences with defaults', () => {
+test('load merges partial stored preferences with defaults', async () => {
   const preferences = new PreferencesService(
     new MemoryStore({
       notifications: { sessionReset: false }
     })
   );
 
-  assert.deepEqual(preferences.load(), {
+  assert.deepEqual(await preferences.load(), {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
     floating: { enabled: false, x: null, y: null },
@@ -24,33 +24,33 @@ test('load merges partial stored preferences with defaults', () => {
   });
 });
 
-test('language defaults to English and survives set', () => {
+test('language defaults to English and survives set', async () => {
   const store = new MemoryStore(null);
   const preferences = new PreferencesService(store);
 
-  assert.equal(preferences.load().language, 'en');
+  assert.equal((await preferences.load()).language, 'en');
 
-  const snapshot = preferences.set('language', 'pt-BR');
+  const snapshot = await preferences.set('language', 'pt-BR');
 
   assert.equal(snapshot.language, 'pt-BR');
   assert.equal(store.value.language, 'pt-BR');
 });
 
-test('get reads a nested preference path', () => {
+test('get reads a nested preference path', async () => {
   const preferences = new PreferencesService(
     new MemoryStore({
       notifications: { sessionReset: false }
     })
   );
 
-  assert.equal(preferences.get('notifications.sessionReset'), false);
+  assert.equal(await preferences.get('notifications.sessionReset'), false);
 });
 
-test('set persists a nested change and returns the full snapshot', () => {
+test('set persists a nested change and returns the full snapshot', async () => {
   const store = new MemoryStore(null);
   const preferences = new PreferencesService(store);
 
-  const snapshot = preferences.set('notifications.sessionReset', false);
+  const snapshot = await preferences.set('notifications.sessionReset', false);
 
   assert.deepEqual(snapshot, {
     language: 'en',
@@ -61,11 +61,11 @@ test('set persists a nested change and returns the full snapshot', () => {
   assert.deepEqual(store.value, snapshot);
 });
 
-test('set creates deep paths without dropping sibling defaults', () => {
+test('set creates deep paths without dropping sibling defaults', async () => {
   const store = new MemoryStore(null);
   const preferences = new PreferencesService(store);
 
-  const snapshot = preferences.set('floating.x', 120);
+  const snapshot = await preferences.set('floating.x', 120);
 
   assert.deepEqual(snapshot, {
     language: 'en',
@@ -75,13 +75,13 @@ test('set creates deep paths without dropping sibling defaults', () => {
   });
 });
 
-test('set emits one change event after persisting', () => {
+test('set emits one change event after persisting', async () => {
   const store = new MemoryStore(null);
   const preferences = new PreferencesService(store);
   const events = [];
 
   preferences.on('change', event => events.push(event));
-  preferences.set('notifications.sessionReset', false);
+  await preferences.set('notifications.sessionReset', false);
 
   assert.equal(events.length, 1);
   assert.deepEqual(events[0], {
@@ -101,11 +101,11 @@ class MemoryStore {
     this.value = value;
   }
 
-  load() {
+  async load() {
     return this.value;
   }
 
-  save(value) {
+  async save(value) {
     this.value = value;
   }
 }

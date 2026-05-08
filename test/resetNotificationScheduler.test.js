@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { ResetNotificationScheduler } from '../src/main/resetNotificationScheduler.js';
 
-test('scheduler schedules one reset notification when session limit is reached', () => {
+test('scheduler schedules one reset notification when session limit is reached', async () => {
   const scheduled = [];
   const store = new Map();
   const now = new Date('2026-04-27T10:00:00Z');
@@ -15,17 +15,17 @@ test('scheduler schedules one reset notification when session limit is reached',
     },
     clearTimer: () => {},
     notify: () => {},
-    loadState: () => store.get('state') ?? null,
-    saveState: state => store.set('state', state)
+    loadState: async () => store.get('state') ?? null,
+    saveState: async state => store.set('state', state)
   });
 
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 100,
       resetsAt: new Date('2026-04-27T12:00:00Z')
     }
   });
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 100,
       resetsAt: new Date('2026-04-27T12:00:00Z')
@@ -40,7 +40,7 @@ test('scheduler schedules one reset notification when session limit is reached',
   });
 });
 
-test('scheduler fires immediately after restart if reset time already passed', () => {
+test('scheduler fires immediately after restart if reset time already passed', async () => {
   let notificationCount = 0;
   const scheduler = new ResetNotificationScheduler({
     now: () => new Date('2026-04-27T13:00:00Z'),
@@ -49,19 +49,19 @@ test('scheduler fires immediately after restart if reset time already passed', (
     notify: () => {
       notificationCount += 1;
     },
-    loadState: () => ({
+    loadState: async () => ({
       resetKey: '2026-04-27T12:00:00.000Z',
       resetsAt: '2026-04-27T12:00:00.000Z'
     }),
-    saveState: () => {}
+    saveState: async () => {}
   });
 
-  scheduler.restore();
+  await scheduler.restore();
 
   assert.equal(notificationCount, 1);
 });
 
-test('scheduler does not refire same resetKey after notification has fired', () => {
+test('scheduler does not refire same resetKey after notification has fired', async () => {
   let notificationCount = 0;
   const scheduler = new ResetNotificationScheduler({
     now: () => new Date('2026-04-27T13:00:00Z'),
@@ -70,18 +70,18 @@ test('scheduler does not refire same resetKey after notification has fired', () 
     notify: () => {
       notificationCount += 1;
     },
-    loadState: () => null,
-    saveState: () => {}
+    loadState: async () => null,
+    saveState: async () => {}
   });
 
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 100,
       resetsAt: new Date('2026-04-27T12:00:00Z')
     }
   });
 
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 100,
       resetsAt: new Date('2026-04-27T12:00:00Z')
@@ -91,24 +91,24 @@ test('scheduler does not refire same resetKey after notification has fired', () 
   assert.equal(notificationCount, 1);
 });
 
-test('scheduler clears stale reset when a new session starts', () => {
+test('scheduler clears stale reset when a new session starts', async () => {
   const savedStates = [];
   const scheduler = new ResetNotificationScheduler({
     now: () => new Date('2026-04-27T10:00:00Z'),
     setTimer: () => 'timer',
     clearTimer: () => {},
     notify: () => {},
-    loadState: () => null,
-    saveState: state => savedStates.push(state)
+    loadState: async () => null,
+    saveState: async state => savedStates.push(state)
   });
 
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 100,
       resetsAt: new Date('2026-04-27T12:00:00Z')
     }
   });
-  scheduler.updateFromQuota({
+  await scheduler.updateFromQuota({
     session: {
       percent: 2,
       resetsAt: new Date('2026-04-27T17:00:00Z')

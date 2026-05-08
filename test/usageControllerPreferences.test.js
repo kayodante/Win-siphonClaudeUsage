@@ -13,6 +13,7 @@ test('controller does not arm reset scheduler when session reset notifications a
   const scheduler = new SchedulerSpy();
   const controller = createController({ preferences, scheduler });
 
+  await controller.start(); // Ensure preferences are loaded
   await controller.refreshQuota();
 
   assert.equal(scheduler.updateCalls, 0);
@@ -24,20 +25,23 @@ test('controller clears armed scheduler when session reset notifications are tog
   const scheduler = new SchedulerSpy();
   const controller = createController({ preferences, scheduler });
 
+  await controller.start(); // Ensure preferences are loaded
   await controller.refreshQuota();
-  preferences.set('notifications.sessionReset', false);
+  await preferences.set('notifications.sessionReset', false);
 
   assert.equal(scheduler.updateCalls, 1);
   assert.equal(scheduler.clearCalls, 1);
 });
 
-test('controller state includes preferences snapshot', () => {
+test('controller state includes preferences snapshot', async () => {
   const preferences = new PreferencesService(
     new MemoryStore({
       notifications: { sessionReset: false }
     })
   );
   const controller = createController({ preferences, scheduler: new SchedulerSpy() });
+
+  await controller.start();
 
   assert.deepEqual(controller.getState().preferences, {
     language: 'en',
@@ -98,11 +102,11 @@ class MemoryStore {
     this.value = value;
   }
 
-  load() {
+  async load() {
     return this.value;
   }
 
-  save(value) {
+  async save(value) {
     this.value = value;
   }
 }

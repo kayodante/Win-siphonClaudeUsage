@@ -20,29 +20,29 @@ export class ResetNotificationScheduler {
     this.lastFiredResetKey = null;
   }
 
-  restore() {
-    const state = this.loadState();
+  async restore() {
+    const state = await this.loadState();
     if (!state?.resetsAt) return;
     const resetsAt = new Date(state.resetsAt);
     if (Number.isNaN(resetsAt.getTime())) {
-      this.saveState(null);
+      await this.saveState(null);
       return;
     }
     this.#schedule(state.resetKey, resetsAt);
   }
 
-  clear() {
+  async clear() {
     this.#clear();
-    this.saveState(null);
+    await this.saveState(null);
   }
 
-  updateFromQuota(quota) {
+  async updateFromQuota(quota) {
     const session = quota?.session;
     if (!session?.resetsAt) return;
 
     if (session.percent < 15) {
       this.#clear();
-      this.saveState(null);
+      await this.saveState(null);
       return;
     }
 
@@ -57,7 +57,7 @@ export class ResetNotificationScheduler {
 
     this.#clear();
     this.currentResetKey = resetKey;
-    this.saveState({ resetKey, resetsAt: resetKey });
+    await this.saveState({ resetKey, resetsAt: resetKey });
     this.#schedule(resetKey, resetsAt);
   }
 
@@ -66,7 +66,7 @@ export class ResetNotificationScheduler {
     const delayMs = resetsAt.getTime() - this.now().getTime();
 
     if (delayMs <= 0) {
-      this.#fire(resetKey);
+      void this.#fire(resetKey);
       return;
     }
 
@@ -77,7 +77,7 @@ export class ResetNotificationScheduler {
     }, nextDelay);
   }
 
-  #fire(resetKey) {
+  async #fire(resetKey) {
     this.notify({
       title: 'Claude session reset',
       body: 'Your Claude session limit should be available again.'
@@ -85,7 +85,7 @@ export class ResetNotificationScheduler {
     this.lastFiredResetKey = resetKey;
     if (this.currentResetKey === resetKey) {
       this.currentResetKey = null;
-      this.saveState(null);
+      await this.saveState(null);
     }
   }
 
