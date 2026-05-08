@@ -8,6 +8,10 @@
   [![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
   [![Node](https://img.shields.io/badge/Node-22%2B-5FA04E?logo=node.js&logoColor=white)](https://nodejs.org/)
   [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+
+  <br/>
+  <br/>
+  <img src="assets/Hero.png" alt="Hero" />
 </div>
 
 ---
@@ -29,24 +33,6 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 | **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen |
 | **Color-coded tray icon** | Icon shifts from neutral → warning → danger as quota fills up |
 | **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings |
-
-## Screenshots
-
-<div align="center">
-
-| Login | Dashboard | Settings |
-|:---:|:---:|:---:|
-| ![Login screen](screenshots/screenshotApp-1.png) | ![Main dashboard](screenshots/screenshotApp-2.png) | ![Settings](screenshots/screenshotApp-3.png) |
-| Sign in with Claude AI | Session quota, costs, and weekly limits | Language, notifications, and widget |
-
-<br/>
-
-| Widget |
-|:---:|
-| ![Floating widget](screenshots/screenshotWidget-1.png) |
-| Floating mini widget — always on top, drag anywhere |
-
-</div>
 
 ## Requirements
 
