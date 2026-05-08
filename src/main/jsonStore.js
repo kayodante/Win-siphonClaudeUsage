@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 
 export class JsonStore {
@@ -6,27 +6,28 @@ export class JsonStore {
     this.filePath = filePath;
   }
 
-  load() {
+  async load() {
     try {
-      return JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+      const raw = await fs.readFile(this.filePath, 'utf8');
+      return JSON.parse(raw);
     } catch (error) {
       if (error.code === 'ENOENT') return null;
       throw error;
     }
   }
 
-  save(value) {
-    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+  async save(value) {
+    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
     if (value == null) {
       try {
-        fs.unlinkSync(this.filePath);
+        await fs.unlink(this.filePath);
       } catch (error) {
         if (error.code !== 'ENOENT') throw error;
       }
       return;
     }
     const tmpPath = `${this.filePath}.tmp`;
-    fs.writeFileSync(tmpPath, JSON.stringify(value, null, 2), { mode: 0o600 });
-    fs.renameSync(tmpPath, this.filePath);
+    await fs.writeFile(tmpPath, JSON.stringify(value, null, 2), { mode: 0o600 });
+    await fs.rename(tmpPath, this.filePath);
   }
 }
