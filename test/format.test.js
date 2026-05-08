@@ -8,6 +8,7 @@ import {
   formatResetDistance,
   formatTimeRemaining,
   formatWeekdayClock,
+  hydrateSlot,
   levelForPercent
 } from '../src/shared/format.js';
 
@@ -143,4 +144,25 @@ test('formatWeekdayClock combines weekday and 24h time', () => {
   const date = new Date('2026-05-05T00:00:00');
   const result = formatWeekdayClock(date, 'pt-BR');
   assert.match(result, /^[A-ZÁ-Ú][a-zá-ú]+, \d{2}:\d{2}$/);
+});
+
+test('hydrateSlot returns null for falsy input', () => {
+  assert.equal(hydrateSlot(null), null);
+  assert.equal(hydrateSlot(undefined), null);
+});
+
+test('hydrateSlot converts resetsAt to Date object', () => {
+  const isoDate = '2026-05-04T12:00:00Z';
+  const slot = { percent: 42, resetsAt: isoDate };
+  const hydrated = hydrateSlot(slot);
+  assert.equal(hydrated.percent, 42);
+  assert.ok(hydrated.resetsAt instanceof Date);
+  assert.equal(hydrated.resetsAt.toISOString(), new Date(isoDate).toISOString());
+});
+
+test('hydrateSlot handles missing resetsAt', () => {
+  const slot = { percent: 10 };
+  const hydrated = hydrateSlot(slot);
+  assert.equal(hydrated.percent, 10);
+  assert.equal(hydrated.resetsAt, null);
 });
