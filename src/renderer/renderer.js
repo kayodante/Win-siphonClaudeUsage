@@ -5,7 +5,7 @@ import {
   hydrateSlot,
   levelForPercent
 } from '../shared/format.js';
-import { t } from '../shared/i18n.js';
+import { t, tFormat } from '../shared/i18n.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
@@ -288,7 +288,7 @@ function renderSettings(state, lang = currentLanguage()) {
 
   const hasPlan = Boolean(profile.plan);
   elements.settingsPlanRow.hidden = !hasPlan;
-  elements.settingsPlan.textContent = hasPlan ? t('settings.planPrefix', lang) + profile.plan : '';
+  elements.settingsPlan.textContent = hasPlan ? tFormat('settings.planLabel', lang, { plan: profile.plan }) : '';
 
   elements.settingsLanguage.value = lang;
   elements.claudePath.textContent = appInfo.claudeDir;

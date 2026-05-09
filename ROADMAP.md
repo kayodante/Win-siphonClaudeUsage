@@ -120,6 +120,44 @@ Lower priority.
 - **Anthropic API Key cost ingestion.** Considered and dropped; it requires
   an admin key, so it is out of scope for this tray app.
 
+## Ideas
+
+Aspirational features. Ordered by dependency — **A unlocks the rest.**
+
+- **A. Local session-log aggregation.** Read `~/.claude/projects/**/*.jsonl`
+  in addition to `readout-cost-cache.json`. Unlocks history, sparklines,
+  per-model breakdown, token throughput. Touches `src/main/localDataService.js`
+  (today it only reads the cost cache). Add tests in
+  `test/localDataService.test.js`.
+
+- **B. Sparkline trend on Session + Cost cards.** Mini SVG chart of last N
+  hours/days, rendered in the renderer. Depends on **A**. Touches
+  `src/renderer/{index.html, renderer.js, styles.css}`. No new dependency —
+  hand-rolled SVG path is ~30 lines.
+
+- **C. Meter style toggle.** Ring / Bar (current) / Numeric / Sparkline,
+  selectable in *Configurações*. Persist in `preferences.json` via the
+  existing `PreferencesService`. Touches the renderer + a new toggle group
+  in the settings view.
+
+- **D. Cost card view modes.** Swipe / toggle between USD, Tokens, and
+  Trend on the cost grid (today, this month). Tokens and Trend depend on **A**.
+  Touches `src/renderer/index.html` (cost grid, currently lines 136-159).
+
+- **E. Configurable polling interval.** Settings preference for refresh
+  cadence (30 s default, 5 min, 15 min, 30 min). Today both timers are
+  hardcoded in `src/main/usageController.js` (`localTimer` 30 s,
+  `quotaTimer` 120 s). Add IPC + preference key.
+
+- **F. Refresh glow animation.** Subtle CSS glow on cards during a fetch,
+  complementing the existing dot-matrix indicator. Renderer-only, no main
+  process change. Touches `src/renderer/styles.css`.
+
+- **G. Hover-expand floating widget.** Today the widget is 220 × 80 with
+  session % only. On hover, expand to also show Weekly + cost. Touches
+  `src/renderer/floating.html` and the floating-widget controller in
+  `src/main/main.js`.
+
 ## Known issues / paper cuts
 
 - No window animation when showing from tray; the macOS app's popover

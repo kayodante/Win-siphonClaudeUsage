@@ -59,10 +59,10 @@ export class UsageController extends EventEmitter {
       await this.refreshProfile();
       await this.refreshQuota();
     }
-    this.localTimer = setInterval(() => this.refreshLocal(), 30_000);
+    this.localTimer = setInterval(() => this.refreshLocal(), 30_000).unref();
     this.quotaTimer = setInterval(() => {
       if (this.state.isSignedIn) this.refreshQuota();
-    }, 120_000);
+    }, 120_000).unref();
     this.#emit();
   }
 

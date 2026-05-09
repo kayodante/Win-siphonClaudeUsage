@@ -65,14 +65,14 @@
   /* ── Colors: Semantic ── */
   --destructive:      oklch(64.5% 0.2154 16.44);
   --destructive-soft: oklch(64.5% 0.2154 16.44 / 0.16);
-  --success:          oklch(69.59% 0.1491 162.48);
+  --success:          oklch(0.8459 0.2026 156.3);
   --success-soft:     oklch(69.59% 0.1491 162.48 / 0.08);
   --warning:          oklch(76.86% 0.1647 70.08);
   --warning-soft:     oklch(76.86% 0.1647 70.08 / 0.16);
 
   /* ── Colors: Level scale ── */
   --level-ok:           var(--success);
-  --level-ok-soft:      oklch(69.59% 0.1491 162.48 / 0.18);
+  --level-ok-soft:      oklch(0.8459 0.2026 156.3 / 0.18);
   --level-warn:         oklch(88% 0.163 92);
   --level-warn-soft:    oklch(88% 0.163 92 / 0.18);
   --level-high:         oklch(72% 0.181 46);
@@ -1303,7 +1303,7 @@ body[data-view="onboard"] .app-footer {
   line-height: var(--space-5);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--foreground);
+  color: var(--subtle-foreground);
   white-space: nowrap;
 }
 

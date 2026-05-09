@@ -12,6 +12,10 @@ export class JsonStore {
       return JSON.parse(raw);
     } catch (error) {
       if (error.code === 'ENOENT') return null;
+      if (error instanceof SyntaxError) {
+        console.warn(`[siphon] JsonStore: malformed JSON at ${this.filePath}, resetting to defaults`);
+        return null;
+      }
       throw error;
     }
   }
