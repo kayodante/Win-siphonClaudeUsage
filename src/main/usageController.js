@@ -6,6 +6,11 @@ import { DEFAULT_PREFERENCES } from './preferencesService.js';
 import { ProfileService } from './profileService.js';
 import { QuotaError, QuotaService } from './quotaService.js';
 
+const DEFAULT_LOCAL_INTERVAL_MS = 30_000;
+const MIN_QUOTA_INTERVAL_MS = 120_000;
+const ALLOWED_REFRESH_INTERVALS = new Set([30, 300, 900, 1800]);
+const MAX_QUOTA_HISTORY_POINTS = 96;
+
 export class UsageController extends EventEmitter {
   constructor({
     localService = new LocalDataService(),
@@ -15,7 +20,9 @@ export class UsageController extends EventEmitter {
     preferences = createDefaultPreferences(),
     tokenStore,
     resetScheduler,
-    openExternal
+    openExternal,
+    timers = globalThis,
+    now = () => new Date()
   }) {
     super();
     this.localService = localService;
@@ -26,6 +33,8 @@ export class UsageController extends EventEmitter {
     this.profileService = profileService ?? new ProfileService({ tokenStore });
     this.resetScheduler = resetScheduler;
     this.openExternal = openExternal;
+    this.timers = timers;
+    this.now = now;
     this.authFlow = null;
     this.localTimer = null;
     this.quotaTimer = null;
@@ -33,10 +42,13 @@ export class UsageController extends EventEmitter {
     this.localInFlight = false;
     this.quotaInFlight = false;
     this.lastEmittedSnapshot = null;
+    this.started = false;
     this.state = {
       todayStats: emptyStats(),
       monthStats: emptyStats(),
+      localHistory: emptyLocalHistory(),
       quota: null,
+      quotaHistory: emptyQuotaHistory(),
       localError: null,
       quotaError: null,
       authError: null,
@@ -51,6 +63,7 @@ export class UsageController extends EventEmitter {
   }
 
   async start() {
+    this.started = true;
     this.state.isSignedIn = Boolean(await this.tokenStore.load());
     this.state.preferences = await this.preferences.load();
     await this.resetScheduler.restore();
@@ -59,16 +72,13 @@ export class UsageController extends EventEmitter {
       await this.refreshProfile();
       await this.refreshQuota();
     }
-    this.localTimer = setInterval(() => this.refreshLocal(), 30_000).unref();
-    this.quotaTimer = setInterval(() => {
-      if (this.state.isSignedIn) this.refreshQuota();
-    }, 120_000).unref();
+    this.#scheduleTimers();
     this.#emit();
   }
 
   stop() {
-    clearInterval(this.localTimer);
-    clearInterval(this.quotaTimer);
+    this.started = false;
+    this.#clearTimers();
   }
 
   getState() {
@@ -91,6 +101,7 @@ export class UsageController extends EventEmitter {
       const summary = await this.localService.load();
       this.state.todayStats = summary.todayStats;
       this.state.monthStats = summary.monthStats;
+      this.state.localHistory = summary.localHistory ?? emptyLocalHistory();
       this.state.lastUpdated = summary.lastUpdated.toISOString();
       this.state.localError = null;
     } catch (error) {
@@ -115,6 +126,7 @@ export class UsageController extends EventEmitter {
     try {
       const quota = await this.quotaService.fetchQuota();
       this.state.quota = serializeQuota(quota);
+      this.#recordQuotaHistory(this.state.quota.session);
       this.state.quotaError = null;
       this.state.isSignedIn = true;
       this.state.isOffline = false;
@@ -180,6 +192,7 @@ export class UsageController extends EventEmitter {
     this.state.awaitingCode = false;
     this.state.isSignedIn = false;
     this.state.quota = null;
+    this.state.quotaHistory = emptyQuotaHistory();
     this.state.profile = null;
     this.state.authError = null;
     this.state.quotaError = null;
@@ -208,7 +221,41 @@ export class UsageController extends EventEmitter {
     if (event.path === 'notifications.sessionReset' && event.value === false) {
       await this.resetScheduler.clear();
     }
+    if (event.path === 'refresh.intervalSeconds' && this.started) {
+      this.#scheduleTimers();
+    }
     this.#emit();
+  }
+
+  #scheduleTimers() {
+    this.#clearTimers();
+    const interval = refreshIntervalMs(this.state.preferences);
+    this.localTimer = this.timers.setInterval(() => this.refreshLocal(), interval);
+    this.localTimer?.unref?.();
+    this.quotaTimer = this.timers.setInterval(() => {
+      if (this.state.isSignedIn) this.refreshQuota();
+    }, Math.max(interval, MIN_QUOTA_INTERVAL_MS));
+    this.quotaTimer?.unref?.();
+  }
+
+  #clearTimers() {
+    if (this.localTimer != null) {
+      this.timers.clearInterval(this.localTimer);
+      this.localTimer = null;
+    }
+    if (this.quotaTimer != null) {
+      this.timers.clearInterval(this.quotaTimer);
+      this.quotaTimer = null;
+    }
+  }
+
+  #recordQuotaHistory(session) {
+    if (!session || session.percent == null) return;
+    this.state.quotaHistory.session.push({
+      timestamp: this.now().toISOString(),
+      percent: session.percent
+    });
+    this.state.quotaHistory.session = this.state.quotaHistory.session.slice(-MAX_QUOTA_HISTORY_POINTS);
   }
 
   #emit() {
@@ -225,6 +272,11 @@ function createDefaultPreferences() {
     get: async path => path.split('.').reduce((current, key) => current?.[key], DEFAULT_PREFERENCES),
     on: () => {}
   };
+}
+
+function refreshIntervalMs(preferences) {
+  const seconds = Number(preferences?.refresh?.intervalSeconds ?? 30);
+  return (ALLOWED_REFRESH_INTERVALS.has(seconds) ? seconds : 30) * 1000 || DEFAULT_LOCAL_INTERVAL_MS;
 }
 
 function serializeQuota(quota) {
@@ -252,5 +304,18 @@ function emptyStats() {
     cost: 0,
     isEmpty: true,
     byModel: {}
+  };
+}
+
+function emptyLocalHistory() {
+  return {
+    hourly: [],
+    daily: []
+  };
+}
+
+function emptyQuotaHistory() {
+  return {
+    session: []
   };
 }

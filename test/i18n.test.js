@@ -40,3 +40,27 @@ test('tFormat falls back to English when locale missing', () => {
 test('tFormat leaves unknown placeholders intact', () => {
   assert.match(tFormat('reset.connector.at', 'en'), /\{time\}/);
 });
+
+test('refresh interval strings exist in both languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('settings.refreshInterval', lang), 'settings.refreshInterval');
+    assert.notEqual(t('settings.refresh30s', lang), 'settings.refresh30s');
+    assert.notEqual(t('settings.refresh5m', lang), 'settings.refresh5m');
+    assert.notEqual(t('settings.refresh15m', lang), 'settings.refresh15m');
+    assert.notEqual(t('settings.refresh30m', lang), 'settings.refresh30m');
+    assert.notEqual(t('error.saveRefresh', lang), 'error.saveRefresh');
+  }
+});
+
+test('pace and tray strings exist in both languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('pace.no_data', lang), 'pace.no_data');
+    assert.notEqual(t('pace.on_track', lang), 'pace.on_track');
+    assert.notEqual(t('pace.high_pace', lang), 'pace.high_pace');
+    assert.notEqual(t('pace.likely_out', lang), 'pace.likely_out');
+    assert.notEqual(t('tray.session', lang), 'tray.session');
+    assert.notEqual(t('tray.weekly', lang), 'tray.weekly');
+    assert.notEqual(t('tray.sessionReset', lang), 'tray.sessionReset');
+    assert.notEqual(t('tray.updated', lang), 'tray.updated');
+  }
+});

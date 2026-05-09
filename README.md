@@ -27,10 +27,12 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 | | |
 |---|---|
 | **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown |
-| **Weekly limits** | Tracks all-model and Sonnet-specific weekly caps |
-| **Cost tracking** | Today's and this month's spend in USD, computed from Claude Code's local pricing files |
+| **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint |
+| **Cost tracking** | Today's and this month's spend in USD, with small trend charts computed from Claude Code's local pricing files |
 | **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened |
 | **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen |
+| **Configurable refresh** | Local refresh defaults to 30 seconds, with 5, 15, and 30 minute options in Settings |
+| **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login |
 | **Color-coded tray icon** | Icon shifts from neutral → warning → danger as quota fills up |
 | **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings |
 
@@ -72,8 +74,8 @@ Siphon runs as three isolated Electron contexts:
 ```
 Main process (Node, ESM)
   ├── UsageController
-  │     ├── LocalDataService   — reads ~/.claude/readout-*.json every 30 s
-  │     ├── QuotaService       — polls api.anthropic.com/api/oauth/usage every 2 min
+  │     ├── LocalDataService   — reads ~/.claude readouts or cached project JSONL on the selected cadence
+  │     ├── QuotaService       — polls api.anthropic.com/api/oauth/usage with a 120 s minimum
   │     ├── OAuthService       — PKCE sign-in flow (same client ID as Claude Code)
   │     └── ResetNotificationScheduler — arms Windows toasts on quota exhaustion
   └── IPC bridge
@@ -81,7 +83,12 @@ Preload (CJS)       — exposes window.siphon.* to the renderer
 Renderer (ESM)      — vanilla JS + CSS, no framework
 ```
 
-Cost figures are computed locally by joining Claude Code's token cache (`readout-cost-cache.json`) against its pricing file (`readout-pricing.json`) — no data leaves your machine for cost calculations.
+Cost figures are computed locally from Claude Code's usage data. Siphon first
+uses the legacy token cache (`readout-cost-cache.json`) when present; otherwise
+it scans modern per-session JSONL files under `~/.claude/projects/` and keeps an
+internal incremental cache so unchanged session files are not re-read. Pricing
+comes from `readout-pricing.json` when available, with bundled fallback prices
+for known Claude models. No data leaves your machine for cost calculations.
 
 ### Data stored on disk
 
@@ -89,7 +96,8 @@ Cost figures are computed locally by joining Claude Code's token cache (`readout
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
 | `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
-| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position |
+| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position, autostart and refresh settings |
+| `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
 
 ### Sign-in
 
@@ -113,3 +121,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagr
 - **No UI framework** — vanilla JS and hand-written CSS
 - **[Geist](https://vercel.com/font)** — display font (Geist, Geist Mono, Geist Pixel Line)
 - **[Carbon Icons](https://carbondesignsystem.com/elements/icons/library/)** — UI iconography
+
+## Credits
+
+Inspired by [siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage/) (MIT), specifically the cost usage tracking.
+
+## License
+
+MIT — do whatever you like, attribution appreciated.

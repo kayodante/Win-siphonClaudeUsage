@@ -89,7 +89,7 @@
   --font-pixel: "Geist Pixel Line", "Geist Mono", ui-monospace, monospace;
 
   /* ── Typography: Scale ── */
-  --text-xs:   11px;
+  --text-xs:   10px;
   --text-sm:   12px;
   --text-base: 13px;
   --text-md:   14px;
@@ -703,6 +703,10 @@ body[data-view="onboard"] .app-footer {
   margin-bottom: var(--space-9);
 }
 
+.quota-panel > .sparkline {
+  margin-top: var(--space-7);
+}
+
 .quota-headline {
   display: flex;
   align-items: baseline;
@@ -739,6 +743,34 @@ body[data-view="onboard"] .app-footer {
   font-variant-numeric: tabular-nums;
 }
 
+.quota-pace {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--subtle-foreground);
+  background: var(--card-elevated);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.quota-pace[data-status="on_track"] {
+  color: var(--level-ok);
+}
+
+.quota-pace[data-status="high_pace"] {
+  color: var(--level-warn);
+}
+
+.quota-pace[data-status="likely_out"] {
+  color: var(--level-critical);
+}
+
 /* ─── Cost grid ─── */
 
 .grid {
@@ -751,8 +783,8 @@ body[data-view="onboard"] .app-footer {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: var(--space-7);
-  min-height: 96px;
+  padding:  var(--space-7) var(--space-7) 0 var(--space-7);
+  min-height: 124px;
 }
 
 .cost-card > .card-eyebrow {
@@ -766,6 +798,7 @@ body[data-view="onboard"] .app-footer {
 .stat-value {
   display: flex;
   align-items: baseline;
+  margin-bottom: var(--space-2);
   gap: var(--space-0);
   font-family: var(--font-pixel);
   font-size: var(--text-2xl);
@@ -774,6 +807,66 @@ body[data-view="onboard"] .app-footer {
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   color: var(--foreground);
+}
+
+.sparkline {
+  width: 100%;
+  height: 28px;
+  display: block;
+  color: var(--subtle-foreground);
+  overflow: visible;
+}
+
+.sparkline[data-empty="true"] {
+  opacity: 0.5;
+}
+
+.sparkline-area {
+  fill: currentColor;
+  opacity: 0.08;
+}
+
+.sparkline-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+body[data-refreshing="true"] .card {
+  animation: refreshGlow 900ms var(--ease) infinite alternate;
+}
+
+@keyframes refreshGlow {
+  from {
+    box-shadow: var(--inner-light);
+  }
+  to {
+    box-shadow:
+      var(--inner-light),
+      0 0 22px color-mix(in srgb, var(--level-ok) 18%, transparent),
+      inset 0 0 18px color-mix(in srgb, var(--level-ok) 8%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-refreshing="true"] .card {
+    animation: none;
+    box-shadow:
+      var(--inner-light),
+      0 0 14px color-mix(in srgb, var(--level-ok) 12%, transparent);
+  }
+}
+
+.cost-sparkline {
+  margin-top: auto;
+  color: var(--subtle-foreground);
+}
+
+.quota-sparkline {
+  color: var(--subtle-foreground);
 }
 
 .cost-symbol {
@@ -1529,6 +1622,11 @@ button:focus-visible {
 .switch input:checked + .switch-track .switch-thumb {
   transform: translateX(16px);
   background: oklch(15% 0.01 270);
+}
+
+.switch input:disabled + .switch-track {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .switch input:focus-visible + .switch-track {

@@ -106,6 +106,8 @@
           <div class="quota-meta">
             <span id="sessionReset" class="reset-line">--</span>
           </div>
+          <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
+          <svg id="sessionSparkline" class="sparkline quota-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
         </section>
 
         <section class="card quota-panel">
@@ -121,6 +123,7 @@
           <div class="quota-meta">
             <span id="weeklyReset" class="reset-line">--</span>
           </div>
+          <div id="weeklyPace" class="quota-pace" data-status="no_data">--</div>
         </section>
 
         <div id="offlineBanner" class="offline-banner" hidden>
@@ -144,6 +147,7 @@
               </button>
             </span>
             <span class="stat-value" id="todayCost">--</span>
+            <svg id="todaySparkline" class="sparkline cost-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
           </article>
           <article class="card cost-card">
             <span class="card-eyebrow" data-i18n="home.month">This Month</span>
@@ -155,6 +159,7 @@
               </button>
             </span>
             <span class="stat-value" id="monthCost">--</span>
+            <svg id="monthSparkline" class="sparkline cost-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
           </article>
         </section>
 
@@ -197,6 +202,16 @@
               <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
             </select>
           </div>
+          <div class="settings-path-block">
+            <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
+            <div class="settings-path-row">
+              <span id="claudePath" class="settings-path-value">--</span>
+              <button id="editClaudePathButton" class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath">
+                <!-- Carbon: Edit -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
+              </button>
+            </div>
+          </div>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.notifReset">Reset notification</span>
             <label class="switch" for="settingsNotificationsToggle">
@@ -212,21 +227,34 @@
             </label>
           </div>
           <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.refreshInterval">Refresh interval</span>
+            <select id="settingsRefreshInterval" class="settings-select">
+              <option value="30" data-i18n="settings.refresh30s">30 seconds</option>
+              <option value="300" data-i18n="settings.refresh5m">5 minutes</option>
+              <option value="900" data-i18n="settings.refresh15m">15 minutes</option>
+              <option value="1800" data-i18n="settings.refresh30m">30 minutes</option>
+            </select>
+          </div>
+          <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
             <label class="switch" for="settingsFloatingToggle">
               <input id="settingsFloatingToggle" type="checkbox" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
-          <div class="settings-path-block">
-            <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
-            <div class="settings-path-row">
-              <span id="claudePath" class="settings-path-value">--</span>
-              <button id="editClaudePathButton" class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath">
-                <!-- Carbon: Edit -->
-                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
-              </button>
-            </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
+            <label class="switch" for="settingsStartupToggle">
+              <input id="settingsStartupToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.startupShowWindow">Show window after login</span>
+            <label class="switch" for="settingsStartupShowWindowToggle">
+              <input id="settingsStartupShowWindowToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
           </div>
         </div>
 

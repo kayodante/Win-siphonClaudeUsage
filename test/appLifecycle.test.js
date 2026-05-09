@@ -17,6 +17,33 @@ test('buildTrayMenuTemplate exposes only the required right-click options', () =
   );
 });
 
+test('buildTrayMenuTemplate can prepend disabled status items', () => {
+  const template = buildTrayMenuTemplate({
+    statusItems: [
+      { label: 'Sessão: 42%', enabled: false },
+      { label: 'Atualizado: agora', enabled: false }
+    ],
+    showMainWindow: () => {},
+    showFloatingWidget: () => {},
+    showSettingsWindow: () => {},
+    quit: () => {}
+  });
+
+  assert.deepEqual(
+    template.map(item => item.type ?? `${item.label}:${item.enabled}`),
+    [
+      'Sessão: 42%:false',
+      'Atualizado: agora:false',
+      'separator',
+      'Mostrar aplicativo:undefined',
+      'Mostrar widget:undefined',
+      'Configurações:undefined',
+      'separator',
+      'Sair:undefined'
+    ]
+  );
+});
+
 test('startApplication shows the window before controller startup resolves', async () => {
   const calls = [];
   let resolveStart;
@@ -43,4 +70,18 @@ test('startApplication shows the window before controller startup resolves', asy
 
   resolveStart();
   await started;
+});
+
+test('startApplication can skip the initial window show', async () => {
+  const calls = [];
+
+  await startApplication({
+    loadWindow: async () => calls.push('loadWindow'),
+    showWindow: () => calls.push('showWindow'),
+    showOnStart: false,
+    startController: () => calls.push('startController'),
+    onControllerError: () => calls.push('controllerError')
+  });
+
+  assert.deepEqual(calls, ['loadWindow', 'startController']);
 });

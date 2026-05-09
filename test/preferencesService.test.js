@@ -20,6 +20,8 @@ test('load merges partial stored preferences with defaults', async () => {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
     floating: { enabled: false, x: null, y: null },
+    startup: { openAtLogin: false, showWindowOnLogin: false },
+    refresh: { intervalSeconds: 30 },
     claudePath: null
   });
 });
@@ -56,6 +58,8 @@ test('set persists a nested change and returns the full snapshot', async () => {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
     floating: { enabled: false, x: null, y: null },
+    startup: { openAtLogin: false, showWindowOnLogin: false },
+    refresh: { intervalSeconds: 30 },
     claudePath: null
   });
   assert.deepEqual(store.value, snapshot);
@@ -71,8 +75,22 @@ test('set creates deep paths without dropping sibling defaults', async () => {
     language: 'en',
     notifications: { sessionReset: true, sound: false },
     floating: { enabled: false, x: 120, y: null },
+    startup: { openAtLogin: false, showWindowOnLogin: false },
+    refresh: { intervalSeconds: 30 },
     claudePath: null
   });
+});
+
+test('refresh interval defaults to 30 seconds and survives set', async () => {
+  const store = new MemoryStore(null);
+  const preferences = new PreferencesService(store);
+
+  assert.equal((await preferences.load()).refresh.intervalSeconds, 30);
+
+  const snapshot = await preferences.set('refresh.intervalSeconds', 300);
+
+  assert.equal(snapshot.refresh.intervalSeconds, 300);
+  assert.equal(store.value.refresh.intervalSeconds, 300);
 });
 
 test('set emits one change event after persisting', async () => {
@@ -91,6 +109,8 @@ test('set emits one change event after persisting', async () => {
       language: 'en',
       notifications: { sessionReset: false, sound: false },
       floating: { enabled: false, x: null, y: null },
+      startup: { openAtLogin: false, showWindowOnLogin: false },
+      refresh: { intervalSeconds: 30 },
       claudePath: null
     }
   });

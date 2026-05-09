@@ -313,18 +313,82 @@ with defaults on load so old files remain valid.
 {
   "language": "en",
   "notifications": {
-    "sessionReset": true
+    "sessionReset": true,
+    "sound": false
   },
   "floating": {
     "enabled": false,
     "x": null,
     "y": null
-  }
+  },
+  "startup": {
+    "openAtLogin": false,
+    "showWindowOnLogin": false
+  },
+  "refresh": {
+    "intervalSeconds": 30
+  },
+  "claudePath": null
 }
 ```
 
 `language` supports `en` and `pt-BR`; unknown values fall back to English in
-the renderer.
+the renderer. `refresh.intervalSeconds` supports `30`, `300`, `900`, and
+`1800`; local JSONL refresh uses that value, while OAuth quota polling keeps a
+120-second minimum. `startup.showWindowOnLogin` only affects app-managed
+Windows login launches; normal/manual launches still show the main window.
+
+### `%APPDATA%\Siphon\local-usage-cache.json`
+
+Written by `LocalDataService` through `JsonStore`. This cache is internal and
+safe to delete; it is rebuilt from Claude Code JSONL files.
+
+```jsonc
+{
+  "version": 1,
+  "updatedAt": "2026-04-28T19:00:00.000Z",
+  "files": {
+    "C:\\Users\\Ada\\.claude\\projects\\example\\session.jsonl": {
+      "path": "C:\\Users\\Ada\\.claude\\projects\\example\\session.jsonl",
+      "mtimeMs": 1777393200000,
+      "size": 123456,
+      "parsedOffset": 123456,
+      "remainder": "",
+      "lastModel": "claude-sonnet-4-5-20250929",
+      "lastTokenTotals": {
+        "input": 120,
+        "output": 80,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "days": {
+        "2026-04-27": {
+          "claude-sonnet-4-5-20250929": {
+            "input": 1000,
+            "output": 2000,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      },
+      "hourly": {
+        "2026-04-27T10:00:00.000Z": {
+          "claude-sonnet-4-5-20250929": {
+            "input": 1000,
+            "output": 2000,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Unchanged files are not re-read. Files that grow are read from
+`parsedOffset`; files that shrink are parsed again from byte zero. Malformed
+JSONL lines are skipped.
 
 ### `%APPDATA%\Siphon\reset-notification.json`
 
@@ -355,3 +419,6 @@ Quick reference for renaming or debugging.
 | Cache-write tokens  | `cacheWrite` / `cache_write` | `cacheWrite` / `cache_write` | `todayStats.cacheWriteTokens`        |
 | Session %           | —                     | —                     | `quota.session.percent`              |
 | Session reset time  | —                     | —                     | `quota.session.resetsAt` (ISO string)|
+| Hourly local history| JSONL assistant usage | pricing by model      | `localHistory.hourly[]`              |
+| Daily local history | JSONL assistant usage / legacy day cache | pricing by model | `localHistory.daily[]` |
+| Session trend       | OAuth usage endpoint  | —                     | `quotaHistory.session[]`             |

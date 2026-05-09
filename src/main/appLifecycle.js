@@ -1,10 +1,20 @@
 export function buildTrayMenuTemplate({
+  statusItems = [],
   showMainWindow,
   showFloatingWidget,
   showSettingsWindow,
   quit
 }) {
+  const infoItems = statusItems
+    .filter(item => item?.label)
+    .map(item => ({
+      label: item.label,
+      enabled: false
+    }));
+
   return [
+    ...infoItems,
+    ...(infoItems.length > 0 ? [{ type: 'separator' }] : []),
     {
       label: 'Mostrar aplicativo',
       click: showMainWindow
@@ -28,11 +38,14 @@ export function buildTrayMenuTemplate({
 export async function startApplication({
   loadWindow,
   showWindow,
+  showOnStart = true,
   startController,
   onControllerError
 }) {
   await loadWindow();
-  showWindow();
+  if (showOnStart) {
+    showWindow();
+  }
   try {
     await startController();
   } catch (error) {

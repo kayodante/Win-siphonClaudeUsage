@@ -11,6 +11,13 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     x: null,
     y: null
   }),
+  startup: Object.freeze({
+    openAtLogin: false,
+    showWindowOnLogin: false
+  }),
+  refresh: Object.freeze({
+    intervalSeconds: 30
+  }),
   claudePath: null
 });
 

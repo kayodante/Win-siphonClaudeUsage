@@ -34,14 +34,17 @@ import { PreferencesService } from './preferencesService.js';
 import { ProfileService } from './profileService.js';
 import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
+import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
 import { UsageController } from './usageController.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
+import { buildTrayStatus } from '../shared/trayStatus.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
 const appIcon = createAppIcon(nativeImage, projectRoot);
+const launchHidden = shouldStartHidden(process.argv);
 
 let tray = null;
 let window = null;
@@ -69,7 +72,7 @@ app.whenReady().then(onReady).catch(error => {
   console.error('[siphon] whenReady failed:', error);
 });
 
-function onReady() {
+async function onReady() {
   console.log('[siphon] app ready');
 
   const tokenStore = new TokenStore();
@@ -78,6 +81,8 @@ function onReady() {
   preferences = new PreferencesService(
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
+  const initialPreferences = await preferences.load();
+  applyStartupSettings(app, initialPreferences.startup);
   const resetScheduler = new ResetNotificationScheduler({
     notify: async () => {
       const lang = (await preferences.get('language')) || 'en';
@@ -126,7 +131,7 @@ function onReady() {
     updateTray(state);
   });
 
-  preferences.on('change', ({ path: preferencePath, value }) => {
+  preferences.on('change', ({ path: preferencePath, value, preferences: nextPreferences }) => {
     if (preferencePath === 'floating.enabled') {
       if (value) {
         openFloatingWidget(controller.getState());
@@ -139,11 +144,15 @@ function onReady() {
       controller.updateClaudePath(effectiveDir);
       void controller.refreshLocal();
     }
+    if (preferencePath.startsWith('startup.')) {
+      applyStartupSettings(app, nextPreferences.startup);
+    }
   });
 
   void startApplication({
     loadWindow: () => window.loadFile(path.join(projectRoot, 'src', 'renderer', 'index.html')),
     showWindow: showMainWindow,
+    showOnStart: !launchHidden,
     startController: () => controller.start(),
     onControllerError: error => {
       console.error('Controller startup failed:', error);
@@ -167,9 +176,9 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 
   window = new BrowserWindow({
-    width: 336,
-    height: 660,
-    minWidth: 336,
+    width: 340,
+    height: 724,
+    minWidth: 340,
     minHeight: 600,
     resizable: true,
     show: false,
@@ -214,14 +223,26 @@ function updateTray(state) {
   if (!tray) return;
   const session = state.quota?.session?.percent;
   const level = levelForPercent(session ?? 0);
+  const lang = state.preferences?.language ?? 'en';
+  const trayStatus = buildTrayStatus(state, { lang });
 
   if (level !== trayIconLevel) {
     tray.setImage(createTrayIcon(level));
     trayIconLevel = level;
   }
 
-  const sessionText = session == null ? '--' : `${Math.round(session)}%`;
-  tray.setToolTip(`Siphon - session ${sessionText}`);
+  tray.setToolTip(trayStatus.tooltip);
+  tray.setContextMenu(
+    Menu.buildFromTemplate(
+      buildTrayMenuTemplate({
+        statusItems: trayStatus.menuItems,
+        showMainWindow,
+        showFloatingWidget: enableFloatingWidget,
+        showSettingsWindow,
+        quit
+      })
+    )
+  );
 }
 
 function registerIpc() {
@@ -235,9 +256,16 @@ function registerIpc() {
   ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
-      'floating.enabled', 'floating.x', 'floating.y', 'claudePath'
+      'floating.enabled', 'floating.x', 'floating.y',
+      'startup.openAtLogin', 'startup.showWindowOnLogin',
+      'refresh.intervalSeconds',
+      'claudePath'
     ]);
     if (!ALLOWED.has(preferencePath)) return;
+    if (preferencePath === 'refresh.intervalSeconds') {
+      const allowedIntervals = new Set([30, 300, 900, 1800]);
+      if (!allowedIntervals.has(Number(value))) return;
+    }
     await controller.preferences.set(preferencePath, value);
   });
   ipcMain.handle('view:show-main', () => showMainWindow());

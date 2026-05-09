@@ -1,8 +1,7 @@
 # Roadmap
 
 Status of the Windows port and what's left to do. Compared against the
-macOS app at
-[appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
+macOS app at [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
 
 ## Parity vs. macOS app
 
@@ -12,14 +11,14 @@ Feature-by-feature comparison against the macOS Swift original.
 | ------------------------------------------------- | :---: | :-----: | ----- |
 | Tray / menu-bar icon                              |   ✓   |    ✓    | Final assets in `assets/tray*.png` wired through `trayIcon.js`. |
 | Click tray to open popover                        |   ✓   |    ✓    | Windows wires **double-click** instead (more conventional on Windows). |
-| Right-click tray menu                             |   ✓   |    ✓    | Items: *Mostrar aplicativo*, *Configurações*, *Sair*. |
+| Right-click tray menu                             |   ✓   |    ✓    | Shows live session/weekly/reset/update summary plus app/widget/settings/quit actions. |
 | Session % + reset countdown                       |   ✓   |    ✓    |  |
 | Weekly all + weekly Sonnet                        |   ✓   |    ✓    | Surfaces `extra_usage` credits when weekly Sonnet data is absent. |
 | Today's USD cost                                  |   ✓   |    ✓    |  |
 | This month's USD cost                             |   ✓   |    ✓    |  |
 | Recent days breakdown                             |   ✓   |    ✗    | Removed; backing data dropped. May return as a dedicated view later. |
-| Local cost data refresh (~30 s)                   |   ✓   |    ✓    |  |
-| OAuth quota refresh                               |   ✓   |    ✓    | Every 120 s on Windows. |
+| Local cost data refresh (~30 s)                   |   ✓   |    ✓    | Default 30 s; configurable to 5, 15, or 30 min. |
+| OAuth quota refresh                               |   ✓   |    ✓    | Uses the chosen refresh interval with a 120 s minimum on Windows. |
 | OAuth PKCE sign-in (paste-redirect flow)          |   ✓   |    ✓    | Same client ID and endpoints as Claude Code. |
 | Token auto-refresh                                |   ✓   |    ✓    | 30-second skew before expiry. |
 | Credentials persisted at `0600`                   |   ✓   |    ✓    | `%APPDATA%\Siphon\credentials.json`. |
@@ -29,8 +28,8 @@ Feature-by-feature comparison against the macOS Swift original.
 | Packaged installer                                |  DMG  |   NSIS  | `electron-builder.yml` configured (`npm run build:win`). Code signing deferred. |
 | **Reset notification when session hits 100%**     |   —   |    ✓    | Windows-only addition (the reason this fork exists). |
 | **Missed-reset notification on next launch**      |   —   |    ✓    | Fires once if the stored reset has already passed. |
-| Code signing                                      |   ✓   |    ✗    | No certificate yet — deferred. |
-| Autostart on login                                |   ✓   |    ✗    | Not implemented. |
+| Code signing                                      |   ✓   |    ✗    | Deferred pending a paid signing route. |
+| Autostart on login                                |   ✓   |    ✓    | Settings toggles for start with Windows + show window after login. |
 
 ## Done
 
@@ -96,73 +95,79 @@ Shipped. Captured here so it's not re-litigated:
 - Start Menu shortcut placed inside a `Siphon` folder; optional desktop shortcut is opt-in during install.
 - Code signing intentionally deferred (see *Next*).
 
+**Autostart on login**
+
+- `startup.openAtLogin` and `startup.showWindowOnLogin` persisted in
+  `preferences.json`.
+- `startupService.js` wraps `app.setLoginItemSettings()` with the app path,
+  registry name `Siphon`, and a managed `--hidden` launch argument.
+- Settings UI has two switches: *Start with Windows* and
+  *Show window after login*. The second stays visible but disabled until
+  autostart is enabled.
+- Manual launches still show the main window; app-managed login launches
+  stay hidden only when started with `--hidden`.
+
+**Incremental usage history, refresh cadence, and sparklines**
+
+- `LocalDataService` caches modern JSONL parsing in
+  `%APPDATA%\Siphon\local-usage-cache.json` by path, `mtimeMs`, size,
+  parsed byte offset, trailing remainder, last model, last token totals, and
+  per-file day/hour aggregates.
+- Local summaries still expose `todayStats` and `monthStats`, and now also
+  expose `localHistory.hourly` and `localHistory.daily` for cost/token trends.
+- `UsageController` keeps an in-memory `quotaHistory.session` trend for
+  successful OAuth quota refreshes.
+- Settings now has a refresh interval preference: 30 s, 5 min, 15 min, or
+  30 min. Local polling uses the selected value; OAuth quota polling keeps a
+  120 s floor and timers are rescheduled live.
+- The Session, Today, and This Month cards render dependency-free SVG
+  sparklines from the new history data.
+
+**Usage pace, rich tray surface, and refresh glow**
+
+- `src/shared/pace.js` classifies session/weekly quota pace as no data,
+  on track, high pace, or likely to run out using reset windows plus local
+  history context.
+- The main Session and Weekly cards show a compact localized pace pill.
+- `src/shared/trayStatus.js` builds the tray tooltip and disabled context-menu
+  summary rows for session %, weekly %, session reset time, and last update.
+- Manual refresh from the topbar adds a subtle renderer-only card glow while
+  the refresh promise is pending.
+
 ## Now
 
 (empty — all items shipped)
 
 ## Next
 
-After the *Now* block ships. These need real work — new IPC, new
-modules, or external dependencies.
+These need real work — new IPC, new modules, or external dependencies.
 
-- **Autostart on login.** `app.setLoginItemSettings({ openAtLogin: true,
-  openAsHidden: true })` plus a `startup.openAtLogin` preference, a new
-  toggle in *Configurações*, and IPC plumbing through
-  `preferencesService`. Medium effort, all in-tree.
-- **Code signing.** Acquire and integrate an EV / OV certificate so the
-  installer doesn't trip SmartScreen. Blocks auto-update.
+- **Privacy mode + safe diagnostics.** Add a setting to hide or partially
+  redact profile email in the UI, and centralize redaction for logs/errors so
+  OAuth codes, access tokens, refresh tokens, bearer headers, and callback URLs
+  never appear in frontend-visible messages or copied diagnostics.
 
-## Later
-
-Lower priority.
-
-- **Auto-update** with `electron-updater`. Needs signed builds first.
-- **Anthropic API Key cost ingestion.** Considered and dropped; it requires
-  an admin key, so it is out of scope for this tray app.
-
-## Ideas
-
-Aspirational features. Ordered by dependency — **A unlocks the rest.**
-
-- **A. Local session-log aggregation.** Read `~/.claude/projects/**/*.jsonl`
-  in addition to `readout-cost-cache.json`. Unlocks history, sparklines,
-  per-model breakdown, token throughput. Touches `src/main/localDataService.js`
-  (today it only reads the cost cache). Add tests in
-  `test/localDataService.test.js`.
-
-- **B. Sparkline trend on Session + Cost cards.** Mini SVG chart of last N
-  hours/days, rendered in the renderer. Depends on **A**. Touches
-  `src/renderer/{index.html, renderer.js, styles.css}`. No new dependency —
-  hand-rolled SVG path is ~30 lines.
-
-- **C. Meter style toggle.** Ring / Bar (current) / Numeric / Sparkline,
-  selectable in *Configurações*. Persist in `preferences.json` via the
-  existing `PreferencesService`. Touches the renderer + a new toggle group
-  in the settings view.
-
-- **D. Cost card view modes.** Swipe / toggle between USD, Tokens, and
-  Trend on the cost grid (today, this month). Tokens and Trend depend on **A**.
-  Touches `src/renderer/index.html` (cost grid, currently lines 136-159).
-
-- **E. Configurable polling interval.** Settings preference for refresh
-  cadence (30 s default, 5 min, 15 min, 30 min). Today both timers are
-  hardcoded in `src/main/usageController.js` (`localTimer` 30 s,
-  `quotaTimer` 120 s). Add IPC + preference key.
-
-- **F. Refresh glow animation.** Subtle CSS glow on cards during a fetch,
-  complementing the existing dot-matrix indicator. Renderer-only, no main
-  process change. Touches `src/renderer/styles.css`.
-
-- **G. Hover-expand floating widget.** Today the widget is 220 × 80 with
-  session % only. On hover, expand to also show Weekly + cost. Touches
+  - **Expand floating widget.** Today the widget is 220 × 80 with
+  session % only. Add a small button at the bottom to expand the window to also show
+  Weekly + cost, and later the trend/pace signals. Touches
   `src/renderer/floating.html` and the floating-widget controller in
   `src/main/main.js`.
 
+- **DPAPI-protected credentials.** Upgrade `%APPDATA%\Siphon\credentials.json`
+  from mode `0600` JSON to Windows DPAPI-protected storage, with a one-time
+  migration path for existing plaintext credentials and graceful fallback in
+  development/tests. Touches `src/main/tokenStore.js` plus focused tests.
+
+## Later
+
+- **Code signing route decision.** Deferred until a paid signing route is
+  chosen. Microsoft's current SmartScreen docs say EV certificates no
+  longer guarantee immediate SmartScreen bypass; Azure Artifact Signing
+  Basic is a likely low-cost route at about US$ 9.99/month. This is a
+  release decision, not an in-tree implementation task for this cycle.
+
+- **Auto-update** with `electron-updater`. Needs signed builds first.
+
 ## Known issues / paper cuts
 
-- No window animation when showing from tray; the macOS app's popover
-  feels nicer (covered in *Now / 4*).
-- `LocalDataService` errors collapse to a single string; if the user has
-  never run Claude Code the message is technically "Could not read"
-  rather than "Claude Code hasn't created the cache yet" (covered in
-  *Now / 3*).
+- No active paper cuts are tracked here right now.
