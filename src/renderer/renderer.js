@@ -10,7 +10,14 @@ import { t, tFormat } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS, WEEKLY_WINDOW_MS } from '../shared/pace.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
-import { spinners } from '../../node_modules/unicode-animations/dist/index.js';
+
+const ONBOARD_ANIMATION_FRAMES = [
+  '..::..\n.::::.\n::..::\n.::::.',
+  '.::..:\n::::::\n:....:\n::::::',
+  '::..::\n.::::.\n..::..\n.::::.',
+  ':..::.\n::::::\n....::\n::::::'
+];
+const ONBOARD_ANIMATION_INTERVAL_MS = 120;
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
@@ -498,14 +505,13 @@ function initDotMatrix() {
 function initOnboardAnimation() {
   const container = document.getElementById('onboardAnimationContainer');
   if (!container) return;
-  const { frames, interval } = spinners.braillewave;
   let frameIndex = 0;
 
   setInterval(() => {
-    const frame = frames[frameIndex++ % frames.length];
+    const frame = ONBOARD_ANIMATION_FRAMES[frameIndex++ % ONBOARD_ANIMATION_FRAMES.length];
     const lines = frame.split('\n');
     container.textContent = lines.map(line => line.repeat(200)).join('\n');
-  }, interval);
+  }, ONBOARD_ANIMATION_INTERVAL_MS);
 }
 
 document.addEventListener('visibilitychange', () => {

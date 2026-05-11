@@ -19,7 +19,7 @@
 }
 
 @font-face {
-  font-family: "Geist Pixel Line";
+  font-family: "Geist Pixel";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -40,20 +40,20 @@
   /* ── Colors: Foreground ── */
   --foreground:        oklch(96% 0 0);
   --subtle-foreground: oklch(62% 0 0);
-  --muted-foreground:  oklch(49.23% 0 0);
+  --muted-foreground:  oklch(43.71% 0 0);
 
   /* ── Colors: Surface ── */
   --card:            oklch(20% 0 0);
   --card-elevated:   oklch(24% 0 0);
-  --card-foreground: oklch(26% 0 0);
+  --card-foreground: oklch(25.91% 0 0);
   --surface-raised:  oklch(15% 0 0);
   --muted:           oklch(22% 0 0);
   --input:           oklch(18% 0 0);
 
   /* ── Colors: Border ── */
   --border:        oklch(100% 0 0 / 0);     /* zero-alpha — use --border-strong for visible borders */
-  --border-strong: oklch(24% 0 0);
-  --border-subtle: oklch(100% 0 0 / 0.02);
+  --border-strong: oklch(100% 0 0 / 0.12);
+  --border-subtle: oklch(100% 0 0 / 0.03);
 
   /* ── Colors: Accent ── */
   --accent:            oklch(84.1% 0.238 128.85);
@@ -71,7 +71,7 @@
   --warning-soft:     oklch(76.86% 0.1647 70.08 / 0.16);
 
   /* ── Colors: Level scale ── */
-  --level-ok:           var(--success);
+  --level-ok:           oklch(84.59% 0.2026 156.3);
   --level-ok-soft:      oklch(0.8459 0.2026 156.3 / 0.18);
   --level-warn:         oklch(88% 0.163 92);
   --level-warn-soft:    oklch(88% 0.163 92 / 0.18);
@@ -109,6 +109,7 @@
   --leading-normal: 1.5;
 
   /* ── Spacing ── */
+  --space-none:  0px;
   --space-0:  2px;
   --space-1:  4px;
   --space-2:  6px;

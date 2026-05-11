@@ -124,7 +124,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagr
 
 ## Credits
 
-Inspired by [siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage/) (MIT), specifically the cost usage tracking.
+Inspired by [siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage/) (MIT)
 
 ## License
 

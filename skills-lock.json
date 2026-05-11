@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "cc-figma-tokens": {
+      "source": "nvillapiano/component-contracts-figma",
+      "sourceType": "github",
+      "skillPath": "skills/cc-figma-tokens/SKILL.md",
+      "computedHash": "5ee96241ac45ae27d765650b5bb34d9cc490c882d20c36be461b01c827f4b9ba"
+    },
+    "electron": {
+      "source": "teachingai/full-stack-skills",
+      "sourceType": "github",
+      "skillPath": "skills/electron-skills/electron/SKILL.md",
+      "computedHash": "ab90f92c4abdc6ff5f26cc387c13beca310986937ee51cecab02a89412181c79"
+    }
+  }
+}

@@ -15,6 +15,9 @@ pnpm-debug.log*
 
 # Tooling / local
 .claude/
+.agents
+.codex
+.jules
 .graphifyignore
 graphify-out/
 coverage/
