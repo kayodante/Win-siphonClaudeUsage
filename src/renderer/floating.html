@@ -34,6 +34,25 @@
         </span>
       </div>
       <div id="floatingMeter" class="floating-meter-bar" aria-hidden="true"></div>
+      <section id="floatingExpandedPanel" class="floating-expanded-panel" hidden>
+        <div class="floating-metric">
+          <span id="floatingWeeklyLabel" class="floating-metric-label"></span>
+          <span id="floatingWeeklyValue" class="floating-metric-value">--</span>
+        </div>
+        <div class="floating-metric">
+          <span id="floatingTodayLabel" class="floating-metric-label"></span>
+          <span id="floatingTodayValue" class="floating-metric-value">--</span>
+        </div>
+        <div class="floating-metric">
+          <span id="floatingMonthLabel" class="floating-metric-label"></span>
+          <span id="floatingMonthValue" class="floating-metric-value">--</span>
+        </div>
+      </section>
+      <button id="floatingExpandButton" class="floating-expand-btn" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.2 6.2 8 10l3.8-3.8 1.1 1.1L8 12.2 3.1 7.3z" />
+        </svg>
+      </button>
     </main>
 
     <script type="module" src="./floating.js"></script>

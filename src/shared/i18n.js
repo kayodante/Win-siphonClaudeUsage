@@ -54,6 +54,11 @@ const STRINGS = Object.freeze({
     'floating.openMain': 'Open Siphon',
     'floating.signIn': 'Sign in',
     'floating.error': 'Could not load state',
+    'floating.expand': 'Expand widget',
+    'floating.collapse': 'Collapse widget',
+    'floating.weekly': 'Weekly',
+    'floating.today': 'Today',
+    'floating.month': 'Month',
 
     'settings.account': 'Account',
     'settings.fullName': 'Full name',
@@ -151,6 +156,11 @@ const STRINGS = Object.freeze({
     'floating.openMain': 'Abrir Siphon',
     'floating.signIn': 'Entrar',
     'floating.error': 'Não foi possível carregar',
+    'floating.expand': 'Expandir widget',
+    'floating.collapse': 'Recolher widget',
+    'floating.weekly': 'Semanal',
+    'floating.today': 'Hoje',
+    'floating.month': 'Mês',
 
     'settings.account': 'Conta',
     'settings.fullName': 'Nome completo',

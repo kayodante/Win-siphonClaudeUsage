@@ -5,10 +5,10 @@ import os from 'node:os';
 console.log('[siphon] main.js: module start');
 
 process.on('uncaughtException', err => {
-  console.error('[siphon] uncaughtException:', err);
+  logSafeError('[siphon] uncaughtException:', err);
 });
 process.on('unhandledRejection', err => {
-  console.error('[siphon] unhandledRejection:', err);
+  logSafeError('[siphon] unhandledRejection:', err);
 });
 
 import {
@@ -40,6 +40,7 @@ import { UsageController } from './usageController.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
 import { buildTrayStatus } from '../shared/trayStatus.js';
+import { logSafeError } from '../shared/diagnostics.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
@@ -69,7 +70,7 @@ app.on('second-instance', () => {
 
 console.log('[siphon] registering whenReady handler');
 app.whenReady().then(onReady).catch(error => {
-  console.error('[siphon] whenReady failed:', error);
+  logSafeError('[siphon] whenReady failed:', error);
 });
 
 async function onReady() {
@@ -139,6 +140,9 @@ async function onReady() {
         floatingWindow?.hide();
       }
     }
+    if (preferencePath === 'floating.expanded') {
+      floatingWindow?.applySize(Boolean(value));
+    }
     if (preferencePath === 'claudePath') {
       const effectiveDir = value || path.join(os.homedir(), '.claude');
       controller.updateClaudePath(effectiveDir);
@@ -155,10 +159,10 @@ async function onReady() {
     showOnStart: !launchHidden,
     startController: () => controller.start(),
     onControllerError: error => {
-      console.error('Controller startup failed:', error);
+      logSafeError('Controller startup failed:', error);
     }
   }).catch(error => {
-    console.error('Application startup failed:', error);
+    logSafeError('Application startup failed:', error);
   });
 }
 
@@ -256,7 +260,7 @@ function registerIpc() {
   ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
-      'floating.enabled', 'floating.x', 'floating.y',
+      'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
       'claudePath'
@@ -273,6 +277,9 @@ function registerIpc() {
   ipcMain.handle('floating:open-main', () => showMainWindow());
   ipcMain.handle('floating:close', async () => {
     await controller.preferences.set('floating.enabled', false);
+  });
+  ipcMain.handle('floating:set-expanded', async (_event, expanded) => {
+    await floatingWindow?.setExpanded(Boolean(expanded));
   });
   ipcMain.handle('app:info', async () => ({
     configDir: configDir(),
@@ -319,7 +326,7 @@ async function enableFloatingWidget() {
 function openFloatingWidget(state = controller?.getState()) {
   if (!floatingWindow || !controller) return;
   void floatingWindow.show(state).catch(error => {
-    console.error('Floating widget failed:', error);
+    logSafeError('Floating widget failed:', error);
   });
 }
 

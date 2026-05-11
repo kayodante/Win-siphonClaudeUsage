@@ -5,10 +5,12 @@ import {
   hydrateSlot,
   levelForPercent
 } from '../shared/format.js';
+import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { t, tFormat } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS, WEEKLY_WINDOW_MS } from '../shared/pace.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
+import { spinners } from '../../node_modules/unicode-animations/dist/index.js';
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
@@ -36,9 +38,6 @@ const elements = {
   notificationIconOff: document.querySelector('#notificationIconOff'),
   todayCost: document.querySelector('#todayCost'),
   monthCost: document.querySelector('#monthCost'),
-  sessionSparkline: document.querySelector('#sessionSparkline'),
-  todaySparkline: document.querySelector('#todaySparkline'),
-  monthSparkline: document.querySelector('#monthSparkline'),
   signOutButton: document.querySelector('#signOutButton'),
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
@@ -100,7 +99,7 @@ elements.settingsNotificationsToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.sessionReset', event.target.checked);
   } catch (error) {
-    console.error('Failed to save notification preference', error);
+    logSafeError('Failed to save notification preference:', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveNotification', currentLanguage());
   }
@@ -109,7 +108,7 @@ elements.settingsSoundToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.sound', event.target.checked);
   } catch (error) {
-    console.error('Failed to save sound preference', error);
+    logSafeError('Failed to save sound preference:', error);
     event.target.checked = !event.target.checked;
   }
 });
@@ -118,7 +117,7 @@ elements.settingsRefreshInterval.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('refresh.intervalSeconds', Number(event.target.value));
   } catch (error) {
-    console.error('Failed to save refresh preference', error);
+    logSafeError('Failed to save refresh preference:', error);
     event.target.value = previousValue;
     elements.errorText.textContent = t('error.saveRefresh', currentLanguage());
   }
@@ -127,7 +126,7 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('floating.enabled', event.target.checked);
   } catch (error) {
-    console.error('Failed to save floating widget preference', error);
+    logSafeError('Failed to save floating widget preference:', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveFloating', currentLanguage());
   }
@@ -136,7 +135,7 @@ elements.settingsStartupToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('startup.openAtLogin', event.target.checked);
   } catch (error) {
-    console.error('Failed to save startup preference', error);
+    logSafeError('Failed to save startup preference:', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveStartup', currentLanguage());
   }
@@ -145,7 +144,7 @@ elements.settingsStartupShowWindowToggle.addEventListener('change', async event 
   try {
     await window.siphon.setPreference('startup.showWindowOnLogin', event.target.checked);
   } catch (error) {
-    console.error('Failed to save startup window preference', error);
+    logSafeError('Failed to save startup window preference:', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveStartup', currentLanguage());
   }
@@ -155,7 +154,7 @@ elements.settingsLanguage.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('language', event.target.value);
   } catch (error) {
-    console.error('Failed to save language preference', error);
+    logSafeError('Failed to save language preference:', error);
     event.target.value = previousLanguage;
     elements.errorText.textContent = t('error.saveLanguage', previousLanguage);
   }
@@ -180,12 +179,13 @@ elements.notificationState.addEventListener('click', async () => {
   try {
     await window.siphon.setPreference('notifications.sessionReset', !enabled);
   } catch (error) {
-    console.error('Failed to toggle notifications', error);
+    logSafeError('Failed to toggle notifications:', error);
     elements.errorText.textContent = t('error.saveNotification', currentLanguage());
   }
 });
 
 initDotMatrix();
+initOnboardAnimation();
 
 try {
   appInfo = await window.siphon.getAppInfo();
@@ -197,7 +197,7 @@ try {
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
 } catch (error) {
-  console.error('Renderer bootstrap failed', error);
+  logSafeError('Renderer bootstrap failed:', error);
   if (elements.errorText) {
     elements.errorText.textContent = t('error.loadState', 'en');
   }
@@ -251,14 +251,8 @@ function render(state) {
   renderPace(elements.weeklyPace, weeklyPace, lang);
 
   renderNotificationPill(notificationsEnabled, lang);
-  renderSparkline(elements.sessionSparkline, (state.quotaHistory?.session ?? []).map(point => ({
-    label: point.timestamp,
-    value: point.percent
-  })), { max: 100 });
-
   setCostValue(elements.todayCost, state.todayStats?.cost);
   setCostValue(elements.monthCost, state.monthStats?.cost);
-  renderCostSparklines(state, now);
   updateLastUpdatedLine();
 
   elements.signOutButton.hidden = !state.isSignedIn;
@@ -308,7 +302,7 @@ async function refreshNow() {
   try {
     await window.siphon.refresh();
   } catch (error) {
-    console.error('Manual refresh failed', error);
+    logSafeError('Manual refresh failed:', error);
     elements.errorText.textContent = t('error.loadState', currentLanguage());
   } finally {
     elements.refreshButton.disabled = false;
@@ -320,24 +314,6 @@ function renderPace(element, pace, lang = currentLanguage()) {
   if (!element) return;
   element.dataset.status = pace?.status ?? 'no_data';
   element.textContent = t(`pace.${pace?.status ?? 'no_data'}`, lang);
-}
-
-function renderCostSparklines(state, now) {
-  const todayKey = toDateKey(now);
-  const monthPrefix = todayKey.slice(0, 7);
-  const hourlyToday = (state.localHistory?.hourly ?? [])
-    .filter(bucket => toDateKey(new Date(bucket.hour)) === todayKey);
-  const dailyMonth = (state.localHistory?.daily ?? [])
-    .filter(bucket => bucket.date?.startsWith(monthPrefix));
-
-  renderSparkline(elements.todaySparkline, hourlyToday.map(bucket => ({
-    label: bucket.hour,
-    value: trendValue(bucket)
-  })));
-  renderSparkline(elements.monthSparkline, dailyMonth.map(bucket => ({
-    label: bucket.date,
-    value: trendValue(bucket)
-  })));
 }
 
 function clampPercent(value) {
@@ -377,59 +353,6 @@ function renderMeter(meter, percent) {
     seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
     meter.appendChild(seg);
   }
-}
-
-function renderSparkline(svg, points, options = {}) {
-  if (!svg) return;
-  svg.replaceChildren();
-  const width = 120;
-  const height = 28;
-  const padding = 2;
-  const values = points.map(point => Number(point.value ?? 0)).filter(Number.isFinite);
-  if (values.length < 2) {
-    svg.dataset.empty = 'true';
-    const y = height / 2;
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    line.setAttribute('class', 'sparkline-line');
-    line.setAttribute('d', `M${padding} ${roundSvg(y)} L${width - padding} ${roundSvg(y)}`);
-    svg.append(line);
-    return;
-  }
-
-  delete svg.dataset.empty;
-  const min = Math.min(0, ...values);
-  const max = Math.max(options.max ?? 0, ...values);
-  const span = max - min || 1;
-  const step = (width - padding * 2) / (values.length - 1);
-  const coordinates = values.map((value, index) => {
-    const x = padding + index * step;
-    const y = height - padding - ((value - min) / span) * (height - padding * 2);
-    return [x, y];
-  });
-  const d = coordinates.map(([x, y], index) =>
-    `${index === 0 ? 'M' : 'L'}${roundSvg(x)} ${roundSvg(y)}`
-  ).join(' ');
-  const areaD = `${d} L${roundSvg(coordinates.at(-1)[0])} ${height - padding} L${padding} ${height - padding} Z`;
-
-  const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  area.setAttribute('class', 'sparkline-area');
-  area.setAttribute('d', areaD);
-
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  line.setAttribute('class', 'sparkline-line');
-  line.setAttribute('d', d);
-
-  svg.append(area, line);
-}
-
-function trendValue(bucket) {
-  const cost = Number(bucket?.cost ?? 0);
-  if (cost > 0) return cost;
-  return Number(bucket?.totalTokens ?? 0);
-}
-
-function roundSvg(value) {
-  return Math.round(value * 100) / 100;
 }
 
 function toDateKey(date) {
@@ -525,7 +448,7 @@ function applyTranslations(lang) {
 
 function playResetSound() {
   const audio = new Audio('../../assets/notification.mp3');
-  audio.play().catch(error => console.warn('Could not play reset sound', error));
+  audio.play().catch(error => console.warn('Could not play reset sound', redactSensitive(error)));
 }
 
 function initDotMatrix() {
@@ -570,6 +493,19 @@ function initDotMatrix() {
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+}
+
+function initOnboardAnimation() {
+  const container = document.getElementById('onboardAnimationContainer');
+  if (!container) return;
+  const { frames, interval } = spinners.braillewave;
+  let frameIndex = 0;
+
+  setInterval(() => {
+    const frame = frames[frameIndex++ % frames.length];
+    const lines = frame.split('\n');
+    container.textContent = lines.map(line => line.repeat(200)).join('\n');
+  }, interval);
 }
 
 document.addEventListener('visibilitychange', () => {

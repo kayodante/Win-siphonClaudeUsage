@@ -19,7 +19,7 @@ test('load merges partial stored preferences with defaults', async () => {
   assert.deepEqual(await preferences.load(), {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
-    floating: { enabled: false, x: null, y: null },
+    floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     claudePath: null
@@ -57,7 +57,7 @@ test('set persists a nested change and returns the full snapshot', async () => {
   assert.deepEqual(snapshot, {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
-    floating: { enabled: false, x: null, y: null },
+    floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     claudePath: null
@@ -74,7 +74,7 @@ test('set creates deep paths without dropping sibling defaults', async () => {
   assert.deepEqual(snapshot, {
     language: 'en',
     notifications: { sessionReset: true, sound: false },
-    floating: { enabled: false, x: 120, y: null },
+    floating: { enabled: false, expanded: false, x: 120, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     claudePath: null
@@ -108,12 +108,27 @@ test('set emits one change event after persisting', async () => {
     preferences: {
       language: 'en',
       notifications: { sessionReset: false, sound: false },
-      floating: { enabled: false, x: null, y: null },
+      floating: { enabled: false, expanded: false, x: null, y: null },
       startup: { openAtLogin: false, showWindowOnLogin: false },
       refresh: { intervalSeconds: 30 },
       claudePath: null
     }
   });
+});
+
+test('concurrent set calls are serialized without dropping sibling changes', async () => {
+  const store = new SlowMemoryStore(null);
+  const preferences = new PreferencesService(store);
+
+  await Promise.all([
+    preferences.set('floating.x', 128),
+    preferences.set('floating.y', 256),
+    preferences.set('language', 'pt-BR')
+  ]);
+
+  assert.equal(store.value.floating.x, 128);
+  assert.equal(store.value.floating.y, 256);
+  assert.equal(store.value.language, 'pt-BR');
 });
 
 class MemoryStore {
@@ -130,13 +145,20 @@ class MemoryStore {
   }
 }
 
-test('setPath blocks prototype pollution', () => {
+class SlowMemoryStore extends MemoryStore {
+  async save(value) {
+    await Promise.resolve();
+    this.value = value;
+  }
+}
+
+test('setPath blocks prototype pollution', async () => {
   const store = new MemoryStore(null);
   const preferences = new PreferencesService(store);
 
-  preferences.set('__proto__.polluted', 'YES');
+  await preferences.set('__proto__.polluted', 'YES');
   assert.equal(({}).polluted, undefined);
 
-  preferences.set('constructor.prototype.polluted2', 'YES');
+  await preferences.set('constructor.prototype.polluted2', 'YES');
   assert.equal(({}).polluted2, undefined);
 });

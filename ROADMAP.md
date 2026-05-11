@@ -59,7 +59,8 @@ Shipped. Captured here so it's not re-litigated:
 
 **Floating widget (PiP-style)**
 
-- 220 × 80, fixed, frameless, transparent, always-on-top, `skipTaskbar`.
+- Compact 220 × 88, frameless, transparent, always-on-top, `skipTaskbar`.
+- Expandable to 260 × 168 for weekly quota plus today/month cost.
 - Opt-in via Settings switch + tray menu *Mostrar widget*.
 - Position persisted to `preferences.json` (debounced on `move`).
 - Consumes the existing `state-changed` channel; no duplicate controller.
@@ -107,7 +108,7 @@ Shipped. Captured here so it's not re-litigated:
 - Manual launches still show the main window; app-managed login launches
   stay hidden only when started with `--hidden`.
 
-**Incremental usage history, refresh cadence, and sparklines**
+**Incremental usage history and refresh cadence**
 
 - `LocalDataService` caches modern JSONL parsing in
   `%APPDATA%\Siphon\local-usage-cache.json` by path, `mtimeMs`, size,
@@ -120,8 +121,6 @@ Shipped. Captured here so it's not re-litigated:
 - Settings now has a refresh interval preference: 30 s, 5 min, 15 min, or
   30 min. Local polling uses the selected value; OAuth quota polling keeps a
   120 s floor and timers are rescheduled live.
-- The Session, Today, and This Month cards render dependency-free SVG
-  sparklines from the new history data.
 
 **Usage pace, rich tray surface, and refresh glow**
 
@@ -134,24 +133,27 @@ Shipped. Captured here so it's not re-litigated:
 - Manual refresh from the topbar adds a subtle renderer-only card glow while
   the refresh promise is pending.
 
+**Safe diagnostics**
+
+- `src/shared/diagnostics.js` centralizes redaction for OAuth codes, token
+  fields, bearer headers, callback URLs, and sensitive diagnostic payloads.
+- Main/renderer log paths use the shared helper so frontend-visible auth/quota
+  errors and bootstrap logs avoid raw secrets.
+
+**Expanded floating widget**
+
+- Floating widget keeps the compact 220 × 88 mode and adds a persisted
+  `floating.expanded` mode at 260 × 168.
+- A bottom expand/collapse button toggles the widget from the preload IPC
+  surface, and the expanded view shows weekly quota plus today/month cost.
+
 ## Now
 
-(empty — all items shipped)
+- No active Now items are tracked right now.
 
 ## Next
 
 These need real work — new IPC, new modules, or external dependencies.
-
-- **Privacy mode + safe diagnostics.** Add a setting to hide or partially
-  redact profile email in the UI, and centralize redaction for logs/errors so
-  OAuth codes, access tokens, refresh tokens, bearer headers, and callback URLs
-  never appear in frontend-visible messages or copied diagnostics.
-
-  - **Expand floating widget.** Today the widget is 220 × 80 with
-  session % only. Add a small button at the bottom to expand the window to also show
-  Weekly + cost, and later the trend/pace signals. Touches
-  `src/renderer/floating.html` and the floating-widget controller in
-  `src/main/main.js`.
 
 - **DPAPI-protected credentials.** Upgrade `%APPDATA%\Siphon\credentials.json`
   from mode `0600` JSON to Windows DPAPI-protected storage, with a one-time

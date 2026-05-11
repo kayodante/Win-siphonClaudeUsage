@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('siphon', {
   showSettingsView: () => ipcRenderer.invoke('view:show-settings'),
   openMainWindowFromWidget: () => ipcRenderer.invoke('floating:open-main'),
   closeFloatingWidget: () => ipcRenderer.invoke('floating:close'),
+  setFloatingExpanded: expanded => ipcRenderer.invoke('floating:set-expanded', expanded),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
   minimize: () => ipcRenderer.invoke('window:minimize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),

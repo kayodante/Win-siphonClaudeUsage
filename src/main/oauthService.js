@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 
+import { safeErrorMessage } from '../shared/diagnostics.js';
+
 export class OAuthService {
   constructor({ fetchImpl = fetch } = {}) {
     this.fetchImpl = fetchImpl;
@@ -57,7 +59,7 @@ export class OAuthService {
 
     if (response.status !== 200) {
       const text = await response.text();
-      throw new Error(`Auth failed: ${text || response.status}`);
+      throw new Error(safeErrorMessage(`Auth failed: ${text || response.status}`, 'Auth failed.'));
     }
 
     const json = await response.json();

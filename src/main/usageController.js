@@ -5,6 +5,7 @@ import { OAuthService } from './oauthService.js';
 import { DEFAULT_PREFERENCES } from './preferencesService.js';
 import { ProfileService } from './profileService.js';
 import { QuotaError, QuotaService } from './quotaService.js';
+import { logSafeError, safeErrorMessage } from '../shared/diagnostics.js';
 
 const DEFAULT_LOCAL_INTERVAL_MS = 30_000;
 const MIN_QUOTA_INTERVAL_MS = 120_000;
@@ -105,7 +106,7 @@ export class UsageController extends EventEmitter {
       this.state.lastUpdated = summary.lastUpdated.toISOString();
       this.state.localError = null;
     } catch (error) {
-      console.error('refreshLocal failed', error);
+      logSafeError('refreshLocal failed:', error);
       this.state.localError =
         error instanceof SyntaxError
           ? 'error.local.corrupted'
@@ -146,8 +147,8 @@ export class UsageController extends EventEmitter {
         this.state.isOffline = true;
         this.state.quotaError = null;
       } else {
-        console.error('refreshQuota failed', error);
-        this.state.quotaError = error.message;
+        logSafeError('refreshQuota failed:', error);
+        this.state.quotaError = safeErrorMessage(error, 'Could not load quota data.');
       }
     } finally {
       this.quotaInFlight = false;
@@ -180,7 +181,7 @@ export class UsageController extends EventEmitter {
       await this.refreshProfile();
       await this.refreshQuota();
     } catch (error) {
-      this.state.authError = error.message;
+      this.state.authError = safeErrorMessage(error, 'Authentication failed. Please try again.');
       this.#emit();
     }
   }
@@ -210,7 +211,7 @@ export class UsageController extends EventEmitter {
     try {
       this.state.profile = await this.profileService.fetchProfile();
     } catch (error) {
-      console.error('[profile] refresh failed', error);
+      logSafeError('[profile] refresh failed:', error);
       this.state.profile = null;
     }
     this.#emit();

@@ -1,4 +1,7 @@
-const WIDGET_WIDTH = 220;
+import { logSafeError } from '../shared/diagnostics.js';
+
+const COMPACT_SIZE = Object.freeze({ width: 220, height: 102 });
+const EXPANDED_SIZE = Object.freeze({ width: 220, height: 168 });
 const WIDGET_MARGIN = 20;
 
 export class FloatingWindowController {
@@ -43,7 +46,7 @@ export class FloatingWindowController {
     if (this.moveTimer) {
       this.clearTimeout(this.moveTimer);
       this.moveTimer = null;
-      this.savePosition();
+      this.persistPosition();
     }
 
     if (this.window && !this.window.isDestroyed()) {
@@ -59,18 +62,29 @@ export class FloatingWindowController {
     this.pendingState = state;
 
     if (!this.window || this.window.isDestroyed() || !this.loaded) return;
+    this.applySize(isExpandedState(state));
     this.window.webContents.send('state-changed', state);
+  }
+
+  async setExpanded(expanded) {
+    const nextExpanded = Boolean(expanded);
+    await this.preferences.set('floating.expanded', nextExpanded);
+    if (this.pendingState?.preferences?.floating) {
+      this.pendingState.preferences.floating.expanded = nextExpanded;
+    }
+    this.applySize(nextExpanded);
   }
 
   createWindow() {
     this.loaded = false;
+    const size = widgetSize(isExpandedState(this.pendingState));
     this.window = new this.BrowserWindow({
-      width: 220,
-      height: 88,
-      minWidth: 220,
-      minHeight: 88,
-      maxWidth: 220,
-      maxHeight: 88,
+      width: size.width,
+      height: size.height,
+      minWidth: size.width,
+      minHeight: size.height,
+      maxWidth: size.width,
+      maxHeight: size.height,
       resizable: false,
       movable: true,
       frame: false,
@@ -117,8 +131,9 @@ export class FloatingWindowController {
 
   positionTopRight() {
     const { workArea } = this.screen.getPrimaryDisplay();
+    const { width } = this.window.getBounds();
     this.window.setPosition(
-      workArea.x + workArea.width - WIDGET_WIDTH - WIDGET_MARGIN,
+      workArea.x + workArea.width - width - WIDGET_MARGIN,
       workArea.y + WIDGET_MARGIN,
       false
     );
@@ -133,15 +148,21 @@ export class FloatingWindowController {
 
     this.moveTimer = this.setTimeout(() => {
       this.moveTimer = null;
-      this.savePosition();
+      this.persistPosition();
     }, this.debounceMs);
   }
 
-  savePosition() {
+  persistPosition() {
+    void this.savePosition().catch(error => {
+      logSafeError('Floating widget position save failed:', error);
+    });
+  }
+
+  async savePosition() {
     if (!this.window || this.window.isDestroyed()) return;
     const { x, y } = this.window.getBounds();
-    this.preferences.set('floating.x', x);
-    this.preferences.set('floating.y', y);
+    await this.preferences.set('floating.x', x);
+    await this.preferences.set('floating.y', y);
   }
 
   showWindow() {
@@ -154,4 +175,20 @@ export class FloatingWindowController {
 
     this.window.show();
   }
+
+  applySize(expanded) {
+    if (!this.window || this.window.isDestroyed()) return;
+    const size = widgetSize(expanded);
+    this.window.setMinimumSize?.(size.width, size.height);
+    this.window.setMaximumSize?.(size.width, size.height);
+    this.window.setSize?.(size.width, size.height, false);
+  }
+}
+
+function isExpandedState(state) {
+  return Boolean(state?.preferences?.floating?.expanded);
+}
+
+function widgetSize(expanded) {
+  return expanded ? EXPANDED_SIZE : COMPACT_SIZE;
 }

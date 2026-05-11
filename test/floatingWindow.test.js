@@ -6,7 +6,7 @@ import { FloatingWindowController } from '../src/main/floatingWindow.js';
 
 test('show creates the PiP widget with fixed always-on-top options', async () => {
   const windows = [];
-  const preferences = new MemoryPreferences({ floating: { enabled: true, x: null, y: null } });
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } });
   const controller = new FloatingWindowController({
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
@@ -31,7 +31,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
     ]),
     {
       width: 220,
-      height: 88,
+      height: 102,
       resizable: false,
       frame: false,
       transparent: true,
@@ -47,7 +47,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
 
 test('show restores the persisted widget position', async () => {
   const windows = [];
-  const preferences = new MemoryPreferences({ floating: { enabled: true, x: 42, y: 84 } });
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: 42, y: 84 } });
   const controller = new FloatingWindowController({
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
@@ -66,7 +66,7 @@ test('syncState forwards state to the floating renderer', async () => {
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
     preloadPath: 'preload.cjs',
-    preferences: new MemoryPreferences({ floating: { enabled: true, x: null, y: null } })
+    preferences: new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } })
   });
   const state = sampleState();
 
@@ -78,7 +78,7 @@ test('syncState forwards state to the floating renderer', async () => {
 
 test('move persists the widget position after the debounce fires', async () => {
   const windows = [];
-  const preferences = new MemoryPreferences({ floating: { enabled: true, x: null, y: null } });
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } });
   const controller = new FloatingWindowController({
     BrowserWindow: createFakeBrowserWindow(windows),
     clearTimeout: () => {},
@@ -93,8 +93,9 @@ test('move persists the widget position after the debounce fires', async () => {
   });
 
   await controller.show(sampleState());
-  windows[0].bounds = { x: 128, y: 256, width: 220, height: 80 };
+  windows[0].bounds = { x: 128, y: 256, width: 220, height: 102 };
   windows[0].emit('move');
+  await Promise.resolve();
 
   assert.deepEqual(preferences.setCalls, [
     ['floating.x', 128],
@@ -106,7 +107,7 @@ test('restorePosition falls back to top-right when saved position is off all dis
   const windows = [];
   const screen = createFakeScreen([{ bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]);
   // position is on a second monitor that is no longer connected
-  const preferences = new MemoryPreferences({ floating: { enabled: true, x: 2500, y: 200 } });
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: 2500, y: 200 } });
   const controller = new FloatingWindowController({
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
@@ -124,7 +125,7 @@ test('restorePosition falls back to top-right when saved position is off all dis
 test('restorePosition uses saved position when it lies on a connected display', async () => {
   const windows = [];
   const screen = createFakeScreen([{ bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]);
-  const preferences = new MemoryPreferences({ floating: { enabled: true, x: 42, y: 84 } });
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: 42, y: 84 } });
   const controller = new FloatingWindowController({
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
@@ -144,7 +145,7 @@ test('hide destroys the active floating window', async () => {
     BrowserWindow: createFakeBrowserWindow(windows),
     htmlPath: 'floating.html',
     preloadPath: 'preload.cjs',
-    preferences: new MemoryPreferences({ floating: { enabled: true, x: null, y: null } })
+    preferences: new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } })
   });
 
   await controller.show(sampleState());
@@ -152,6 +153,53 @@ test('hide destroys the active floating window', async () => {
 
   assert.equal(windows[0].destroyed, true);
   assert.equal(controller.window, null);
+});
+
+test('show creates the expanded widget when the preference is active', async () => {
+  const windows = [];
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: true, x: null, y: null } });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences
+  });
+
+  await controller.show(sampleState({ expanded: true }));
+
+  assert.deepEqual(
+    pick(windows[0].options, ['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight']),
+    {
+      width: 220,
+      height: 168,
+      minWidth: 220,
+      minHeight: 168,
+      maxWidth: 220,
+      maxHeight: 168
+    }
+  );
+});
+
+test('setExpanded persists preference and resizes an open widget', async () => {
+  const windows = [];
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences
+  });
+
+  await controller.show(sampleState());
+  await controller.setExpanded(true);
+
+  assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', true]);
+  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 168, false]);
+
+  await controller.setExpanded(false);
+
+  assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', false]);
+  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 102, false]);
 });
 
 function createFakeBrowserWindow(windows) {
@@ -167,6 +215,7 @@ function createFakeBrowserWindow(windows) {
       this.destroyed = false;
       this.loadedFile = null;
       this.position = null;
+      this.sizeCalls = [];
       this.showInactiveCalls = 0;
       this.showCalls = 0;
       windows.push(this);
@@ -180,6 +229,12 @@ function createFakeBrowserWindow(windows) {
       this.position = { x, y };
       this.bounds.x = x;
       this.bounds.y = y;
+    }
+
+    setSize(width, height, animate = false) {
+      this.sizeCalls.push([width, height, animate]);
+      this.bounds.width = width;
+      this.bounds.height = height;
     }
 
     showInactive() {
@@ -228,15 +283,21 @@ class MemoryPreferences {
   }
 }
 
-function sampleState() {
+function sampleState({ expanded = false } = {}) {
   return {
-    preferences: { floating: { enabled: true, x: null, y: null } },
+    preferences: { floating: { enabled: true, expanded, x: null, y: null } },
     quota: {
       session: {
         percent: 64,
         resetsAt: new Date('2026-04-29T18:00:00.000Z').toISOString()
+      },
+      weeklyAll: {
+        percent: 32,
+        resetsAt: new Date('2026-05-01T18:00:00.000Z').toISOString()
       }
-    }
+    },
+    todayStats: { cost: 1.25 },
+    monthStats: { cost: 12.5 }
   };
 }
 

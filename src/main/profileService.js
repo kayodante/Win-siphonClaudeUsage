@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { logSafeError } from '../shared/diagnostics.js';
+
 const FETCH_TIMEOUT_MS = 15_000;
 
 export class ProfileService {
@@ -18,7 +20,7 @@ export class ProfileService {
     try {
       token = await this.#validToken();
     } catch (error) {
-      console.error('[profile] token validation failed', error);
+      logSafeError('[profile] token validation failed:', error);
       return null;
     }
 
@@ -54,7 +56,7 @@ export class ProfileService {
 
       return null;
     } catch (error) {
-      console.error('[profile] fetch failed', error);
+      logSafeError('[profile] fetch failed:', error);
       return null;
     } finally {
       clearTimeout(timer);

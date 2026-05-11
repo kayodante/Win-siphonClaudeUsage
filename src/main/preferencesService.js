@@ -8,6 +8,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   }),
   floating: Object.freeze({
     enabled: false,
+    expanded: false,
     x: null,
     y: null
   }),
@@ -25,6 +26,7 @@ export class PreferencesService extends EventEmitter {
   constructor(store) {
     super();
     this.store = store;
+    this.writeQueue = Promise.resolve();
   }
 
   async load() {
@@ -36,11 +38,19 @@ export class PreferencesService extends EventEmitter {
   }
 
   async set(path, value) {
-    const preferences = await this.load();
-    setPath(preferences, path, value);
-    await this.store.save(preferences);
-    this.emit('change', { path, value, preferences });
-    return preferences;
+    return this.enqueueWrite(async () => {
+      const preferences = await this.load();
+      setPath(preferences, path, value);
+      await this.store.save(preferences);
+      this.emit('change', { path, value, preferences });
+      return preferences;
+    });
+  }
+
+  enqueueWrite(operation) {
+    const run = this.writeQueue.then(operation, operation);
+    this.writeQueue = run.catch(() => {});
+    return run;
   }
 }
 

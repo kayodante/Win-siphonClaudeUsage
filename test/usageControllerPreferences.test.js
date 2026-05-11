@@ -46,7 +46,7 @@ test('controller state includes preferences snapshot', async () => {
   assert.deepEqual(controller.getState().preferences, {
     language: 'en',
     notifications: { sessionReset: false, sound: false },
-    floating: { enabled: false, x: null, y: null },
+    floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     claudePath: null

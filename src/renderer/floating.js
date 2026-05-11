@@ -1,4 +1,5 @@
-import { formatClockTime, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
+import { logSafeError } from '../shared/diagnostics.js';
+import { formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 20;
@@ -6,15 +7,24 @@ const METER_SEGMENTS = 20;
 const elements = {
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
+  expandButton: document.querySelector('#floatingExpandButton'),
+  expandedPanel: document.querySelector('#floatingExpandedPanel'),
   refreshButton: document.querySelector('#floatingRefreshButton'),
   titleLabel: document.querySelector('#floatingTitleLabel'),
   percent: document.querySelector('#floatingPercent'),
   resetLabel: document.querySelector('#floatingResetLabel'),
   resetTime: document.querySelector('#floatingResetTime'),
+  weeklyLabel: document.querySelector('#floatingWeeklyLabel'),
+  weeklyValue: document.querySelector('#floatingWeeklyValue'),
+  todayLabel: document.querySelector('#floatingTodayLabel'),
+  todayValue: document.querySelector('#floatingTodayValue'),
+  monthLabel: document.querySelector('#floatingMonthLabel'),
+  monthValue: document.querySelector('#floatingMonthValue'),
   meter: document.querySelector('#floatingMeter')
 };
 
 let currentLang = 'en';
+let currentExpanded = false;
 
 elements.openButton.addEventListener('click', () => {
   window.siphon.openMainWindowFromWidget();
@@ -30,27 +40,43 @@ elements.refreshButton.addEventListener('click', event => {
   window.siphon.refresh();
 });
 
+elements.expandButton.addEventListener('click', event => {
+  event.stopPropagation();
+  window.siphon.setFloatingExpanded(!currentExpanded);
+});
+
 try {
   window.siphon.onState(render);
   render(await window.siphon.getState());
 } catch (error) {
-  console.error('Floating widget bootstrap failed', error);
+  logSafeError('Floating widget bootstrap failed:', error);
   elements.percent.textContent = '--';
+  elements.percent.dataset.value = '--';
   elements.resetLabel.textContent = t('floating.error', currentLang);
   elements.resetTime.textContent = '';
 }
 
 function render(state) {
   currentLang = languageOf(state);
+  currentExpanded = Boolean(state.preferences?.floating?.expanded);
   applyStaticLabels();
 
   const session = hydrateSlot(state.quota?.session);
+  const weekly = hydrateSlot(state.quota?.weeklyAll);
   const percent = clampPercent(session?.percent ?? 0);
 
-  elements.percent.textContent = session ? formatPercent(session.percent) : '--';
+  document.body.dataset.expanded = String(currentExpanded);
+  elements.expandedPanel.hidden = !currentExpanded;
+  const percentText = session ? formatPercent(session.percent) : '--';
+  elements.percent.textContent = percentText;
+  elements.percent.dataset.value = percentText;
 
   elements.resetLabel.textContent = buildFloatingReset(session, currentLang);
   elements.resetTime.textContent = '';
+
+  elements.weeklyValue.textContent = weekly ? formatPercent(weekly.percent) : '--';
+  elements.todayValue.textContent = formatCurrency(state.todayStats?.cost);
+  elements.monthValue.textContent = formatCurrency(state.monthStats?.cost);
 
   renderMeter(percent);
 }
@@ -67,6 +93,14 @@ function applyStaticLabels() {
   elements.refreshButton.setAttribute('aria-label', t('floating.refresh', currentLang));
   elements.closeButton.setAttribute('aria-label', t('floating.close', currentLang));
   elements.openButton.setAttribute('aria-label', t('floating.openMain', currentLang));
+  elements.expandButton.setAttribute(
+    'aria-label',
+    t(currentExpanded ? 'floating.collapse' : 'floating.expand', currentLang)
+  );
+  elements.expandButton.title = t(currentExpanded ? 'floating.collapse' : 'floating.expand', currentLang);
+  elements.weeklyLabel.textContent = t('floating.weekly', currentLang);
+  elements.todayLabel.textContent = t('floating.today', currentLang);
+  elements.monthLabel.textContent = t('floating.month', currentLang);
 }
 
 function languageOf(state) {

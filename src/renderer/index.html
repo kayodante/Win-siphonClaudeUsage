@@ -7,7 +7,7 @@
     <title>Siphon</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body data-view="onboard">
     <main class="shell">
       <header class="topbar">
         <div class="topbar-card">
@@ -37,7 +37,7 @@
         </div>
       </header>
 
-      <section id="onboardView" class="view onboard" hidden>
+      <section id="onboardView" class="view onboard">
         <div class="onboard-center">
           <img class="onboard-logo" src="../../assets/Logo.png" alt="Siphon" />
 
@@ -83,7 +83,7 @@
         </div>
       </section>
 
-      <section id="mainView" class="view">
+      <section id="mainView" class="view" hidden>
         <section class="card quota-panel">
           <div class="card-eyebrow card-eyebrow-row">
             <span class="card-eyebrow-left">
@@ -107,7 +107,6 @@
             <span id="sessionReset" class="reset-line">--</span>
           </div>
           <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
-          <svg id="sessionSparkline" class="sparkline quota-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
         </section>
 
         <section class="card quota-panel">
@@ -147,7 +146,6 @@
               </button>
             </span>
             <span class="stat-value" id="todayCost">--</span>
-            <svg id="todaySparkline" class="sparkline cost-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
           </article>
           <article class="card cost-card">
             <span class="card-eyebrow" data-i18n="home.month">This Month</span>
@@ -159,7 +157,6 @@
               </button>
             </span>
             <span class="stat-value" id="monthCost">--</span>
-            <svg id="monthSparkline" class="sparkline cost-sparkline" viewBox="0 0 120 28" aria-hidden="true"></svg>
           </article>
         </section>
 
