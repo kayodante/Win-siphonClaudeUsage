@@ -2,6 +2,7 @@ import {
   formatCurrency,
   formatPercent,
   formatRelativeUpdated,
+  formatTokens,
   hydrateSlot,
   levelForPercent
 } from '../shared/format.js';
@@ -44,7 +45,9 @@ const elements = {
   notificationIconOn: document.querySelector('#notificationIconOn'),
   notificationIconOff: document.querySelector('#notificationIconOff'),
   todayCost: document.querySelector('#todayCost'),
+  todayTokens: document.querySelector('#todayTokens'),
   monthCost: document.querySelector('#monthCost'),
+  monthTokens: document.querySelector('#monthTokens'),
   signOutButton: document.querySelector('#signOutButton'),
   lastUpdated: document.querySelector('#lastUpdated'),
   claudePath: document.querySelector('#claudePath'),
@@ -260,6 +263,8 @@ function render(state) {
   renderNotificationPill(notificationsEnabled, lang);
   setCostValue(elements.todayCost, state.todayStats?.cost);
   setCostValue(elements.monthCost, state.monthStats?.cost);
+  elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
+  elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens) ?? '';
   updateLastUpdatedLine();
 
   elements.signOutButton.hidden = !state.isSignedIn;

@@ -97,6 +97,13 @@ export function formatRelativeUpdated(date, now = new Date(), lang = 'en') {
   return lang === 'pt-BR' ? `atualizado há ${days}d` : `updated ${days}d ago`;
 }
 
+export function formatTokens(n) {
+  if (n == null || Number.isNaN(n) || n === 0) return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M tokens`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K tokens`;
+  return `${n} tokens`;
+}
+
 export function hydrateSlot(slot) {
   if (!slot) return null;
   return {
