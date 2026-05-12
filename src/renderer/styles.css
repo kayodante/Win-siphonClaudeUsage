@@ -1832,13 +1832,6 @@ button:focus-visible {
   background: var(--level-critical);
 }
 
-.floating-meter-bar[data-level] .meter-segment {
-  background: #043d2d;
-}
-
-.floating-meter-bar[data-level] .meter-segment.active {
-  background: #19c88b;
-}
 
 /* ═══════════════════════════════════════════════════════════
    TEXTAREA

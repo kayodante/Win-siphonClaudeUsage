@@ -4,7 +4,15 @@ import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 20;
 
+const LEVEL_ICONS = {
+  ok: '../../assets/tray.png',
+  warn: '../../assets/tray-warn.png',
+  high: '../../assets/tray-high.png',
+  critical: '../../assets/tray-danger.png'
+};
+
 const elements = {
+  logo: document.querySelector('#floatingLogo'),
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
   expandButton: document.querySelector('#floatingExpandButton'),
@@ -79,6 +87,7 @@ function render(state) {
   elements.monthValue.textContent = formatCurrency(state.monthStats?.cost);
 
   renderMeter(percent);
+  elements.logo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
 }
 
 function buildFloatingReset(session, lang) {
