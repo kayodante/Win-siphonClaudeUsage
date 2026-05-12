@@ -101,12 +101,12 @@
           </div>
           <div class="quota-headline">
             <span class="quota-percent" id="sessionPercent">--</span>
+            <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
           </div>
           <div id="sessionMeter" class="meter" aria-hidden="true"></div>
           <div class="quota-meta">
             <span id="sessionReset" class="reset-line">--</span>
           </div>
-          <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
         </section>
 
         <section class="card quota-panel">
@@ -117,12 +117,12 @@
           </div>
           <div class="quota-headline">
             <span class="quota-percent" id="weeklyPercent">--</span>
+            <div id="weeklyPace" class="quota-pace" data-status="no_data">--</div>
           </div>
           <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
           <div class="quota-meta">
             <span id="weeklyReset" class="reset-line">--</span>
           </div>
-          <div id="weeklyPace" class="quota-pace" data-status="no_data">--</div>
         </section>
 
         <div id="offlineBanner" class="offline-banner" hidden>
@@ -160,12 +160,6 @@
           </article>
         </section>
 
-        <div class="last-updated-row">
-          <div class="last-updated">
-            <span id="lastUpdatedDot" class="dmx-wrap" aria-hidden="true"></span>
-            <span id="lastUpdated">--</span>
-          </div>
-        </div>
 
       </section>
 
@@ -180,14 +174,13 @@
         </div>
 
         <div class="account-card">
-          <div class="account-profile">
+          <div class="account-inner">
             <p class="account-name" id="settingsName">--</p>
             <p class="account-email" id="settingsEmail">--</p>
             <div id="settingsPlanRow" class="account-badge-row" hidden>
               <span id="settingsPlan" class="plan-pill">Plano - </span>
             </div>
           </div>
-          <div class="account-divider"></div>
           <button class="btn-secondary" id="signOutButton" data-i18n="settings.signOut">Sign out</button>
         </div>
 
@@ -199,6 +192,7 @@
               <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
             </select>
           </div>
+          <div class="settings-divider"></div>
           <div class="settings-path-block">
             <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
             <div class="settings-path-row">
@@ -209,6 +203,7 @@
               </button>
             </div>
           </div>
+          <div class="settings-divider"></div>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.notifReset">Reset notification</span>
             <label class="switch" for="settingsNotificationsToggle">
@@ -223,6 +218,15 @@
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
+            <label class="switch" for="settingsFloatingToggle">
+              <input id="settingsFloatingToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-divider"></div>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.refreshInterval">Refresh interval</span>
             <select id="settingsRefreshInterval" class="settings-select">
@@ -232,13 +236,7 @@
               <option value="1800" data-i18n="settings.refresh30m">30 minutes</option>
             </select>
           </div>
-          <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
-            <label class="switch" for="settingsFloatingToggle">
-              <input id="settingsFloatingToggle" type="checkbox" />
-              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
-            </label>
-          </div>
+          <div class="settings-divider"></div>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
             <label class="switch" for="settingsStartupToggle">
@@ -265,22 +263,28 @@
       </section>
 
       <p id="errorText" class="error"></p>
-    </main>
 
-    <footer class="app-footer">
+      <footer class="app-footer">
       <div class="footer-card">
-      <a class="footer-link" id="openClaudeLink" href="#" title="Open claude.ai" data-i18n-title="footer.openClaude">
-        <span data-i18n="footer.openClaude">Open claude.ai</span>
-        <!-- Carbon: ArrowUpRight -->
-        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26 6L6 26 7.41 27.41 27.41 7.41 27 26h2V4H7v2h19z"/></svg>
-      </a>
-      <button class="footer-quit-btn" id="footerQuitButton" title="Quit" data-i18n-title="footer.quit">
-        <!-- Carbon: Logout -->
-        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 30h12v-2H8V4h10V2H6zM20 20l-1.41-1.41L22.17 15H10v-2h12.17l-3.58-3.59L20 8l6 6z"/></svg>
-        <span data-i18n="footer.quit">Quit</span>
-      </button>
+        <div class="footer-updated-row">
+          <span id="lastUpdatedDot" class="dmx-wrap" aria-hidden="true"></span>
+          <span id="lastUpdated">--</span>
+        </div>
+        <div class="footer-buttons">
+          <a class="footer-link" id="openClaudeLink" href="#" title="Open claude.ai" data-i18n-title="footer.openClaude">
+            <span data-i18n="footer.openClaude">Open claude.ai</span>
+            <!-- Carbon: ArrowUpRight -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26 6L6 26 7.41 27.41 27.41 7.41 27 26h2V4H7v2h19z"/></svg>
+          </a>
+          <button class="footer-quit-btn" id="footerQuitButton" title="Quit" data-i18n-title="footer.quit">
+            <!-- Carbon: Power -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M18 8.83a8 8 0 1 1-4 0V2h-2v7.68A10 10 0 1 0 18 9.68zM15 2h2v2h-2z"/></svg>
+            <span data-i18n="footer.quit">Shut down</span>
+          </button>
+        </div>
       </div>
-    </footer>
+      </footer>
+    </main>
 
     <script type="module" src="./renderer.js"></script>
   </body>

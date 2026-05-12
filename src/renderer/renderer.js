@@ -462,9 +462,9 @@ function initDotMatrix() {
   const wrap = document.getElementById('lastUpdatedDot');
   if (!wrap) return;
 
-  const N = 5;
-  const CENTER = 2;
-  const CORNERS = new Set(['0,0', '0,4', '4,0', '4,4']);
+  const N = 4;
+  const CENTER = 1.5;
+  const CORNERS = new Set(['0,0', '0,3', '3,0', '3,3']);
   const CYCLE_MS = 1400;
 
   const dots = [];
@@ -476,7 +476,7 @@ function initDotMatrix() {
       } else {
         const r = Math.hypot(col - CENTER, row - CENTER);
         span.className = 'dmx-dot';
-        span.dataset.zone = r < 0.55 ? 'c' : r < 1.65 ? 'i' : 'o';
+        span.dataset.zone = r < 0.8 ? 'c' : 'i';
       }
       wrap.appendChild(span);
       dots.push(span);

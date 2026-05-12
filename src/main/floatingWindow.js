@@ -1,7 +1,7 @@
 import { logSafeError } from '../shared/diagnostics.js';
 
-const COMPACT_SIZE = Object.freeze({ width: 220, height: 102 });
-const EXPANDED_SIZE = Object.freeze({ width: 220, height: 168 });
+const COMPACT_SIZE = Object.freeze({ width: 220, height: 104 });
+const EXPANDED_SIZE = Object.freeze({ width: 220, height: 192 });
 const WIDGET_MARGIN = 20;
 
 export class FloatingWindowController {

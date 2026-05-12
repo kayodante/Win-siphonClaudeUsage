@@ -181,15 +181,16 @@ function createWindow() {
 
   window = new BrowserWindow({
     width: 340,
-    height: 724,
+    height: 702,
     minWidth: 340,
     minHeight: 600,
     resizable: true,
     show: false,
     frame: false,
+    hasShadow: false,
     title: 'Siphon',
     icon: appIcon,
-    backgroundColor: '#000000',
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
