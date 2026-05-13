@@ -522,8 +522,8 @@ function initOnboardAnimation() {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     document.body.dataset.entering = '1';
-    document.body.addEventListener('animationend', () => {
+    setTimeout(() => {
       delete document.body.dataset.entering;
-    }, { once: true });
+    }, 400);
   }
 });

@@ -1886,8 +1886,65 @@ textarea:focus {
   }
 }
 
+@keyframes numberReveal {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes subtleFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 body[data-entering] {
   animation: windowEnter var(--duration-enter) var(--ease-out) both;
+}
+
+body[data-entering] #sessionPercent {
+  animation: numberReveal 220ms var(--ease-out) 30ms both;
+}
+body[data-entering] #sessionPace {
+  animation: subtleFadeUp 180ms var(--ease-out) 80ms both;
+}
+body[data-entering] #sessionMeter {
+  animation: subtleFadeUp 180ms var(--ease-out) 20ms both;
+}
+
+body[data-entering] #weeklyPercent {
+  animation: numberReveal 220ms var(--ease-out) 80ms both;
+}
+body[data-entering] #weeklyPace {
+  animation: subtleFadeUp 180ms var(--ease-out) 130ms both;
+}
+body[data-entering] #weeklyMeter {
+  animation: subtleFadeUp 180ms var(--ease-out) 70ms both;
+}
+
+body[data-entering] #todayCost {
+  animation: numberReveal 220ms var(--ease-out) 120ms both;
+}
+body[data-entering] #monthCost {
+  animation: numberReveal 220ms var(--ease-out) 150ms both;
+}
+body[data-entering] #todayTokens {
+  animation: subtleFadeUp 160ms var(--ease-out) 170ms both;
+}
+body[data-entering] #monthTokens {
+  animation: subtleFadeUp 160ms var(--ease-out) 200ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
