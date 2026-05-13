@@ -87,14 +87,15 @@ async function onReady() {
   const resetScheduler = new ResetNotificationScheduler({
     notify: async () => {
       const lang = (await preferences.get('language')) || 'en';
+      const soundEnabled = await preferences.get('notifications.sound');
       const notif = new Notification({
         title: t('notification.resetTitle', lang),
         body: t('notification.resetBody', lang),
-        silent: false
+        silent: soundEnabled
       });
       notif.on('click', () => showMainWindow());
       notif.show();
-      if (await preferences.get('notifications.sound')) {
+      if (soundEnabled) {
         window?.webContents.send('play-reset-sound');
       }
     },
