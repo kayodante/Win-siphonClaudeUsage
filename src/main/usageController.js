@@ -277,7 +277,7 @@ function createDefaultPreferences() {
 
 function refreshIntervalMs(preferences) {
   const seconds = Number(preferences?.refresh?.intervalSeconds ?? 30);
-  return (ALLOWED_REFRESH_INTERVALS.has(seconds) ? seconds : 30) * 1000 || DEFAULT_LOCAL_INTERVAL_MS;
+  return (ALLOWED_REFRESH_INTERVALS.has(seconds) ? seconds : 30) * 1000;
 }
 
 function serializeQuota(quota) {

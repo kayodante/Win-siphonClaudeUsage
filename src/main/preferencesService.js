@@ -1,5 +1,7 @@
 import EventEmitter from 'node:events';
 
+import { logSafeError } from '../shared/diagnostics.js';
+
 export const DEFAULT_PREFERENCES = Object.freeze({
   language: 'en',
   notifications: Object.freeze({
@@ -49,7 +51,7 @@ export class PreferencesService extends EventEmitter {
 
   enqueueWrite(operation) {
     const run = this.writeQueue.then(operation, operation);
-    this.writeQueue = run.catch(() => {});
+    this.writeQueue = run.catch(err => logSafeError('[prefs] write failed:', err));
     return run;
   }
 }

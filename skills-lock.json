@@ -7,6 +7,12 @@
       "skillPath": "skills/cc-figma-tokens/SKILL.md",
       "computedHash": "5ee96241ac45ae27d765650b5bb34d9cc490c882d20c36be461b01c827f4b9ba"
     },
+    "code-review": {
+      "source": "coderabbitai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-review/SKILL.md",
+      "computedHash": "38fa1a6b131fc7c97969deae97c4ddfc6adb3c444d8e91a24fab9c69467f2673"
+    },
     "electron": {
       "source": "teachingai/full-stack-skills",
       "sourceType": "github",

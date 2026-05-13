@@ -467,7 +467,7 @@ async function readRange(fsImpl, filePath, start) {
     return fsImpl.readFile(filePath, 'utf8');
   }
 
-  const handle = await fs.open(filePath, 'r');
+  const handle = await fsImpl.open(filePath, 'r');
   try {
     const stat = await handle.stat();
     const length = Math.max(0, stat.size - start);
