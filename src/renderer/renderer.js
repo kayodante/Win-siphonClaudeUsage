@@ -78,6 +78,12 @@ let appInfo = {
 let currentState = null;
 let requestedView = 'main';
 let offlineDismissed = false;
+let isEntering = false;
+let lastEnterTime = 0;
+const animatingElements = new Map();
+
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function cubicEaseOut(t) { return 1 - (1 - t) ** 3; }
 
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
@@ -217,6 +223,42 @@ try {
 // even when no state event fires.
 setInterval(updateLastUpdatedLine, 30_000);
 
+function cancelCountUp(element) {
+  const id = animatingElements.get(element);
+  if (id != null) { cancelAnimationFrame(id); animatingElements.delete(element); }
+}
+
+function countUpPercent(element, target, { duration = 650, delay = 0 } = {}) {
+  if (reducedMotion()) { element.textContent = target != null ? formatPercent(target) : '--'; return; }
+  cancelCountUp(element);
+  element.textContent = formatPercent(0);
+  const t0 = performance.now() + delay;
+  function tick(now) {
+    if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
+    const p = Math.min((now - t0) / duration, 1);
+    element.textContent = formatPercent(cubicEaseOut(p) * target);
+    if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
+    else animatingElements.delete(element);
+  }
+  animatingElements.set(element, requestAnimationFrame(tick));
+}
+
+function countUpCost(element, target, { duration = 600, delay = 0 } = {}) {
+  if (target == null || Number.isNaN(target)) { setCostValue(element, target); return; }
+  if (reducedMotion()) { setCostValue(element, target); return; }
+  cancelCountUp(element);
+  setCostValue(element, 0);
+  const t0 = performance.now() + delay;
+  function tick(now) {
+    if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
+    const p = Math.min((now - t0) / duration, 1);
+    setCostValue(element, cubicEaseOut(p) * target);
+    if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
+    else animatingElements.delete(element);
+  }
+  animatingElements.set(element, requestAnimationFrame(tick));
+}
+
 function render(state) {
   currentState = state;
   const lang = currentLanguage();
@@ -250,22 +292,37 @@ function render(state) {
 
   renderActiveView();
 
-  elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
   renderPace(elements.sessionPace, sessionPace, lang);
 
-  elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
   renderPace(elements.weeklyPace, weeklyPace, lang);
 
   renderNotificationPill(notificationsEnabled, lang);
-  setCostValue(elements.todayCost, state.todayStats?.cost);
-  setCostValue(elements.monthCost, state.monthStats?.cost);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
   elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens) ?? '';
   updateLastUpdatedLine();
+
+  const entering = isEntering;
+  if (entering) isEntering = false;
+
+  if (entering) {
+    countUpPercent(elements.sessionPercent, sessionPercent, { delay: 310 });
+    countUpPercent(elements.weeklyPercent, weeklyPercent, { delay: 380 });
+    countUpCost(elements.todayCost, state.todayStats?.cost, { delay: 440 });
+    countUpCost(elements.monthCost, state.monthStats?.cost, { delay: 470 });
+  } else {
+    if (!animatingElements.has(elements.sessionPercent))
+      elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
+    if (!animatingElements.has(elements.weeklyPercent))
+      elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
+    if (!animatingElements.has(elements.todayCost))
+      setCostValue(elements.todayCost, state.todayStats?.cost);
+    if (!animatingElements.has(elements.monthCost))
+      setCostValue(elements.monthCost, state.monthStats?.cost);
+  }
 
   elements.signOutButton.hidden = !state.isSignedIn;
   elements.onboardSignInButton.hidden = state.awaitingCode;
@@ -358,11 +415,14 @@ function renderMeter(meter, percent) {
   const total = 20;
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
+  if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
   meter.dataset.level = level;
+  meter.dataset.filled = String(filled);
   meter.replaceChildren();
   for (let i = 0; i < total; i++) {
     const seg = document.createElement('div');
     seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
+    seg.style.setProperty('--i', i);
     meter.appendChild(seg);
   }
 }
@@ -521,9 +581,13 @@ function initOnboardAnimation() {
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
+    const now = Date.now();
+    if (now - lastEnterTime < 2000) return;
+    lastEnterTime = now;
+    isEntering = true;
     document.body.dataset.entering = '1';
     setTimeout(() => {
       delete document.body.dataset.entering;
-    }, 400);
+    }, 900);
   }
 });

@@ -254,7 +254,7 @@ body[data-view="onboard"] .shell {
   gap: var(--space-0);
   padding: var(--space-8) var(--space-8) 22px;
   background: var(--card);
-  border-radius: 4px 4px 20px 20px;
+  border-radius: 20px;
   box-shadow: var(--inner-light), inset 0 0 0 1px var(--border-subtle);
   -webkit-app-region: drag;
 }
@@ -376,7 +376,7 @@ body[data-view="onboard"] .window-control-btn svg {
   gap: var(--space-1);
   padding: var(--space-2);
   background: var(--card);
-  border-radius: 20px 20px 4px 4px;
+  border-radius: 20px;
   border: 1px solid var(--border-subtle);
   box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-strong);
 }
@@ -419,7 +419,7 @@ body[data-view="onboard"] .app-footer {
   height: auto;
   padding: var(--space-7) var(--space-8);
   border: 1px solid var(--border-subtle);
-  border-radius: 14px 14px 20px 28px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
   color: var(--foreground);
   font-size: var(--text-sm);
@@ -454,7 +454,7 @@ body[data-view="onboard"] .app-footer {
   height: auto;
   padding: var(--space-7) var(--space-8);
   border: 1px solid var(--border-subtle);
-  border-radius: 14px 14px 28px 20px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
   color: var(--foreground);
   font-size: var(--text-sm);
@@ -718,7 +718,7 @@ body[data-view="onboard"] .app-footer {
   gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--subtle-foreground);
 }
@@ -1387,7 +1387,7 @@ body[data-refreshing="true"] .card {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #0b0b0b;
+  background: oklch(0 0 0 / 60%);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -1520,7 +1520,7 @@ body[data-refreshing="true"] .card {
   overflow: hidden;
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--weight-normal);
   line-height: var(--space-5);
   font-variant-numeric: tabular-nums;
@@ -1889,12 +1889,12 @@ textarea:focus {
 @keyframes numberReveal {
   from {
     opacity: 0;
-    transform: translateY(3px);
-    filter: blur(3px);
+    transform: translateY(5px) scale(0.95);
+    filter: blur(5px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     filter: blur(0);
   }
 }
@@ -1902,7 +1902,7 @@ textarea:focus {
 @keyframes subtleFadeUp {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -1910,41 +1910,70 @@ textarea:focus {
   }
 }
 
+@keyframes meterReveal {
+  from {
+    opacity: 0;
+    transform: scaleY(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes meterRevealActive {
+  0%   { opacity: 0; transform: scaleY(0.35); }
+  68%  { opacity: 1; transform: scaleY(1.14); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+
 body[data-entering] {
   animation: windowEnter var(--duration-enter) var(--ease-out) both;
 }
 
 body[data-entering] #sessionPercent {
-  animation: numberReveal 220ms var(--ease-out) 30ms both;
+  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 310ms both;
 }
 body[data-entering] #sessionPace {
-  animation: subtleFadeUp 180ms var(--ease-out) 80ms both;
+  animation: subtleFadeUp 160ms var(--ease-out) 240ms both;
 }
-body[data-entering] #sessionMeter {
-  animation: subtleFadeUp 180ms var(--ease-out) 20ms both;
+body[data-entering] #sessionMeter .meter-segment {
+  transform-origin: bottom;
+  animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 12ms + 230ms);
+}
+body[data-entering] #sessionMeter .meter-segment.active {
+  animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 12ms + 230ms);
 }
 
 body[data-entering] #weeklyPercent {
-  animation: numberReveal 220ms var(--ease-out) 80ms both;
+  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 380ms both;
 }
 body[data-entering] #weeklyPace {
-  animation: subtleFadeUp 180ms var(--ease-out) 130ms both;
+  animation: subtleFadeUp 160ms var(--ease-out) 300ms both;
 }
-body[data-entering] #weeklyMeter {
-  animation: subtleFadeUp 180ms var(--ease-out) 70ms both;
+body[data-entering] #weeklyMeter .meter-segment {
+  transform-origin: bottom;
+  animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 12ms + 295ms);
+}
+body[data-entering] #weeklyMeter .meter-segment.active {
+  animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 12ms + 295ms);
 }
 
 body[data-entering] #todayCost {
-  animation: numberReveal 220ms var(--ease-out) 120ms both;
+  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
 }
 body[data-entering] #monthCost {
-  animation: numberReveal 220ms var(--ease-out) 150ms both;
+  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 470ms both;
 }
 body[data-entering] #todayTokens {
-  animation: subtleFadeUp 160ms var(--ease-out) 170ms both;
+  animation: subtleFadeUp 160ms var(--ease-out) 350ms both;
 }
 body[data-entering] #monthTokens {
-  animation: subtleFadeUp 160ms var(--ease-out) 200ms both;
+  animation: subtleFadeUp 160ms var(--ease-out) 380ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {

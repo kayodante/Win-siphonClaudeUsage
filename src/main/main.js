@@ -181,7 +181,7 @@ function createWindow() {
 
   window = new BrowserWindow({
     width: 340,
-    height: 707,
+    height: 711,
     minWidth: 340,
     minHeight: 600,
     resizable: true,
