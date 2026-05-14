@@ -147,18 +147,23 @@ Shipped. Captured here so it's not re-litigated:
 - A bottom expand/collapse button toggles the widget from the preload IPC
   surface, and the expanded view shows weekly quota plus today/month cost.
 
+**DPAPI-protected credentials**
+
+- `PlaintextCrypto` and `SafeStorageCrypto` adapters injected into `TokenStore`.
+- `SafeStorageCrypto` uses Electron `safeStorage` (DPAPI on Windows); falls back
+  to plaintext with a warning when `isEncryptionAvailable()` is false.
+- Files use a 1-byte format marker: `0x01` = DPAPI blob, `0x02` = plaintext,
+  `0x7B` = legacy JSON (triggers one-time migration on load).
+- `PlaintextCrypto` used in tests — no Electron context required.
+- `main.js` unchanged: `new TokenStore()` gets DPAPI automatically.
+
 ## Now
 
-- No active Now items are tracked right now.
+No active items right now.
 
 ## Next
 
 These need real work — new IPC, new modules, or external dependencies.
-
-- **DPAPI-protected credentials.** Upgrade `%APPDATA%\Siphon\credentials.json`
-  from mode `0600` JSON to Windows DPAPI-protected storage, with a one-time
-  migration path for existing plaintext credentials and graceful fallback in
-  development/tests. Touches `src/main/tokenStore.js` plus focused tests.
 
 ## Later
 
