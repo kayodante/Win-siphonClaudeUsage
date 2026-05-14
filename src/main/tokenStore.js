@@ -30,6 +30,9 @@ export class SafeStorageCrypto {
     if (buf[0] === MARKER_PLAIN) {
       return buf.slice(1).toString('utf8');
     }
+    if (buf[0] !== MARKER_DPAPI) {
+      throw new Error(`tokenStore: unknown format marker 0x${buf[0]?.toString(16) ?? 'undefined'}`);
+    }
     const { safeStorage } = await import('electron');
     return safeStorage.decryptString(buf.slice(1));
   }
