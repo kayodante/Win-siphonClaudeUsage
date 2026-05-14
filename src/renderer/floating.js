@@ -5,10 +5,10 @@ import { t, tFormat } from '../shared/i18n.js';
 const METER_SEGMENTS = 20;
 
 const LEVEL_ICONS = {
-  ok: '../../assets/tray.png',
-  warn: '../../assets/tray-warn.png',
-  high: '../../assets/tray-high.png',
-  critical: '../../assets/tray-danger.png'
+  ok: '../../assets/f-icon/f-icon-ok.png',
+  warn: '../../assets/f-icon/f-icon-warn.png',
+  high: '../../assets/f-icon/f-icon-high.png',
+  critical: '../../assets/f-icon/f-icon-critical.png'
 };
 
 const elements = {
