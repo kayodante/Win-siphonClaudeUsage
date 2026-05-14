@@ -26,6 +26,8 @@ coverage/
 # Docs (local only)
 ARCHITECTURE.md
 CLAUDE.md
+AGENTS.md
+skills-lock.json
 
 # Secrets / credentials
 .env
