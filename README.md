@@ -123,6 +123,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagr
 - **[Geist](https://vercel.com/font)** — display font (Geist, Geist Mono, Geist Pixel Line)
 - **[Carbon Icons](https://carbondesignsystem.com/elements/icons/library/)** — UI iconography
 
+## Privacy
+
+Siphon stores data only on your machine and makes outbound requests exclusively to Anthropic. No telemetry, no analytics, no third-party data sharing. See [docs/privacy-policy.md](docs/privacy-policy.md) for details.
+
+## Code signing
+
+Installers are signed through the [SignPath Foundation](https://signpath.org/) free program for open-source projects. See [docs/code-signing-policy.md](docs/code-signing-policy.md) for the signing policy and team roles.
+
 ## Credits
 
 Inspired by [siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage/) (MIT)
