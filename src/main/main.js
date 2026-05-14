@@ -36,6 +36,7 @@ import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
+import { checkForUpdate } from './updateService.js';
 import { UsageController } from './usageController.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
@@ -164,6 +165,16 @@ async function onReady() {
     }
   }).catch(error => {
     logSafeError('Application startup failed:', error);
+  });
+
+  void checkForUpdate().then(update => {
+    if (!update || !window) return;
+    const send = () => window?.webContents.send('update-available', update);
+    if (window.webContents.isLoading()) {
+      window.webContents.once('did-finish-load', send);
+    } else {
+      send();
+    }
   });
 }
 

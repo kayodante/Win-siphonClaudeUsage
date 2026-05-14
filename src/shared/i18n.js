@@ -101,7 +101,10 @@ const STRINGS = Object.freeze({
     'error.local.missing': 'No usage data yet. Run Claude Code to generate data.',
     'error.local.corrupted': 'Usage cache is corrupted. Try restarting Claude Code.',
     'error.offline.title': 'No connection',
-    'error.offline.body': 'Quota data unavailable. Check your internet connection.'
+    'error.offline.body': 'Quota data unavailable. Check your internet connection.',
+
+    'update.title': 'Update available',
+    'update.download': 'Download'
   }),
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
@@ -203,7 +206,10 @@ const STRINGS = Object.freeze({
     'error.local.missing': 'Sem dados de uso ainda. Execute o Claude Code para gerar dados.',
     'error.local.corrupted': 'Cache de uso corrompido. Tente reiniciar o Claude Code.',
     'error.offline.title': 'Sem conexão',
-    'error.offline.body': 'Dados de cota indisponíveis. Verifique sua conexão.'
+    'error.offline.body': 'Dados de cota indisponíveis. Verifique sua conexão.',
+
+    'update.title': 'Atualização disponível',
+    'update.download': 'Baixar'
   })
 });
 

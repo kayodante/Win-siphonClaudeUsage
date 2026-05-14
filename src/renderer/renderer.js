@@ -67,7 +67,11 @@ const elements = {
   appVersionText: document.querySelector('#appVersionText'),
   githubLink: document.querySelector('#githubLink'),
   offlineBanner: document.querySelector('#offlineBanner'),
-  offlineBannerDismiss: document.querySelector('#offlineBannerDismiss')
+  offlineBannerDismiss: document.querySelector('#offlineBannerDismiss'),
+  updateBanner: document.querySelector('#updateBanner'),
+  updateBannerVersion: document.querySelector('#updateBannerVersion'),
+  updateBannerDownload: document.querySelector('#updateBannerDownload'),
+  updateBannerDismiss: document.querySelector('#updateBannerDismiss')
 };
 
 let appInfo = {
@@ -79,6 +83,8 @@ let appInfo = {
 let currentState = null;
 let requestedView = 'main';
 let offlineDismissed = false;
+let updateDismissed = false;
+let updateUrl = null;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -184,11 +190,27 @@ elements.onboardCodeForm.addEventListener('submit', event => {
 
 elements.githubLink.addEventListener('click', event => {
   event.preventDefault();
-  window.siphon.openExternal('https://github.com/kayodante/siphonClaudeUsage');
+  window.siphon.openExternal('https://github.com/kayodante/Win-siphonClaudeUsage');
 });
 elements.offlineBannerDismiss.addEventListener('click', () => {
   offlineDismissed = true;
   elements.offlineBanner.hidden = true;
+});
+
+elements.updateBannerDismiss.addEventListener('click', () => {
+  updateDismissed = true;
+  elements.updateBanner.hidden = true;
+});
+elements.updateBannerDownload.addEventListener('click', () => {
+  if (updateUrl) window.siphon.openExternal(updateUrl);
+});
+
+window.siphon.onUpdateAvailable(({ version, url }) => {
+  updateUrl = url;
+  const lang = currentState?.preferences?.language ?? 'en';
+  elements.updateBannerVersion.textContent =
+    lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
+  if (!updateDismissed) elements.updateBanner.hidden = false;
 });
 
 elements.notificationState.addEventListener('click', async () => {

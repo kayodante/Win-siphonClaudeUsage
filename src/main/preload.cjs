@@ -34,5 +34,10 @@ contextBridge.exposeInMainWorld('siphon', {
     const listener = () => callback();
     ipcRenderer.on('play-reset-sound', listener);
     return () => ipcRenderer.removeListener('play-reset-sound', listener);
+  },
+  onUpdateAvailable: callback => {
+    const listener = (_event, update) => callback(update);
+    ipcRenderer.on('update-available', listener);
+    return () => ipcRenderer.removeListener('update-available', listener);
   }
 });
