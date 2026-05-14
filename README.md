@@ -34,7 +34,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 | **Configurable refresh** | Local refresh defaults to 30 seconds, with 5, 15, and 30 minute options in Settings |
 | **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login |
 | **Pace indicator** | Session and weekly cards show whether your usage pace is on track or likely to exhaust the quota before it resets |
-| **Color-coded tray icon** | Icon shifts from neutral → warning → danger as quota fills up |
+| <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> **Color-coded tray icon** | Icon encodes both session and weekly quota levels simultaneously — two independent color channels in one 16 × 16 icon |
 | **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings |
 
 ## Requirements
