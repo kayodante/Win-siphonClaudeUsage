@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,17 +7,18 @@ import electron from 'electron';
 const { nativeImage } = electron;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const assetRoot = path.resolve(__dirname, '..', '..', 'assets');
+const iconRoot = path.resolve(__dirname, '..', '..', 'assets', 'tray-icon');
 
-const ICONS = {
-  ok: 'tray.png',
-  warn: 'tray-warn.png',
-  high: 'tray-high.png',
-  critical: 'tray-danger.png',
-  danger: 'tray-danger.png'
-};
-
-export function createTrayIcon(level = 'ok') {
-  const filename = ICONS[level] ?? ICONS.ok;
-  return nativeImage.createFromPath(path.join(assetRoot, filename));
+export function createTrayIcon(sessionLevel = 'ok', weeklyLevel = 'ok') {
+  const base = `tray-${sessionLevel}-${weeklyLevel}`;
+  const image = nativeImage.createEmpty();
+  image.addRepresentation({
+    scaleFactor: 1.0,
+    buffer: fs.readFileSync(path.join(iconRoot, `${base}.png`))
+  });
+  image.addRepresentation({
+    scaleFactor: 2.0,
+    buffer: fs.readFileSync(path.join(iconRoot, `${base}@2x.png`))
+  });
+  return image;
 }

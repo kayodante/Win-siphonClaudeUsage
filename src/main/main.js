@@ -52,7 +52,7 @@ let window = null;
 let floatingWindow = null;
 let controller = null;
 let preferences = null;
-let trayIconLevel = 'ok';
+let trayIconKey = 'ok-ok';
 
 app.setAppUserModelId('com.kayodantes.siphon');
 
@@ -208,8 +208,8 @@ function createWindow() {
 }
 
 function createTray() {
-  trayIconLevel = 'ok';
-  tray = new Tray(createTrayIcon());
+  trayIconKey = 'ok-ok';
+  tray = new Tray(createTrayIcon('ok', 'ok'));
   tray.setToolTip('Siphon');
   tray.on('double-click', () => showMainWindow());
   tray.setContextMenu(
@@ -227,14 +227,15 @@ function createTray() {
 
 function updateTray(state) {
   if (!tray) return;
-  const session = state.quota?.session?.percent;
-  const level = levelForPercent(session ?? 0);
+  const sessionLevel = levelForPercent(state.quota?.session?.percent ?? 0);
+  const weeklyLevel = levelForPercent(state.quota?.weekly?.percent ?? 0);
+  const key = `${sessionLevel}-${weeklyLevel}`;
   const lang = state.preferences?.language ?? 'en';
   const trayStatus = buildTrayStatus(state, { lang });
 
-  if (level !== trayIconLevel) {
-    tray.setImage(createTrayIcon(level));
-    trayIconLevel = level;
+  if (key !== trayIconKey) {
+    tray.setImage(createTrayIcon(sessionLevel, weeklyLevel));
+    trayIconKey = key;
   }
 
   tray.setToolTip(trayStatus.tooltip);
