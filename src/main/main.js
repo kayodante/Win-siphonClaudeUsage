@@ -83,7 +83,7 @@ async function onReady() {
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
   const initialPreferences = await preferences.load();
-  applyStartupSettings(app, initialPreferences.startup);
+  if (app.isPackaged) applyStartupSettings(app, initialPreferences.startup);
   const resetScheduler = new ResetNotificationScheduler({
     notify: async () => {
       const lang = (await preferences.get('language')) || 'en';
@@ -150,7 +150,7 @@ async function onReady() {
       void controller.refreshLocal();
     }
     if (preferencePath.startsWith('startup.')) {
-      applyStartupSettings(app, nextPreferences.startup);
+      if (app.isPackaged) applyStartupSettings(app, nextPreferences.startup);
     }
   });
 
@@ -287,7 +287,8 @@ function registerIpc() {
     configDir: configDir(),
     claudeDir: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude'),
     notificationsSupported: Notification.isSupported(),
-    version: app.getVersion()
+    version: app.getVersion(),
+    isPackaged: app.isPackaged
   }));
   ipcMain.handle('dialog:pick-folder', async () => {
     const result = await dialog.showOpenDialog(window, {

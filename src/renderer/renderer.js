@@ -73,7 +73,8 @@ const elements = {
 let appInfo = {
   configDir: '--',
   claudeDir: '--',
-  notificationsSupported: false
+  notificationsSupported: false,
+  isPackaged: false
 };
 let currentState = null;
 let requestedView = 'main';
@@ -334,8 +335,9 @@ function render(state) {
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
+  elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
   elements.settingsStartupShowWindowToggle.checked = startupShowWindow;
-  elements.settingsStartupShowWindowToggle.disabled = !startupOpenAtLogin;
+  elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
 
   if (!state.isOffline) offlineDismissed = false;
   elements.offlineBanner.hidden = !state.isOffline || offlineDismissed;
