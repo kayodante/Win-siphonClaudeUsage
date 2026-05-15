@@ -191,9 +191,12 @@ app.on('before-quit', () => {
 function createWindow() {
   Menu.setApplicationMenu(null);
 
+  const { workArea } = electronScreen.getPrimaryDisplay();
+  const height = Math.max(600, Math.min(711, Math.round(workArea.height * 0.85)));
+
   window = new BrowserWindow({
     width: 340,
-    height: 711,
+    height,
     minWidth: 340,
     minHeight: 600,
     resizable: true,
