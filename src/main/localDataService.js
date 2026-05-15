@@ -69,7 +69,8 @@ export function summarizeUsage(cache, pricing, now = new Date()) {
       const cost = price ? tokenCost(tokens, price) : 0;
 
       if (date === today) {
-        todayModels.set(model, { tokens, cost });
+        const current = todayModels.get(model) ?? emptyAccumulator();
+        todayModels.set(model, addTokens(current, tokens, cost));
       }
 
       if (date.startsWith(monthPrefix)) {
@@ -126,8 +127,8 @@ function aggregateToday(map) {
   const totals = emptyAccumulator();
   const byModel = {};
   for (const [model, entry] of map.entries()) {
-    addTokens(totals, entry.tokens, entry.cost);
-    byModel[model] = toPerModelStats(model, entry.tokens, entry.cost);
+    addTokens(totals, entry, entry.cost);
+    byModel[model] = toPerModelStats(model, entry, entry.cost);
   }
   return toPeriodStats(totals, byModel);
 }

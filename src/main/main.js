@@ -92,7 +92,7 @@ async function onReady() {
       const notif = new Notification({
         title: t('notification.resetTitle', lang),
         body: t('notification.resetBody', lang),
-        silent: soundEnabled
+        silent: true
       });
       notif.on('click', () => showMainWindow());
       notif.show();
@@ -239,7 +239,7 @@ function createTray() {
 function updateTray(state) {
   if (!tray) return;
   const sessionLevel = levelForPercent(state.quota?.session?.percent ?? 0);
-  const weeklyLevel = levelForPercent(state.quota?.weekly?.percent ?? 0);
+  const weeklyLevel = levelForPercent(state.quota?.weeklyAll?.percent ?? 0);
   const key = `${sessionLevel}-${weeklyLevel}`;
   const lang = state.preferences?.language ?? 'en';
   const trayStatus = buildTrayStatus(state, { lang });

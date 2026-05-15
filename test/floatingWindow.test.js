@@ -31,7 +31,7 @@ test('show creates the PiP widget with fixed always-on-top options', async () =>
     ]),
     {
       width: 220,
-      height: 102,
+      height: 104,
       resizable: false,
       frame: false,
       transparent: true,
@@ -171,11 +171,11 @@ test('show creates the expanded widget when the preference is active', async () 
     pick(windows[0].options, ['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight']),
     {
       width: 220,
-      height: 168,
+      height: 192,
       minWidth: 220,
-      minHeight: 168,
+      minHeight: 192,
       maxWidth: 220,
-      maxHeight: 168
+      maxHeight: 192
     }
   );
 });
@@ -194,12 +194,12 @@ test('setExpanded persists preference and resizes an open widget', async () => {
   await controller.setExpanded(true);
 
   assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', true]);
-  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 168, false]);
+  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 192, false]);
 
   await controller.setExpanded(false);
 
   assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', false]);
-  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 102, false]);
+  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 104, false]);
 });
 
 function createFakeBrowserWindow(windows) {
