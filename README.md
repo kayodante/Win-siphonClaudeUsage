@@ -24,18 +24,16 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Features
 
-| | |
-|---|---|
-| **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown |
-| **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint |
-| **Cost tracking** | Today's and this month's spend in USD, computed locally from Claude Code's usage and pricing files |
-| **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened |
-| **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen |
-| **Configurable refresh** | Local refresh defaults to 30 seconds, with 5, 15, and 30 minute options in Settings |
-| **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login |
-| **Pace indicator** | Session and weekly cards show whether your usage pace is on track or likely to exhaust the quota before it resets |
-| **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Icon encodes both session and weekly quota levels simultaneously — two independent color channels in one icon |
-| **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings |
+* **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown
+* **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint
+* **Cost tracking** | Today's and this month's spend in USD, computed locally from Claude Code's usage and pricing files
+* **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened
+* **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen
+* **Configurable refresh** | Local refresh defaults to 30 seconds, with 5, 15, and 30 minute options in Settings
+* **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login
+* **Pace indicator** | Session and weekly cards show whether your usage pace is on track or likely to exhaust the quota before it resets
+* **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Icon encodes both session and weekly quota levels simultaneously — two independent color channels in one icon
+* **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings
 
 ## Requirements
 
