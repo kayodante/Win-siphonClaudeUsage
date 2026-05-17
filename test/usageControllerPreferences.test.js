@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { PreferencesService } from '../src/main/preferencesService.js';
+import { QuotaError } from '../src/main/quotaService.js';
 import { UsageController } from '../src/main/usageController.js';
 
 test('controller does not arm reset scheduler when session reset notifications are disabled', async () => {
@@ -133,6 +134,73 @@ test('controller records session quota history from successful quota refreshes',
     { timestamp: '2026-04-29T12:00:00.000Z', percent: 42.4 },
     { timestamp: '2026-04-29T12:05:00.000Z', percent: 47.8 }
   ]);
+});
+
+test('controller sets needsReauth and quotaError on scope_insufficient, keeps isSignedIn true', async () => {
+  const controller = createController({
+    scheduler: new SchedulerSpy(),
+    quotaService: {
+      fetchQuota: async () => {
+        throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+      }
+    }
+  });
+
+  await controller.refreshQuota();
+  const state = controller.getState();
+
+  assert.equal(state.needsReauth, true);
+  assert.equal(state.quotaError, 'error.scope_insufficient');
+  assert.equal(state.isSignedIn, true);
+});
+
+test('controller clears needsReauth after successful sign-in', async () => {
+  // scopeThrows controls whether the mocked quotaService throws.
+  // submitCode calls refreshQuota internally — we stop throwing after
+  // the first call so that the re-auth success path can complete.
+  let scopeThrows = true;
+  const controller = createController({
+    scheduler: new SchedulerSpy(),
+    quotaService: {
+      fetchQuota: async () => {
+        if (scopeThrows) throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+        return { session: null, weeklyAll: null };
+      }
+    }
+  });
+  controller.oauthService = {
+    exchange: async () => ({
+      accessToken: 'new-tok',
+      refreshToken: 'new-ref',
+      expiresAt: new Date(Date.now() + 3600_000).toISOString()
+    })
+  };
+  controller.tokenStore = { load: async () => null, save: async () => {}, clear: async () => {} };
+  controller.authFlow = { verifier: 'v', state: 's' };
+
+  await controller.refreshQuota();
+  assert.equal(controller.getState().needsReauth, true);
+
+  scopeThrows = false;
+  await controller.submitCode('code123');
+  assert.equal(controller.getState().needsReauth, false);
+});
+
+test('controller clears needsReauth on sign-out', async () => {
+  const controller = createController({
+    scheduler: new SchedulerSpy(),
+    quotaService: {
+      fetchQuota: async () => {
+        throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+      }
+    }
+  });
+
+  await controller.refreshQuota();
+  assert.equal(controller.getState().needsReauth, true);
+
+  await controller.signOut();
+  assert.equal(controller.getState().needsReauth, false);
 });
 
 function createController({ preferences, scheduler, timers, quotaService, now } = {}) {

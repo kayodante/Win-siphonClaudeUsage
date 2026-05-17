@@ -58,7 +58,8 @@ export class UsageController extends EventEmitter {
       isSignedIn: false,
       awaitingCode: false,
       lastUpdated: null,
-      isOffline: false
+      isOffline: false,
+      needsReauth: false
     };
     this.preferences.on?.('change', event => this.#handlePreferenceChange(event));
   }
@@ -143,6 +144,10 @@ export class UsageController extends EventEmitter {
       } else if (error instanceof QuotaError && error.code === 'not_signed_in') {
         this.state.isSignedIn = false;
         this.state.quota = null;
+      } else if (error instanceof QuotaError && error.code === 'scope_insufficient') {
+        this.state.quotaError = 'error.scope_insufficient';
+        this.state.needsReauth = true;
+        this.state.isSignedIn = true;
       } else if (error instanceof QuotaError && error.code === 'network') {
         this.state.isOffline = true;
         this.state.quotaError = null;
@@ -178,6 +183,7 @@ export class UsageController extends EventEmitter {
       this.state.awaitingCode = false;
       this.state.isSignedIn = true;
       this.state.authError = null;
+      this.state.needsReauth = false;
       await this.refreshProfile();
       await this.refreshQuota();
     } catch (error) {
@@ -197,6 +203,7 @@ export class UsageController extends EventEmitter {
     this.state.profile = null;
     this.state.authError = null;
     this.state.quotaError = null;
+    this.state.needsReauth = false;
     this.#emit();
   }
 
