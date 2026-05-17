@@ -64,6 +64,7 @@ const elements = {
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
   errorText: document.querySelector('#errorText'),
+  reauthButton: document.querySelector('#reauthButton'),
   appVersionText: document.querySelector('#appVersionText'),
   githubLink: document.querySelector('#githubLink'),
   offlineBanner: document.querySelector('#offlineBanner'),
@@ -96,6 +97,7 @@ elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
+elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 elements.editClaudePathButton.addEventListener('click', async () => {
@@ -363,9 +365,11 @@ function render(state) {
 
   if (!state.isOffline) offlineDismissed = false;
   elements.offlineBanner.hidden = !state.isOffline || offlineDismissed;
+  elements.reauthButton.hidden = !state.needsReauth;
+  elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   elements.errorText.textContent = [
     state.localError ? t(state.localError, lang) : null,
-    state.quotaError,
+    state.quotaError && !state.needsReauth ? t(state.quotaError, lang) : null,
     state.authError
   ].filter(Boolean).join(' ');
 

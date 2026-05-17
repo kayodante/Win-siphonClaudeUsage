@@ -64,3 +64,9 @@ test('pace and tray strings exist in both languages', () => {
     assert.notEqual(t('tray.updated', lang), 'tray.updated');
   }
 });
+
+test('error.scope_insufficient exists in both languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('error.scope_insufficient', lang), 'error.scope_insufficient');
+  }
+});

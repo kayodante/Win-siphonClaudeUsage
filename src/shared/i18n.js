@@ -104,7 +104,9 @@ const STRINGS = Object.freeze({
     'error.offline.body': 'Quota data unavailable. Check your internet connection.',
 
     'update.title': 'Update available',
-    'update.download': 'Download'
+    'update.download': 'Download',
+
+    'error.scope_insufficient': 'Re-authentication required. Click to sign in again.'
   }),
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
@@ -209,7 +211,9 @@ const STRINGS = Object.freeze({
     'error.offline.body': 'Dados de cota indisponíveis. Verifique sua conexão.',
 
     'update.title': 'Atualização disponível',
-    'update.download': 'Baixar'
+    'update.download': 'Baixar',
+
+    'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.'
   })
 });
 
