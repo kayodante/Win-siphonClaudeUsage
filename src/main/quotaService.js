@@ -37,7 +37,7 @@ export class QuotaService {
           Accept: 'application/json',
           'Content-Type': 'application/json',
           'anthropic-beta': 'oauth-2025-04-20',
-          'User-Agent': 'claude-code/2.1.0'
+          'User-Agent': 'claude-code/2.1.121'
         }
       });
     } catch (error) {
