@@ -222,6 +222,36 @@ test('LocalDataService reprocesses JSONL from zero when file shrinks', async () 
   assert.deepEqual(fsImpl.readRangeCalls.at(-1), { filePath: sessionPath, start: 0 });
 });
 
+test('LocalDataService deduplicates JSONL entries with same messageId:requestId', async () => {
+  const tempDir = await makeClaudeDir();
+  await writePricing(tempDir);
+  const duplicateRecord = JSON.stringify({
+    type: 'assistant',
+    timestamp: '2026-04-27T10:15:00.000Z',
+    requestId: 'req-abc',
+    message: {
+      id: 'msg-xyz',
+      model: 'claude-sonnet-4-5-20250929',
+      usage: {
+        input_tokens: 1000,
+        output_tokens: 500
+      }
+    }
+  });
+  // Same messageId + requestId written twice
+  const sessionPath = path.join(tempDir, 'projects', 'project-a', 'session.jsonl');
+  await fs.mkdir(path.dirname(sessionPath), { recursive: true });
+  await fs.writeFile(sessionPath, `${duplicateRecord}\n${duplicateRecord}\n`);
+  const cacheStore = new MemoryStore(null);
+  const service = new LocalDataService(tempDir, { cacheStore });
+
+  const summary = await service.load(new Date('2026-04-27T12:00:00.000Z'));
+
+  // Should count tokens once, not twice
+  assert.equal(summary.todayStats.inputTokens, 1000);
+  assert.equal(summary.todayStats.outputTokens, 500);
+});
+
 async function makeClaudeDir() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'siphon-local-data-'));
   await fs.mkdir(path.join(tempDir, 'projects'), { recursive: true });

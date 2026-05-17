@@ -317,7 +317,7 @@ async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
   };
 }
 
-function parseJsonlChunk({ chunk, previousRemainder, aggregate, cutoff }) {
+function parseJsonlChunk({ chunk, previousRemainder, aggregate, cutoff, seen = new Set() }) {
   const text = `${previousRemainder}${chunk}`;
   const lines = text.split('\n');
   const endsWithNewline = text.endsWith('\n');
@@ -338,6 +338,13 @@ function parseJsonlChunk({ chunk, previousRemainder, aggregate, cutoff }) {
     if (Number.isNaN(entryTime.getTime()) || entryTime < cutoff) continue;
 
     const model = record.message.model ?? aggregate.lastModel ?? 'unknown';
+    const messageId = record.message?.id ?? '';
+    const requestId = record.requestId ?? '';
+    if (messageId && requestId) {
+      const dedupKey = `${messageId}:${requestId}`;
+      if (seen.has(dedupKey)) continue;
+      seen.add(dedupKey);
+    }
     const tokens = normalizeJsonlUsage(record.message.usage);
     const dateKey = toLocalDateKey(entryTime);
     const hourKey = toHourKey(entryTime);
