@@ -167,3 +167,27 @@ test('QuotaService.fetchQuota maps 429 to QuotaError("rate_limited") with retryA
     return true;
   });
 });
+
+test('QuotaService.fetchQuota maps 403 to QuotaError("scope_insufficient")', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({
+      status: 403,
+      headers: { get: () => null }
+    })
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'scope_insufficient');
+    return true;
+  });
+});

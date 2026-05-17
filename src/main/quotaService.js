@@ -67,6 +67,10 @@ export class QuotaService {
       throw new QuotaError('unauthorized', 'Session expired. Please sign in again.');
     }
 
+    if (response.status === 403) {
+      throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+    }
+
     if (response.status === 429) {
       const retryAfter = Number(response.headers.get('retry-after')) || 300;
       throw new QuotaError('rate_limited', 'Rate limited', { retryAfter });
