@@ -338,6 +338,7 @@ function parseJsonlChunk({ chunk, previousRemainder, aggregate, cutoff, seen = n
     if (Number.isNaN(entryTime.getTime()) || entryTime < cutoff) continue;
 
     const model = record.message.model ?? aggregate.lastModel ?? 'unknown';
+    if (model === '<synthetic>' || model.startsWith('synthetic')) continue;
     const messageId = record.message?.id ?? '';
     const requestId = record.requestId ?? '';
     if (messageId && requestId) {

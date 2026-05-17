@@ -252,6 +252,34 @@ test('LocalDataService deduplicates JSONL entries with same messageId:requestId'
   assert.equal(summary.todayStats.outputTokens, 500);
 });
 
+test('LocalDataService ignores synthetic model entries', async () => {
+  const tempDir = await makeClaudeDir();
+  await writePricing(tempDir);
+  const sessionPath = path.join(tempDir, 'projects', 'project-a', 'session.jsonl');
+  await fs.mkdir(path.dirname(sessionPath), { recursive: true });
+  const syntheticRecord = JSON.stringify({
+    type: 'assistant',
+    timestamp: '2026-04-27T10:15:00.000Z',
+    message: {
+      model: '<synthetic>',
+      usage: { input_tokens: 9999, output_tokens: 9999 }
+    }
+  });
+  const realRecord = JSON.stringify(assistantRecord(
+    '2026-04-27T10:20:00.000Z',
+    'claude-sonnet-4-5-20250929',
+    { input_tokens: 100, output_tokens: 50 }
+  ));
+  await fs.writeFile(sessionPath, `${syntheticRecord}\n${realRecord}\n`);
+  const cacheStore = new MemoryStore(null);
+  const service = new LocalDataService(tempDir, { cacheStore });
+
+  const summary = await service.load(new Date('2026-04-27T12:00:00.000Z'));
+
+  assert.equal(summary.todayStats.inputTokens, 100);
+  assert.equal(summary.todayStats.outputTokens, 50);
+});
+
 async function makeClaudeDir() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'siphon-local-data-'));
   await fs.mkdir(path.join(tempDir, 'projects'), { recursive: true });
