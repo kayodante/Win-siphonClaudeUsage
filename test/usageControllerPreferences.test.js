@@ -203,6 +203,27 @@ test('controller clears needsReauth on sign-out', async () => {
   assert.equal(controller.getState().needsReauth, false);
 });
 
+test('controller clears needsReauth when subsequent quota refresh succeeds', async () => {
+  let shouldThrow = true;
+  const controller = createController({
+    scheduler: new SchedulerSpy(),
+    quotaService: {
+      fetchQuota: async () => {
+        if (shouldThrow) throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+        return { session: { percent: 10, resetsAt: new Date() }, weeklyAll: null };
+      }
+    }
+  });
+
+  await controller.refreshQuota();
+  assert.equal(controller.getState().needsReauth, true);
+
+  shouldThrow = false;
+  await controller.refreshQuota();
+  assert.equal(controller.getState().needsReauth, false);
+  assert.equal(controller.getState().quotaError, null);
+});
+
 function createController({ preferences, scheduler, timers, quotaService, now } = {}) {
   return new UsageController({
     preferences,

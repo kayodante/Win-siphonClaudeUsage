@@ -130,6 +130,7 @@ export class UsageController extends EventEmitter {
       this.state.quota = serializeQuota(quota);
       this.#recordQuotaHistory(this.state.quota.session);
       this.state.quotaError = null;
+      this.state.needsReauth = false;
       this.state.isSignedIn = true;
       this.state.isOffline = false;
       if (await this.preferences.get('notifications.sessionReset')) {
