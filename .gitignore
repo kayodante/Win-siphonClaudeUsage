@@ -22,6 +22,7 @@ pnpm-debug.log*
 graphify-out/
 coverage/
 .nyc_output/
+/docs/superpowers
 
 # Docs (local only)
 ARCHITECTURE.md
