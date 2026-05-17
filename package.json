@@ -17,7 +17,7 @@
     "windows"
   ],
   "productName": "Siphon",
-  "author": "kayodantes",
+  "author": "Kayo Dante",
   "license": "MIT",
   "devDependencies": {
     "electron": "^41.3.0",

@@ -123,7 +123,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagr
 
 ## Privacy
 
-Siphon stores data only on your machine and makes outbound requests exclusively to Anthropic. No telemetry, no analytics, no third-party data sharing. See [docs/privacy-policy.md](docs/privacy-policy.md) for details.
+- **On-device only** — outbound requests go exclusively to Anthropic (`api.anthropic.com`). No telemetry, no analytics, no third-party data sharing.
+- **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, and `%APPDATA%\Siphon\`.
+- **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI via Electron's `safeStorage` before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
+- **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
+
+See [docs/privacy-policy.md](docs/privacy-policy.md) for full details.
 
 ## Code signing
 

@@ -1,5 +1,6 @@
 appId: com.kayodantes.siphon
 productName: Siphon
+afterAllArtifactBuild: scripts/after-build.cjs
 directories:
   output: dist
   buildResources: assets/installer
