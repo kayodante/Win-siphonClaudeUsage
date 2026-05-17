@@ -47,9 +47,6 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 Download the latest `Siphon Setup <version>.exe` from [Releases](../../releases) and run it. The installer is per-user — no admin elevation required. A Start Menu entry is created under **Siphon**, and an optional desktop shortcut is offered on the final page.
 
-> [!NOTE]
-> Microsoft Defender SmartScreen may show a warning the first time you run the installer since the app isn't code-signed yet. Click **More info → Run anyway** to proceed.
-
 ### From source
 
 ```powershell
@@ -129,10 +126,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagr
 - **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
 
 See [docs/privacy-policy.md](docs/privacy-policy.md) for full details.
-
-## Code signing
-
-Installers are signed through the [SignPath Foundation](https://signpath.org/) free program for open-source projects. See [docs/code-signing-policy.md](docs/code-signing-policy.md) for the signing policy and team roles.
 
 ## Credits
 

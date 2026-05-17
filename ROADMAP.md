@@ -25,10 +25,9 @@ Feature-by-feature comparison against the macOS Swift original.
 | Bundled display font                              | Inter |  Geist  | Geist + Geist Mono + Geist Pixel Line, loaded via `@font-face`. |
 | Polished UI (post visual-polish pass)             |   ✓   |    ✓    | Carbon icons, `#000` background, borderless cards, pixel numerals. |
 | Tray icon color-coded by usage level              |   ✓   |    ✓    | `updateTray()` swaps `tray.png` / `tray-warn.png` / `tray-danger.png` via `levelForPercent`. |
-| Packaged installer                                |  DMG  |   NSIS  | `electron-builder.yml` configured (`npm run build:win`). Code signing deferred. |
+| Packaged installer                                |  DMG  |   NSIS  | `electron-builder.yml` configured (`npm run build:win`). |
 | **Reset notification when session hits 100%**     |   —   |    ✓    | Windows-only addition (the reason this fork exists). |
 | **Missed-reset notification on next launch**      |   —   |    ✓    | Fires once if the stored reset has already passed. |
-| Code signing                                      |   ✓   |    ✗    | Deferred pending a paid signing route. |
 | Autostart on login                                |   ✓   |    ✓    | Settings toggles for start with Windows + show window after login. |
 
 ## Done
@@ -94,7 +93,6 @@ Shipped. Captured here so it's not re-litigated:
 - Files included: `src/`, `assets/`, `package.json`. Excluded: `test/`,
   `scripts/`, `docs/`, `mockup.html`, `ROADMAP.md`, `ARCHITECTURE.md`.
 - Start Menu shortcut placed inside a `Siphon` folder; optional desktop shortcut is opt-in during install.
-- Code signing intentionally deferred (see *Next*).
 
 **Autostart on login**
 
@@ -167,13 +165,7 @@ These need real work — new IPC, new modules, or external dependencies.
 
 ## Later
 
-- **Code signing route decision.** Deferred until a paid signing route is
-  chosen. Microsoft's current SmartScreen docs say EV certificates no
-  longer guarantee immediate SmartScreen bypass; Azure Artifact Signing
-  Basic is a likely low-cost route at about US$ 9.99/month. This is a
-  release decision, not an in-tree implementation task for this cycle.
-
-- **Auto-update** with `electron-updater`. Needs signed builds first.
+- **Auto-update** with `electron-updater`.
 
 ## Known issues / paper cuts
 
