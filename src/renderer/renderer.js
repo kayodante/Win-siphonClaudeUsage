@@ -60,6 +60,8 @@ const elements = {
   settingsSoundToggle: document.querySelector('#settingsSoundToggle'),
   testSoundButton: document.querySelector('#testSoundButton'),
   settingsSoundVolume: document.querySelector('#settingsSoundVolume'),
+  settingsLimitSoundToggle: document.querySelector('#settingsLimitSoundToggle'),
+  testLimitSoundButton: document.querySelector('#testLimitSoundButton'),
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
@@ -68,6 +70,10 @@ const elements = {
   reauthButton: document.querySelector('#reauthButton'),
   appVersionText: document.querySelector('#appVersionText'),
   githubLink: document.querySelector('#githubLink'),
+  highUsageBanner: document.querySelector('#highUsageBanner'),
+  highUsageBannerDismiss: document.querySelector('#highUsageBannerDismiss'),
+  criticalBanner: document.querySelector('#criticalBanner'),
+  criticalBannerDismiss: document.querySelector('#criticalBannerDismiss'),
   offlineBanner: document.querySelector('#offlineBanner'),
   offlineBannerDismiss: document.querySelector('#offlineBannerDismiss'),
   updateBanner: document.querySelector('#updateBanner'),
@@ -86,6 +92,9 @@ let currentState = null;
 let requestedView = 'main';
 let offlineDismissed = false;
 let updateDismissed = false;
+let highUsageDismissed = false;
+let criticalDismissed = false;
+let prevSessionPercent = null;
 let updateUrl = null;
 let isEntering = false;
 let lastEnterTime = 0;
@@ -145,6 +154,23 @@ elements.settingsSoundVolume.addEventListener('input', async event => {
   } catch (error) {
     logSafeError('Failed to save volume preference:', error);
   }
+});
+elements.settingsLimitSoundToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('notifications.limitSound', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save limit sound preference:', error);
+    event.target.checked = !event.target.checked;
+  }
+});
+elements.testLimitSoundButton.addEventListener('click', () => playLimitSound());
+elements.highUsageBannerDismiss.addEventListener('click', () => {
+  highUsageDismissed = true;
+  elements.highUsageBanner.hidden = true;
+});
+elements.criticalBannerDismiss.addEventListener('click', () => {
+  criticalDismissed = true;
+  elements.criticalBanner.hidden = true;
 });
 elements.settingsRefreshInterval.addEventListener('change', async event => {
   const previousValue = String(currentState?.preferences?.refresh?.intervalSeconds ?? 30);
@@ -306,6 +332,7 @@ function render(state) {
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
+  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
   const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
@@ -318,6 +345,20 @@ function render(state) {
     windowMs: SESSION_WINDOW_MS,
     localHistory: state.localHistory
   });
+
+  // Threshold crossing detection — play limit sound on upward cross
+  if (prevSessionPercent !== null && limitSoundEnabled) {
+    if (prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
+    else if (prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
+  }
+  // Reset dismissed state when percent drops back below threshold
+  if (sessionPercent < 70) {
+    highUsageDismissed = false;
+    criticalDismissed = false;
+  } else if (sessionPercent < 90) {
+    criticalDismissed = false;
+  }
+  prevSessionPercent = sessionPercent;
 
   renderActiveView();
 
@@ -360,12 +401,16 @@ function render(state) {
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsSoundToggle.checked = soundEnabled;
   elements.settingsSoundVolume.value = String(soundVolume);
+  elements.settingsLimitSoundToggle.checked = limitSoundEnabled;
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
   elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
   elements.settingsStartupShowWindowToggle.checked = startupShowWindow;
   elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
+
+  elements.criticalBanner.hidden = sessionPercent < 90 || criticalDismissed;
+  elements.highUsageBanner.hidden = sessionPercent < 70 || sessionPercent >= 90 || highUsageDismissed;
 
   if (!state.isOffline) offlineDismissed = false;
   elements.offlineBanner.hidden = !state.isOffline || offlineDismissed;
@@ -548,6 +593,12 @@ function playResetSound() {
   const audio = new Audio('../../assets/notification.mp3');
   audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
   audio.play().catch(error => console.warn('Could not play reset sound', redactSensitive(error)));
+}
+
+function playLimitSound() {
+  const audio = new Audio('../../assets/notification2.mp3');
+  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
+  audio.play().catch(error => console.warn('Could not play limit sound', redactSensitive(error)));
 }
 
 function initDotMatrix() {

@@ -7,7 +7,8 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   notifications: Object.freeze({
     sessionReset: true,
     sound: false,
-    soundVolume: 1.0
+    soundVolume: 1.0,
+    limitSound: false
   }),
   floating: Object.freeze({
     enabled: false,

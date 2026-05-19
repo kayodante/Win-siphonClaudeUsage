@@ -75,6 +75,8 @@ const STRINGS = Object.freeze({
     'settings.sound': 'Sound alert on reset',
     'settings.testSound': 'Play sound',
     'settings.soundVolume': 'Volume',
+    'settings.limitSound': 'Sound on limit (70% / 90%)',
+    'settings.testLimitSound': 'Play limit sound',
     'settings.floating': 'Floating widget',
     'settings.startupOpenAtLogin': 'Start with Windows',
     'settings.startupShowWindow': 'Show window after login',
@@ -109,7 +111,12 @@ const STRINGS = Object.freeze({
     'update.title': 'Update available',
     'update.download': 'Download',
 
-    'error.scope_insufficient': 'Re-authentication required. Click to sign in again.'
+    'error.scope_insufficient': 'Re-authentication required. Click to sign in again.',
+
+    'alert.highUsage.title': 'High usage',
+    'alert.highUsage.body': 'Session has reached 70%.',
+    'alert.critical.title': 'Critical usage',
+    'alert.critical.body': 'Session has reached 90%.'
   }),
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
@@ -185,6 +192,8 @@ const STRINGS = Object.freeze({
     'settings.sound': 'Aviso sonoro no reset',
     'settings.testSound': 'Tocar',
     'settings.soundVolume': 'Volume',
+    'settings.limitSound': 'Som ao atingir limite (70% / 90%)',
+    'settings.testLimitSound': 'Tocar som de limite',
     'settings.floating': 'Widget flutuante',
     'settings.startupOpenAtLogin': 'Iniciar com o Windows',
     'settings.startupShowWindow': 'Mostrar janela ao entrar',
@@ -219,7 +228,12 @@ const STRINGS = Object.freeze({
     'update.title': 'Atualização disponível',
     'update.download': 'Baixar',
 
-    'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.'
+    'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.',
+
+    'alert.highUsage.title': 'Uso elevado',
+    'alert.highUsage.body': 'Sessão atingiu 70%.',
+    'alert.critical.title': 'Uso crítico',
+    'alert.critical.body': 'Sessão atingiu 90%.'
   })
 });
 

@@ -169,6 +169,26 @@ Shipped. Captured here so it's not re-litigated:
 - `electron-builder.yml` alterado para produzir `nsis` + `portable` em `npm run build:win`.
 - Artefato nomeado `Siphon-Portable-${version}.exe`.
 
+**Bug fix — ALLOWED set e allowedIntervals incompletos**
+
+- `notifications.soundVolume`, `notifications.limitSound` adicionados ao ALLOWED set em `registerIpc()`.
+- `60` adicionado a `allowedIntervals` na validação de `refresh.intervalSeconds`.
+- Sem esse fix, as preferências de volume e som de limite eram silenciosamente ignoradas.
+
+**Alerta sonoro para limite atingido**
+
+- Toggle `notifications.limitSound` nas configurações (compartilha slider de volume).
+- Botão "Tocar som de limite" para testar `notification2.mp3`.
+- Detecção de cruzamento em `renderer.js`: `prevSessionPercent` rastreia o valor anterior;
+  som toca no primeiro cruzamento upward para 70% ou 90%.
+
+**Alerta de Uso Elevado + Alerta Crítico**
+
+- `#highUsageBanner` (warning) aparece quando sessão ≥ 70% e < 90%.
+- `#criticalBanner` (critical) aparece quando sessão ≥ 90%.
+- Banners são dismissíveis por sessão; estado de dismiss reseta quando % cai abaixo do threshold.
+- Strings i18n em en + pt-BR para os dois banners.
+
 **Refresh interval — opção de 1 minuto**
 
 - Opção `60 s` adicionada ao seletor de intervalo (antes de 5 min).
@@ -191,20 +211,7 @@ Shipped. Captured here so it's not re-litigated:
 
 ## Next
 
-- **Alerta sonoro para limite atingido**
-
-  - Adicionar toggle de opção para reproduzir um som quando os limites forem atingidos.
-  - Adicionar também opção para testar alerta sonoro e ajustar volume
-  - Som do alerta em assets/notification2.mp3
-
-- **Alerta de Uso Elevado**
-
-  - Exibir um aviso quando o uso ultrapassar 70%.
-
-- **Alerta Crítico**
-
-  - Exibir um aviso quando o uso ultrapassar 90%.
-
+*(sem itens pendentes)*
 
 ## Later
 

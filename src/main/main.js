@@ -277,6 +277,7 @@ function registerIpc() {
   ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
+      'notifications.soundVolume', 'notifications.limitSound',
       'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
@@ -284,7 +285,7 @@ function registerIpc() {
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     if (preferencePath === 'refresh.intervalSeconds') {
-      const allowedIntervals = new Set([30, 300, 900, 1800]);
+      const allowedIntervals = new Set([30, 60, 300, 900, 1800]);
       if (!allowedIntervals.has(Number(value))) return;
     }
     await controller.preferences.set(preferencePath, value);
