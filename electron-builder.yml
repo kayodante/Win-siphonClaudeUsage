@@ -16,8 +16,12 @@ files:
 asarUnpack:
   - assets/installer/icon.ico
 win:
-  target: nsis
+  target:
+    - target: nsis
+    - target: portable
   icon: assets/installer/icon.ico
+portable:
+  artifactName: Siphon-Portable-${version}.exe
 nsis:
   oneClick: false
   perMachine: false

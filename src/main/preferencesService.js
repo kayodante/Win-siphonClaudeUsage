@@ -6,7 +6,8 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   language: 'en',
   notifications: Object.freeze({
     sessionReset: true,
-    sound: false
+    sound: false,
+    soundVolume: 1.0
   }),
   floating: Object.freeze({
     enabled: false,

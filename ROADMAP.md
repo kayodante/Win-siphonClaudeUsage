@@ -145,6 +145,36 @@ Shipped. Captured here so it's not re-litigated:
 - A bottom expand/collapse button toggles the widget from the preload IPC
   surface, and the expanded view shows weekly quota plus today/month cost.
 
+**Card semanal — pace badge removido**
+
+- Badge de pace removido do card Semanal; card sessão mantém o badge.
+
+**Bug fix — % da sessão desatualizado vs. barra**
+
+- Root cause: state-changed disparado durante animação de entrada era descartado pelo
+  guard `animatingElements.has(element)`. Barra atualizava (sem guard), texto ficava
+  com valor antigo até próximo evento.
+- Fix: no branch não-entering do render, `cancelCountUp` nos elementos antes de
+  escrever o novo texto — atualização ao vivo sempre vence a animação.
+
+**Alerta sonoro — testar e ajustar volume**
+
+- Botão "Tocar" (`back-btn` + PlayOutline) abaixo do toggle de som em Configurações.
+- Slider de volume (0–1, step 0.05) persistido em `preferences.notifications.soundVolume`.
+- `playResetSound()` lê o volume do estado atual antes de tocar.
+- `DEFAULT_PREFERENCES` inclui `soundVolume: 1.0`.
+
+**Versão portable do App**
+
+- `electron-builder.yml` alterado para produzir `nsis` + `portable` em `npm run build:win`.
+- Artefato nomeado `Siphon-Portable-${version}.exe`.
+
+**Refresh interval — opção de 1 minuto**
+
+- Opção `60 s` adicionada ao seletor de intervalo (antes de 5 min).
+- `ALLOWED_REFRESH_INTERVALS` em `usageController.js` inclui `60`.
+- Strings i18n `settings.refresh1m` em en + pt-BR.
+
 **DPAPI-protected credentials**
 
 - `PlaintextCrypto` and `SafeStorageCrypto` adapters injected into `TokenStore`.
@@ -157,15 +187,35 @@ Shipped. Captured here so it's not re-litigated:
 
 ## Now
 
-No active items right now.
+*(sem itens pendentes)*
 
 ## Next
 
-These need real work — new IPC, new modules, or external dependencies.
+- **Alerta sonoro para limite atingido**
+
+  - Adicionar toggle de opção para reproduzir um som quando os limites forem atingidos.
+  - Adicionar também opção para testar alerta sonoro e ajustar volume
+  - Som do alerta em assets/notification2.mp3
+
+- **Alerta de Uso Elevado**
+
+  - Exibir um aviso quando o uso ultrapassar 70%.
+
+- **Alerta Crítico**
+
+  - Exibir um aviso quando o uso ultrapassar 90%.
+
 
 ## Later
 
 - **Auto-update** with `electron-updater`.
+
+- **Toggle Verificar atualizações automaticamente nas configurações**
+
+  - Adicionar opção para verificar atualizações automaticamente nas configurações.
+  - Verificar possibilidade de baixar atualização em segundo plano.
+  - Se baixar em segundo plano for possível, adicionar toggle para habilitar essa opção também.
+  - Se baixar em segundo plano for possível, Verificar atualização automaticamente -> Baixar atualização em segundo plano -> Exibir mensagem dizendo para reiniciar para aplicar atualização com botão "Reiniciar"
 
 ## Known issues / paper cuts
 

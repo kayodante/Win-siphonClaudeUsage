@@ -8,7 +8,7 @@ import {
 } from '../shared/format.js';
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { t, tFormat } from '../shared/i18n.js';
-import { buildUsagePace, SESSION_WINDOW_MS, WEEKLY_WINDOW_MS } from '../shared/pace.js';
+import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
@@ -39,7 +39,6 @@ const elements = {
   weeklyPercent: document.querySelector('#weeklyPercent'),
   weeklyMeter: document.querySelector('#weeklyMeter'),
   weeklyReset: document.querySelector('#weeklyReset'),
-  weeklyPace: document.querySelector('#weeklyPace'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
@@ -59,6 +58,8 @@ const elements = {
   settingsLanguage: document.querySelector('#settingsLanguage'),
   settingsNotificationsToggle: document.querySelector('#settingsNotificationsToggle'),
   settingsSoundToggle: document.querySelector('#settingsSoundToggle'),
+  testSoundButton: document.querySelector('#testSoundButton'),
+  settingsSoundVolume: document.querySelector('#settingsSoundVolume'),
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
@@ -135,6 +136,14 @@ elements.settingsSoundToggle.addEventListener('change', async event => {
   } catch (error) {
     logSafeError('Failed to save sound preference:', error);
     event.target.checked = !event.target.checked;
+  }
+});
+elements.testSoundButton.addEventListener('click', () => playResetSound());
+elements.settingsSoundVolume.addEventListener('input', async event => {
+  try {
+    await window.siphon.setPreference('notifications.soundVolume', Number(event.target.value));
+  } catch (error) {
+    logSafeError('Failed to save volume preference:', error);
   }
 });
 elements.settingsRefreshInterval.addEventListener('change', async event => {
@@ -296,6 +305,7 @@ function render(state) {
   const weekly = hydrateSlot(state.quota?.weeklyAll);
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
+  const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
   const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
@@ -308,12 +318,6 @@ function render(state) {
     windowMs: SESSION_WINDOW_MS,
     localHistory: state.localHistory
   });
-  const weeklyPace = buildUsagePace({
-    slot: weekly,
-    now,
-    windowMs: WEEKLY_WINDOW_MS,
-    localHistory: state.localHistory
-  });
 
   renderActiveView();
 
@@ -323,7 +327,6 @@ function render(state) {
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
-  renderPace(elements.weeklyPace, weeklyPace, lang);
 
   renderNotificationPill(notificationsEnabled, lang);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
@@ -339,10 +342,10 @@ function render(state) {
     countUpCost(elements.todayCost, state.todayStats?.cost, { delay: 440 });
     countUpCost(elements.monthCost, state.monthStats?.cost, { delay: 470 });
   } else {
-    if (!animatingElements.has(elements.sessionPercent))
-      elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
-    if (!animatingElements.has(elements.weeklyPercent))
-      elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
+    cancelCountUp(elements.sessionPercent);
+    elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
+    cancelCountUp(elements.weeklyPercent);
+    elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
     if (!animatingElements.has(elements.todayCost))
       setCostValue(elements.todayCost, state.todayStats?.cost);
     if (!animatingElements.has(elements.monthCost))
@@ -356,6 +359,7 @@ function render(state) {
   elements.settingsLanguage.value = lang;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsSoundToggle.checked = soundEnabled;
+  elements.settingsSoundVolume.value = String(soundVolume);
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
@@ -542,6 +546,7 @@ function applyTranslations(lang) {
 
 function playResetSound() {
   const audio = new Audio('../../assets/notification.mp3');
+  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
   audio.play().catch(error => console.warn('Could not play reset sound', redactSensitive(error)));
 }
 
