@@ -62,6 +62,7 @@ const elements = {
   settingsSoundVolume: document.querySelector('#settingsSoundVolume'),
   settingsLimitSoundToggle: document.querySelector('#settingsLimitSoundToggle'),
   testLimitSoundButton: document.querySelector('#testLimitSoundButton'),
+  settingsLimitSoundVolume: document.querySelector('#settingsLimitSoundVolume'),
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
@@ -149,6 +150,7 @@ elements.settingsSoundToggle.addEventListener('change', async event => {
 });
 elements.testSoundButton.addEventListener('click', () => playResetSound());
 elements.settingsSoundVolume.addEventListener('input', async event => {
+  updateSliderFill(event.target);
   try {
     await window.siphon.setPreference('notifications.soundVolume', Number(event.target.value));
   } catch (error) {
@@ -164,6 +166,14 @@ elements.settingsLimitSoundToggle.addEventListener('change', async event => {
   }
 });
 elements.testLimitSoundButton.addEventListener('click', () => playLimitSound());
+elements.settingsLimitSoundVolume.addEventListener('input', async event => {
+  updateSliderFill(event.target);
+  try {
+    await window.siphon.setPreference('notifications.limitSoundVolume', Number(event.target.value));
+  } catch (error) {
+    logSafeError('Failed to save limit volume preference:', error);
+  }
+});
 elements.highUsageBannerDismiss.addEventListener('click', () => {
   highUsageDismissed = true;
   elements.highUsageBanner.hidden = true;
@@ -333,6 +343,7 @@ function render(state) {
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
   const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
+  const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
   const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
@@ -401,7 +412,10 @@ function render(state) {
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsSoundToggle.checked = soundEnabled;
   elements.settingsSoundVolume.value = String(soundVolume);
+  updateSliderFill(elements.settingsSoundVolume);
   elements.settingsLimitSoundToggle.checked = limitSoundEnabled;
+  elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
+  updateSliderFill(elements.settingsLimitSoundVolume);
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
@@ -597,8 +611,15 @@ function playResetSound() {
 
 function playLimitSound() {
   const audio = new Audio('../../assets/notification2.mp3');
-  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
+  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.limitSoundVolume ?? 1.0)));
   audio.play().catch(error => console.warn('Could not play limit sound', redactSensitive(error)));
+}
+
+function updateSliderFill(slider) {
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  const pct = ((Number(slider.value) - min) / (max - min)) * 100;
+  slider.style.setProperty('--slider-fill', `${pct}%`);
 }
 
 function initDotMatrix() {

@@ -277,7 +277,7 @@ function registerIpc() {
   ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
-      'notifications.soundVolume', 'notifications.limitSound',
+      'notifications.soundVolume', 'notifications.limitSound', 'notifications.limitSoundVolume',
       'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',

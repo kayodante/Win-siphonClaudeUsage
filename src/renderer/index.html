@@ -244,17 +244,18 @@
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.sound">Sound alert</span>
+            <span class="settings-row-label" data-i18n="settings.sound">Play sound on reset</span>
             <label class="switch" for="settingsSoundToggle">
               <input id="settingsSoundToggle" type="checkbox" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <button type="button" class="back-btn" id="testSoundButton">
-              <!-- Carbon: PlayOutline -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 28a1 1 0 0 1-.481-.124A1 1 0 0 1 6 27V5a1 1 0 0 1 1.519-.855l18 11a1 1 0 0 1 0 1.71l-18 11A1 1 0 0 1 7 28zm1-21.28v18.56L23.28 16z"/></svg>
-              <span data-i18n="settings.testSound">Play sound</span>
+            <span class="settings-row-label" data-i18n="settings.testSound">Test sound alert</span>
+            <button type="button" class="settings-test-btn" id="testSoundButton">
+              <!-- Carbon: PlayOutline (circle) -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28ZM12,23l12-7L12,9Z"/></svg>
+              <span data-i18n="settings.testSoundBtn">Test</span>
             </button>
           </div>
           <div class="settings-row">
@@ -262,18 +263,23 @@
             <input type="range" id="settingsSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.limitSound">Sound on limit</span>
+            <span class="settings-row-label" data-i18n="settings.limitSound">Play sound when session expires</span>
             <label class="switch" for="settingsLimitSoundToggle">
               <input id="settingsLimitSoundToggle" type="checkbox" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <button type="button" class="back-btn" id="testLimitSoundButton">
-              <!-- Carbon: PlayOutline -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 28a1 1 0 0 1-.481-.124A1 1 0 0 1 6 27V5a1 1 0 0 1 1.519-.855l18 11a1 1 0 0 1 0 1.71l-18 11A1 1 0 0 1 7 28zm1-21.28v18.56L23.28 16z"/></svg>
-              <span data-i18n="settings.testLimitSound">Play limit sound</span>
+            <span class="settings-row-label" data-i18n="settings.testLimitSound">Test sound alert</span>
+            <button type="button" class="settings-test-btn" id="testLimitSoundButton">
+              <!-- Carbon: PlayOutline (circle) -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28ZM12,23l12-7L12,9Z"/></svg>
+              <span data-i18n="settings.testSoundBtn">Test</span>
             </button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsLimitSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
           </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
