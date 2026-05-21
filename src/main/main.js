@@ -38,6 +38,7 @@ import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
 import { checkForUpdate } from './updateService.js';
 import { UsageController } from './usageController.js';
+import { ClaudeSettingsService } from './claudeSettingsService.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
 import { buildTrayStatus } from '../shared/trayStatus.js';
@@ -52,6 +53,7 @@ let tray = null;
 let window = null;
 let floatingWindow = null;
 let controller = null;
+let claudeSettingsService = null;
 let preferences = null;
 let trayIconKey = 'ok-ok';
 
@@ -84,6 +86,12 @@ async function onReady() {
     new JsonStore(path.join(configDir(), 'preferences.json'))
   );
   const initialPreferences = await preferences.load();
+  claudeSettingsService = new ClaudeSettingsService({ exePath: app.getPath('exe') });
+  if (app.isPackaged && initialPreferences.integration?.launchWithClaudeCode) {
+    void claudeSettingsService.ensureEnabled().catch(err => {
+      logSafeError('[siphon] claude settings sync failed on startup:', err);
+    });
+  }
   if (app.isPackaged) applyStartupSettings(app, initialPreferences.startup);
   const resetScheduler = new ResetNotificationScheduler({
     notify: async () => {
@@ -281,12 +289,21 @@ function registerIpc() {
       'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
-      'claudePath'
+      'claudePath',
+      'integration.launchWithClaudeCode'
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     if (preferencePath === 'refresh.intervalSeconds') {
       const allowedIntervals = new Set([30, 60, 300, 900, 1800]);
       if (!allowedIntervals.has(Number(value))) return;
+    }
+    if (preferencePath === 'integration.launchWithClaudeCode') {
+      if (!app.isPackaged) return;
+      if (value) {
+        await claudeSettingsService.enable();
+      } else {
+        await claudeSettingsService.disable();
+      }
     }
     await controller.preferences.set(preferencePath, value);
   });
