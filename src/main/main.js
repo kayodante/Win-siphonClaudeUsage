@@ -156,7 +156,7 @@ async function onReady() {
     if (preferencePath === 'floating.style') {
       if (floatingWindow?.window && !floatingWindow.window.isDestroyed()) {
         floatingWindow.hide();
-        openFloatingWidget(controller.getState());
+        setImmediate(() => openFloatingWidget(controller.getState()));
       }
     }
     if (preferencePath === 'claudePath') {
