@@ -22,6 +22,7 @@ test('load merges partial stored preferences with defaults', async () => {
     floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
+    integration: { launchWithClaudeCode: false },
     claudePath: null
   });
 });
@@ -60,6 +61,7 @@ test('set persists a nested change and returns the full snapshot', async () => {
     floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
+    integration: { launchWithClaudeCode: false },
     claudePath: null
   });
   assert.deepEqual(store.value, snapshot);
@@ -77,6 +79,7 @@ test('set creates deep paths without dropping sibling defaults', async () => {
     floating: { enabled: false, expanded: false, x: 120, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
+    integration: { launchWithClaudeCode: false },
     claudePath: null
   });
 });
@@ -111,6 +114,7 @@ test('set emits one change event after persisting', async () => {
       floating: { enabled: false, expanded: false, x: null, y: null },
       startup: { openAtLogin: false, showWindowOnLogin: false },
       refresh: { intervalSeconds: 30 },
+      integration: { launchWithClaudeCode: false },
       claudePath: null
     }
   });

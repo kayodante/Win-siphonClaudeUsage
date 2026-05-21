@@ -50,6 +50,7 @@ test('controller state includes preferences snapshot', async () => {
     floating: { enabled: false, expanded: false, x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
+    integration: { launchWithClaudeCode: false },
     claudePath: null
   });
 });

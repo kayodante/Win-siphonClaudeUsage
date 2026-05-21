@@ -24,6 +24,9 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   refresh: Object.freeze({
     intervalSeconds: 30
   }),
+  integration: Object.freeze({
+    launchWithClaudeCode: false
+  }),
   claudePath: null
 });
 
