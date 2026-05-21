@@ -67,6 +67,7 @@ const elements = {
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
+  settingsLaunchWithClaudeCodeToggle: document.querySelector('#settingsLaunchWithClaudeCodeToggle'),
   errorText: document.querySelector('#errorText'),
   reauthButton: document.querySelector('#reauthButton'),
   appVersionText: document.querySelector('#appVersionText'),
@@ -219,6 +220,15 @@ elements.settingsStartupShowWindowToggle.addEventListener('change', async event 
     elements.errorText.textContent = t('error.saveStartup', currentLanguage());
   }
 });
+elements.settingsLaunchWithClaudeCodeToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('integration.launchWithClaudeCode', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save launchWithClaudeCode preference:', error);
+    event.target.checked = !event.target.checked;
+    elements.errorText.textContent = t('error.saveLaunchWithClaudeCode', currentLanguage());
+  }
+});
 elements.settingsLanguage.addEventListener('change', async event => {
   const previousLanguage = currentLanguage();
   try {
@@ -347,6 +357,7 @@ function render(state) {
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
   const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
+  const launchWithClaudeCode = state.preferences?.integration?.launchWithClaudeCode ?? false;
   const refreshInterval = state.preferences?.refresh?.intervalSeconds ?? 30;
   const sessionPercent = clampPercent(session?.percent ?? 0);
   const weeklyPercent = clampPercent(weekly?.percent ?? 0);
@@ -422,6 +433,8 @@ function render(state) {
   elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
   elements.settingsStartupShowWindowToggle.checked = startupShowWindow;
   elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
+  elements.settingsLaunchWithClaudeCodeToggle.checked = launchWithClaudeCode;
+  elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
 
   elements.criticalBanner.hidden = sessionPercent < 90 || criticalDismissed;
   elements.highUsageBanner.hidden = sessionPercent < 70 || sessionPercent >= 90 || highUsageDismissed;
