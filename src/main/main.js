@@ -151,7 +151,13 @@ async function onReady() {
       }
     }
     if (preferencePath === 'floating.expanded') {
-      floatingWindow?.applySize(Boolean(value));
+      floatingWindow?.applySize(nextPreferences.floating?.style ?? 'classic', Boolean(value));
+    }
+    if (preferencePath === 'floating.style') {
+      if (floatingWindow?.window && !floatingWindow.window.isDestroyed()) {
+        floatingWindow.hide();
+        openFloatingWidget(controller.getState());
+      }
     }
     if (preferencePath === 'claudePath') {
       const effectiveDir = value || path.join(os.homedir(), '.claude');
@@ -286,7 +292,7 @@ function registerIpc() {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
       'notifications.soundVolume', 'notifications.limitSound', 'notifications.limitSoundVolume',
-      'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y',
+      'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y', 'floating.style',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
       'claudePath',
@@ -304,6 +310,9 @@ function registerIpc() {
       } else {
         await claudeSettingsService.disable();
       }
+    }
+    if (preferencePath === 'floating.style') {
+      if (value !== 'classic' && value !== 'mini') return;
     }
     await controller.preferences.set(preferencePath, value);
   });
