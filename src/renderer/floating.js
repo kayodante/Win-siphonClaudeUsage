@@ -13,6 +13,8 @@ const LEVEL_ICONS = {
 
 const elements = {
   logo: document.querySelector('#floatingLogo'),
+  miniLogo: document.querySelector('#floatingMiniLogo'),
+  miniPercent: document.querySelector('#floatingMiniPercent'),
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
   expandButton: document.querySelector('#floatingExpandButton'),
@@ -65,6 +67,7 @@ try {
 }
 
 function render(state) {
+  document.body.dataset.style = state?.preferences?.floating?.style ?? 'classic';
   currentLang = languageOf(state);
   currentExpanded = Boolean(state.preferences?.floating?.expanded);
   applyStaticLabels();
@@ -88,6 +91,8 @@ function render(state) {
 
   renderMeter(percent);
   elements.logo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
+  if (elements.miniLogo) elements.miniLogo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
+  if (elements.miniPercent) elements.miniPercent.textContent = percentText;
 }
 
 function buildFloatingReset(session, lang) {
