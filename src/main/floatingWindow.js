@@ -63,7 +63,9 @@ export class FloatingWindowController {
     this.pendingState = state;
 
     if (!this.window || this.window.isDestroyed() || !this.loaded) return;
-    this.applySize(styleOfState(state), isExpandedState(state));
+    const style = styleOfState(state);
+    this.applyAppearance(style);
+    this.applySize(style, isExpandedState(state));
     this.window.webContents.send('state-changed', state);
   }
 
@@ -78,7 +80,8 @@ export class FloatingWindowController {
 
   createWindow() {
     this.loaded = false;
-    const size = widgetSize(styleOfState(this.pendingState), isExpandedState(this.pendingState));
+    const style = styleOfState(this.pendingState);
+    const size = widgetSize(style, isExpandedState(this.pendingState));
     this.window = new this.BrowserWindow({
       width: size.width,
       height: size.height,
@@ -89,14 +92,15 @@ export class FloatingWindowController {
       resizable: false,
       movable: true,
       frame: false,
+      thickFrame: false,
       transparent: true,
+      useContentSize: true,
       hasShadow: false,
       alwaysOnTop: true,
       skipTaskbar: true,
       show: false,
       title: 'Siphon Widget',
-      backgroundColor: '#000000bf',
-      backgroundMaterial: 'acrylic',
+      ...appearanceOptions(style),
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
@@ -182,7 +186,18 @@ export class FloatingWindowController {
     const size = widgetSize(style, expanded);
     this.window.setMinimumSize?.(size.width, size.height);
     this.window.setMaximumSize?.(size.width, size.height);
+    if (typeof this.window.setContentSize === 'function') {
+      this.window.setContentSize(size.width, size.height, false);
+      return;
+    }
     this.window.setSize?.(size.width, size.height, false);
+  }
+
+  applyAppearance(style) {
+    if (!this.window || this.window.isDestroyed()) return;
+    const appearance = appearanceOptions(style);
+    this.window.setBackgroundMaterial?.(appearance.backgroundMaterial);
+    this.window.setBackgroundColor?.(appearance.backgroundColor);
   }
 }
 
@@ -197,4 +212,18 @@ function styleOfState(state) {
 function widgetSize(style, expanded) {
   if (style === 'mini') return MINI_SIZE;
   return expanded ? EXPANDED_SIZE : COMPACT_SIZE;
+}
+
+function appearanceOptions(style) {
+  if (style === 'mini') {
+    return {
+      backgroundColor: '#00000000',
+      backgroundMaterial: 'none'
+    };
+  }
+
+  return {
+    backgroundColor: '#000000bf',
+    backgroundMaterial: 'acrylic'
+  };
 }

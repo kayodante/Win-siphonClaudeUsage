@@ -205,6 +205,19 @@ Shipped. Captured here so it's not re-litigated:
 - `PlaintextCrypto` used in tests — no Electron context required.
 - `main.js` unchanged: `new TokenStore()` gets DPAPI automatically.
 
+- **Floating Widget Style**
+
+  - Implementar nas configurações a opção para escolher o estilo do floating widget entre Classic e Mini.
+  - Widget mini: Tamanho 73x34px e tray-icon com cor semântica somente. Com linha pontilhada na borda esquerda para indicar que é possível arrastar.
+  - Criar o novo floating widget conforme design no Figma do link compartilhado.
+  - https://www.figma.com/design/ZA62Ne6n8JQczrsKyErVag/siphon?node-id=165-1313&t=aPeKFBVdZy479xRi-4
+
+- **Update Settings UI**
+
+  - Nova tela de Settings dividida em 3 partes utilizado tabs.
+  - Implementar atualizações de UI conforme design no Figma do link compartilhado.
+  - https://www.figma.com/design/ZA62Ne6n8JQczrsKyErVag/siphon?node-id=136-4312&t=aPeKFBVdZy479xRi-4
+
 ## Now
 
 *(sem itens pendentes)*
@@ -222,7 +235,7 @@ Shipped. Captured here so it's not re-litigated:
   - Adicionar opção para verificar atualizações automaticamente nas configurações.
   - Verificar possibilidade de baixar atualização em segundo plano.
   - Se baixar em segundo plano for possível, adicionar toggle para habilitar essa opção também.
-  - Se baixar em segundo plano for possível, Verificar atualização automaticamente -> Baixar atualização em segundo plano -> Exibir mensagem dizendo para reiniciar para aplicar atualização com botão "Reiniciar"
+  - Se baixar em segundo plano for possível, Verificar atualização automaticamente -> Baixar atualização em segundo plano -> Exibir mensagem dizendo para reiniciar para aplicar atualização com botão "Reiniciar".
 
 ## Known issues / paper cuts
 

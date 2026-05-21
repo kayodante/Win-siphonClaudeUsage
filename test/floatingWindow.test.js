@@ -194,12 +194,12 @@ test('setExpanded persists preference and resizes an open widget', async () => {
   await controller.setExpanded(true);
 
   assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', true]);
-  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 192, false]);
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [220, 192, false]);
 
   await controller.setExpanded(false);
 
   assert.deepEqual(preferences.setCalls.at(-1), ['floating.expanded', false]);
-  assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 104, false]);
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [220, 104, false]);
 });
 
 test('show creates a 73x34 mini widget when style is mini', async () => {
@@ -217,9 +217,51 @@ test('show creates a 73x34 mini widget when style is mini', async () => {
   await controller.show(sampleState({ style: 'mini' }));
 
   assert.deepEqual(
-    pick(windows[0].options, ['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight']),
-    { width: 73, height: 34, minWidth: 73, minHeight: 34, maxWidth: 73, maxHeight: 34 }
+    pick(windows[0].options, [
+      'width',
+      'height',
+      'minWidth',
+      'minHeight',
+      'maxWidth',
+      'maxHeight',
+      'thickFrame',
+      'useContentSize',
+      'backgroundColor',
+      'backgroundMaterial'
+    ]),
+    {
+      width: 73,
+      height: 34,
+      minWidth: 73,
+      minHeight: 34,
+      maxWidth: 73,
+      maxHeight: 34,
+      thickFrame: false,
+      useContentSize: true,
+      backgroundColor: '#00000000',
+      backgroundMaterial: 'none'
+    }
   );
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [73, 34, false]);
+});
+
+test('syncState clears native acrylic when an open widget switches to mini', async () => {
+  const windows = [];
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences: new MemoryPreferences({
+      floating: { enabled: true, expanded: false, style: 'classic', x: null, y: null }
+    })
+  });
+
+  await controller.show(sampleState({ style: 'classic' }));
+  controller.syncState(sampleState({ style: 'mini' }));
+
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [73, 34, false]);
+  assert.deepEqual(windows[0].backgroundMaterialCalls.at(-1), 'none');
+  assert.deepEqual(windows[0].backgroundColorCalls.at(-1), '#00000000');
 });
 
 function createFakeBrowserWindow(windows) {
@@ -236,6 +278,9 @@ function createFakeBrowserWindow(windows) {
       this.loadedFile = null;
       this.position = null;
       this.sizeCalls = [];
+      this.contentSizeCalls = [];
+      this.backgroundColorCalls = [];
+      this.backgroundMaterialCalls = [];
       this.showInactiveCalls = 0;
       this.showCalls = 0;
       windows.push(this);
@@ -255,6 +300,20 @@ function createFakeBrowserWindow(windows) {
       this.sizeCalls.push([width, height, animate]);
       this.bounds.width = width;
       this.bounds.height = height;
+    }
+
+    setContentSize(width, height, animate = false) {
+      this.contentSizeCalls.push([width, height, animate]);
+      this.bounds.width = width;
+      this.bounds.height = height;
+    }
+
+    setBackgroundColor(color) {
+      this.backgroundColorCalls.push(color);
+    }
+
+    setBackgroundMaterial(material) {
+      this.backgroundMaterialCalls.push(material);
     }
 
     showInactive() {
