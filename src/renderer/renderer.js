@@ -68,6 +68,14 @@ const elements = {
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
   settingsLaunchWithClaudeCodeToggle: document.querySelector('#settingsLaunchWithClaudeCodeToggle'),
+  settingsTabSystem: document.querySelector('#settingsTabSystem'),
+  settingsTabNotification: document.querySelector('#settingsTabNotification'),
+  settingsTabWidget: document.querySelector('#settingsTabWidget'),
+  settingsTabSystemPanel: document.querySelector('#settingsTabSystemPanel'),
+  settingsTabNotificationPanel: document.querySelector('#settingsTabNotificationPanel'),
+  settingsTabWidgetPanel: document.querySelector('#settingsTabWidgetPanel'),
+  settingsStyleClassic: document.querySelector('#settingsStyleClassic'),
+  settingsStyleMini: document.querySelector('#settingsStyleMini'),
   errorText: document.querySelector('#errorText'),
   reauthButton: document.querySelector('#reauthButton'),
   appVersionText: document.querySelector('#appVersionText'),
@@ -96,6 +104,7 @@ let offlineDismissed = false;
 let updateDismissed = false;
 let highUsageDismissed = false;
 let criticalDismissed = false;
+let currentSettingsTab = 'system';
 let prevSessionPercent = null;
 let updateUrl = null;
 let isEntering = false;
@@ -107,6 +116,9 @@ function cubicEaseOut(t) { return 1 - (1 - t) ** 3; }
 
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
+elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
+elements.settingsTabNotification.addEventListener('click', () => switchSettingsTab('notification'));
+elements.settingsTabWidget.addEventListener('click', () => switchSettingsTab('widget'));
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
@@ -200,6 +212,20 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
     logSafeError('Failed to save floating widget preference:', error);
     event.target.checked = !event.target.checked;
     elements.errorText.textContent = t('error.saveFloating', currentLanguage());
+  }
+});
+elements.settingsStyleClassic.addEventListener('click', async () => {
+  try {
+    await window.siphon.setPreference('floating.style', 'classic');
+  } catch (error) {
+    logSafeError('Failed to save widget style preference:', error);
+  }
+});
+elements.settingsStyleMini.addEventListener('click', async () => {
+  try {
+    await window.siphon.setPreference('floating.style', 'mini');
+  } catch (error) {
+    logSafeError('Failed to save widget style preference:', error);
   }
 });
 elements.settingsStartupToggle.addEventListener('change', async event => {
@@ -429,6 +455,9 @@ function render(state) {
   updateSliderFill(elements.settingsLimitSoundVolume);
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
+  const floatingStyle = state.preferences?.floating?.style ?? 'classic';
+  elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
+  elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
   elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
   elements.settingsStartupShowWindowToggle.checked = startupShowWindow;
@@ -531,6 +560,39 @@ function renderMeter(meter, percent) {
   }
 }
 
+
+function switchSettingsTab(name) {
+  if (name === currentSettingsTab) return;
+  const FADE_MS = 120;
+  const panels = {
+    system: elements.settingsTabSystemPanel,
+    notification: elements.settingsTabNotificationPanel,
+    widget: elements.settingsTabWidgetPanel
+  };
+  const tabs = {
+    system: elements.settingsTabSystem,
+    notification: elements.settingsTabNotification,
+    widget: elements.settingsTabWidget
+  };
+  const outgoing = panels[currentSettingsTab];
+  const incoming = panels[name];
+  tabs[currentSettingsTab].classList.remove('settings-tab--active');
+  tabs[name].classList.add('settings-tab--active');
+  currentSettingsTab = name;
+  outgoing.style.opacity = '0';
+  setTimeout(() => {
+    outgoing.hidden = true;
+    outgoing.style.opacity = '';
+    incoming.hidden = false;
+    incoming.style.opacity = '0';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        incoming.style.opacity = '1';
+        setTimeout(() => { incoming.style.opacity = ''; }, FADE_MS);
+      });
+    });
+  }, FADE_MS);
+}
 
 function renderSettings(state, lang = currentLanguage()) {
   const profile = state.profile ?? {};
