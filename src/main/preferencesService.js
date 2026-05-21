@@ -14,6 +14,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   floating: Object.freeze({
     enabled: false,
     expanded: false,
+    style: 'classic',
     x: null,
     y: null
   }),
