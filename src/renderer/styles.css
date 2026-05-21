@@ -2220,3 +2220,150 @@ body[data-entering] #monthTokens {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── Settings tabs ─────────────────────────────────────── */
+.settings-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  margin: 0 6px 6px;
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: 'Geist', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.settings-tab--active {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-tab-panel {
+  transition: opacity 120ms ease;
+}
+
+/* ── Style picker ─────────────────────────────────────── */
+.settings-section-heading {
+  font-size: 10px;
+  font-family: 'Geist', sans-serif;
+  color: var(--muted-foreground);
+  margin: 8px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings-style-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-style-card {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease;
+}
+
+.settings-style-card[data-active="true"] {
+  border-color: var(--accent);
+}
+
+.settings-style-label {
+  display: block;
+  font-size: 10px;
+  font-family: 'Geist', sans-serif;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 6px;
+}
+
+.settings-style-preview--classic {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-xs);
+}
+
+.settings-style-preview-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+}
+
+.settings-style-preview--mini {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-xs);
+}
+
+.settings-style-preview-mini-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-style-preview-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.settings-style-preview-percent {
+  font-size: 8px;
+  font-family: 'GeistPixel-Line', monospace;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── Mini floating widget ─────────────────────────────── */
+.floating-mini-row {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  width: 73px;
+  height: 34px;
+  background: oklch(12% 0 0 / 0.92);
+  border-radius: var(--radius-sm);
+  border-left: 2px dashed rgba(255, 255, 255, 0.22);
+  box-sizing: border-box;
+  -webkit-app-region: drag;
+}
+
+body[data-style="mini"] .floating-mini-row {
+  display: flex;
+}
+
+body[data-style="mini"] .floating-widget {
+  display: none;
+}
+
+.floating-mini-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.floating-mini-percent {
+  font-family: 'GeistPixel-Line', 'Geist', monospace;
+  font-size: 11px;
+  color: #ffffff;
+  -webkit-app-region: drag;
+}
