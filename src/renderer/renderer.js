@@ -105,6 +105,7 @@ let updateDismissed = false;
 let highUsageDismissed = false;
 let criticalDismissed = false;
 let currentSettingsTab = 'system';
+let _tabTransitioning = false;
 let prevSessionPercent = null;
 let updateUrl = null;
 let isEntering = false;
@@ -562,7 +563,8 @@ function renderMeter(meter, percent) {
 
 
 function switchSettingsTab(name) {
-  if (name === currentSettingsTab) return;
+  if (name === currentSettingsTab || _tabTransitioning) return;
+  _tabTransitioning = true;
   const FADE_MS = 120;
   const panels = {
     system: elements.settingsTabSystemPanel,
@@ -578,6 +580,8 @@ function switchSettingsTab(name) {
   const incoming = panels[name];
   tabs[currentSettingsTab].classList.remove('settings-tab--active');
   tabs[name].classList.add('settings-tab--active');
+  tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
+  tabs[name].setAttribute('aria-selected', 'true');
   currentSettingsTab = name;
   outgoing.style.opacity = '0';
   setTimeout(() => {
@@ -588,7 +592,10 @@ function switchSettingsTab(name) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         incoming.style.opacity = '1';
-        setTimeout(() => { incoming.style.opacity = ''; }, FADE_MS);
+        setTimeout(() => {
+          incoming.style.opacity = '';
+          _tabTransitioning = false;
+        }, FADE_MS);
       });
     });
   }, FADE_MS);
