@@ -1,6 +1,7 @@
 import { logSafeError } from '../shared/diagnostics.js';
 
-const COMPACT_SIZE = Object.freeze({ width: 220, height: 104 });
+const MINI_SIZE     = Object.freeze({ width: 73,  height: 34  });
+const COMPACT_SIZE  = Object.freeze({ width: 220, height: 104 });
 const EXPANDED_SIZE = Object.freeze({ width: 220, height: 192 });
 const WIDGET_MARGIN = 20;
 
@@ -62,7 +63,7 @@ export class FloatingWindowController {
     this.pendingState = state;
 
     if (!this.window || this.window.isDestroyed() || !this.loaded) return;
-    this.applySize(isExpandedState(state));
+    this.applySize(styleOfState(state), isExpandedState(state));
     this.window.webContents.send('state-changed', state);
   }
 
@@ -72,12 +73,12 @@ export class FloatingWindowController {
     if (this.pendingState?.preferences?.floating) {
       this.pendingState.preferences.floating.expanded = nextExpanded;
     }
-    this.applySize(nextExpanded);
+    this.applySize(styleOfState(this.pendingState), nextExpanded);
   }
 
   createWindow() {
     this.loaded = false;
-    const size = widgetSize(isExpandedState(this.pendingState));
+    const size = widgetSize(styleOfState(this.pendingState), isExpandedState(this.pendingState));
     this.window = new this.BrowserWindow({
       width: size.width,
       height: size.height,
@@ -176,9 +177,9 @@ export class FloatingWindowController {
     this.window.show();
   }
 
-  applySize(expanded) {
+  applySize(style, expanded) {
     if (!this.window || this.window.isDestroyed()) return;
-    const size = widgetSize(expanded);
+    const size = widgetSize(style, expanded);
     this.window.setMinimumSize?.(size.width, size.height);
     this.window.setMaximumSize?.(size.width, size.height);
     this.window.setSize?.(size.width, size.height, false);
@@ -189,6 +190,11 @@ function isExpandedState(state) {
   return Boolean(state?.preferences?.floating?.expanded);
 }
 
-function widgetSize(expanded) {
+function styleOfState(state) {
+  return state?.preferences?.floating?.style ?? 'classic';
+}
+
+function widgetSize(style, expanded) {
+  if (style === 'mini') return MINI_SIZE;
   return expanded ? EXPANDED_SIZE : COMPACT_SIZE;
 }

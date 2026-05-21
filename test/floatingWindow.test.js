@@ -202,6 +202,26 @@ test('setExpanded persists preference and resizes an open widget', async () => {
   assert.deepEqual(windows[0].sizeCalls.at(-1), [220, 104, false]);
 });
 
+test('show creates a 73x34 mini widget when style is mini', async () => {
+  const windows = [];
+  const preferences = new MemoryPreferences({
+    floating: { enabled: true, expanded: false, style: 'mini', x: null, y: null }
+  });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences
+  });
+
+  await controller.show(sampleState({ style: 'mini' }));
+
+  assert.deepEqual(
+    pick(windows[0].options, ['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight']),
+    { width: 73, height: 34, minWidth: 73, minHeight: 34, maxWidth: 73, maxHeight: 34 }
+  );
+});
+
 function createFakeBrowserWindow(windows) {
   return class FakeBrowserWindow extends EventEmitter {
     constructor(options) {
@@ -283,9 +303,9 @@ class MemoryPreferences {
   }
 }
 
-function sampleState({ expanded = false } = {}) {
+function sampleState({ expanded = false, style = 'classic' } = {}) {
   return {
-    preferences: { floating: { enabled: true, expanded, x: null, y: null } },
+    preferences: { floating: { enabled: true, expanded, style, x: null, y: null } },
     quota: {
       session: {
         percent: 64,
