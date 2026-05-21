@@ -216,6 +216,8 @@
           <button class="btn-secondary" id="signOutButton" data-i18n="settings.signOut">Sign out</button>
         </div>
 
+        <div class="settings-card settings-tabs-card">
+
         <!-- Tab bar -->
         <div class="settings-tabs" role="tablist">
           <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" data-i18n="settings.tabs.system">System</button>
@@ -224,7 +226,7 @@
         </div>
 
         <!-- System panel -->
-        <div id="settingsTabSystemPanel" class="settings-tab-panel settings-card">
+        <div id="settingsTabSystemPanel" class="settings-tab-panel">
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.language">Language</span>
             <select id="settingsLanguage" class="settings-select">
@@ -278,7 +280,7 @@
         </div>
 
         <!-- Notification panel -->
-        <div id="settingsTabNotificationPanel" class="settings-tab-panel settings-card" hidden>
+        <div id="settingsTabNotificationPanel" class="settings-tab-panel" hidden>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.notifReset">Reset notification</span>
             <label class="switch" for="settingsNotificationsToggle">
@@ -329,7 +331,7 @@
         </div>
 
         <!-- Widget panel -->
-        <div id="settingsTabWidgetPanel" class="settings-tab-panel settings-card" hidden>
+        <div id="settingsTabWidgetPanel" class="settings-tab-panel" hidden>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
             <label class="switch" for="settingsFloatingToggle">
@@ -359,6 +361,8 @@
             </button>
           </div>
         </div>
+
+        </div><!-- end settings-tabs-card -->
 
         <div class="settings-version-row">
           <span id="appVersionText" class="settings-version-text">Siphon - Claude Usage</span>

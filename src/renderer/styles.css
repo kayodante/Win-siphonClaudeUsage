@@ -125,9 +125,11 @@
 
   /* ── Radius ── */
   --radius:      12px;
+  --radius-none: 0px;
   --radius-xs:   4px;
   --radius-sm:   8px;
   --radius-lg:   16px;
+  --radius-xl:   20px;
   --radius-pill: 999px;
 
   /* ── Shadows ── */
@@ -254,7 +256,7 @@ body[data-view="onboard"] .shell {
   gap: var(--space-0);
   padding: var(--space-8) var(--space-8) 22px;
   background: var(--card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   box-shadow: var(--inner-light), inset 0 0 0 1px var(--border-subtle);
   -webkit-app-region: drag;
 }
@@ -376,7 +378,7 @@ body[data-view="onboard"] .window-control-btn svg {
   gap: var(--space-1);
   padding: var(--space-2);
   background: var(--card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-strong);
 }
@@ -402,7 +404,7 @@ body[data-view="onboard"] .app-footer {
   content: "";
   flex: 1;
   height: 1px;
-  background: oklch(100% 0 0 / 0.08);
+  background: var(--border-strong);
 }
 
 .footer-buttons {
@@ -706,7 +708,7 @@ body[data-view="onboard"] .app-footer {
 .card {
   position: relative;
   background: var(--card);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
   padding: var(--space-6) var(--space-7);
   box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-subtle);
@@ -1330,7 +1332,7 @@ body[data-refreshing="true"] .card {
 .settings-card {
   background: var(--card);
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: var(--space-8) var(--space-7);
   display: flex;
   flex-direction: column;
@@ -1341,7 +1343,7 @@ body[data-refreshing="true"] .card {
 .account-card {
   background: var(--card);
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: var(--space-2);
   display: flex;
   flex-direction: column;
@@ -1456,7 +1458,7 @@ body[data-refreshing="true"] .card {
 
 .settings-divider {
   height: 1px;
-  background: var(--border-strong);
+  background: var(--border-subtle);
 }
 
 .settings-row-label {
@@ -1773,7 +1775,7 @@ body[data-refreshing="true"] .card {
   height: 17px;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-none);
   background: var(--border-subtle);
   color: var(--subtle-foreground);
   cursor: pointer;
@@ -2226,9 +2228,9 @@ body[data-entering] #monthTokens {
   display: flex;
   gap: 3px;
   padding: 3px;
-  background: var(--card);
+  background: var(--muted);
   border-radius: var(--radius-sm);
-  margin: 0 6px 6px;
+  margin: 0 0 var(--space-5);
 }
 
 .settings-tab {
@@ -2251,30 +2253,41 @@ body[data-entering] #monthTokens {
 }
 
 .settings-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
   transition: opacity 120ms ease;
+}
+
+.settings-tabs-card {
+  padding: var(--space-5);
+  gap: var(--space-none);
 }
 
 /* ── Style picker ─────────────────────────────────────── */
 .settings-section-heading {
-  font-size: 10px;
-  font-family: 'Geist', sans-serif;
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
   color: var(--muted-foreground);
-  margin: 8px 0 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin: var(--space-3) var(--space-none) var(--space-2);
 }
 
 .settings-style-picker {
   display: flex;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
 .settings-style-card {
   flex: 1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: auto;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 8px;
+  background: var(--card);
+  padding: var(--space-4) var(--space-3) var(--space-3) var(--space-3);
   cursor: pointer;
   text-align: left;
   transition: border-color 120ms ease;
@@ -2286,39 +2299,39 @@ body[data-entering] #monthTokens {
 
 .settings-style-label {
   display: block;
-  font-size: 10px;
-  font-family: 'Geist', sans-serif;
-  color: rgba(255, 255, 255, 0.65);
-  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  color: var(--subtle-foreground);
+  margin-bottom: var(--space-2);
 }
 
 .settings-style-preview--classic {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--card-foreground);
   border-radius: var(--radius-xs);
 }
 
 .settings-style-preview-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 2px;
+  height: var(--space-3);
+  background: var(--border-strong);
+  border-radius: var(--radius-xs);
 }
 
 .settings-style-preview--mini {
   display: flex;
   align-items: center;
-  padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.04);
+  padding: var(--space-3);
+  background: var(--card-foreground);
   border-radius: var(--radius-xs);
 }
 
 .settings-style-preview-mini-content {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .settings-style-preview-icon {
@@ -2327,28 +2340,27 @@ body[data-entering] #monthTokens {
 }
 
 .settings-style-preview-percent {
-  font-size: 8px;
-  font-family: 'GeistPixel-Line', monospace;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: var(--text-xs);
+  font-family: var(--font-sans);
+  color: var(--foreground);
 }
 
 /* ── Mini floating widget ─────────────────────────────── */
 .floating-mini-row {
   display: none;
   align-items: center;
-  gap: 5px;
-  padding: 0 10px;
-  width: 73px;
-  height: 34px;
+  gap: var(--space-3);
+  padding: var(--space-none) var(--space-4);
   background: oklch(12% 0 0 / 0.92);
-  border-radius: var(--radius-sm);
-  border-left: 2px dashed rgba(255, 255, 255, 0.22);
+  border-left: 2px dashed var(--subtle-foreground);
   box-sizing: border-box;
   -webkit-app-region: drag;
 }
 
 body[data-style="mini"] .floating-mini-row {
   display: flex;
+  width: 100%;
+  height: 100%;
 }
 
 body[data-style="mini"] .floating-widget {
@@ -2362,8 +2374,8 @@ body[data-style="mini"] .floating-widget {
 }
 
 .floating-mini-percent {
-  font-family: 'GeistPixel-Line', 'Geist', monospace;
-  font-size: 11px;
-  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--foreground);
   -webkit-app-region: drag;
 }
