@@ -28,6 +28,10 @@ These override any default behavior — follow them on every turn:
    build outputs, generated files, anything.
 5. **Before editing any file, read it first.** Before modifying a function,
    grep for all callers. Research before you edit.
+6. **Bump `package.json` version on every commit.** Run
+   `npm version <patch|minor|major> --no-git-tag-version` before committing.
+   Rule: `feat` → minor, `fix`/`chore`/`style`/`refactor` → patch,
+   breaking change → major. Include the updated `package.json` in the commit.
 
 The user is a designer, not a programmer. Don't dump code into chat unless
 asked. Prefer file edits and short prose explanations.
