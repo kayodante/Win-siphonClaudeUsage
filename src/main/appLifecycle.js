@@ -3,6 +3,7 @@ export function buildTrayMenuTemplate({
   showMainWindow,
   showFloatingWidget,
   showSettingsWindow,
+  restart,
   quit
 }) {
   const infoItems = statusItems
@@ -28,6 +29,10 @@ export function buildTrayMenuTemplate({
       click: showSettingsWindow
     },
     { type: 'separator' },
+    {
+      label: 'Reiniciar',
+      click: restart
+    },
     {
       label: 'Sair',
       click: quit

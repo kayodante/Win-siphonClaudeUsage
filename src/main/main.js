@@ -246,6 +246,7 @@ function createTray() {
         showMainWindow,
         showFloatingWidget: enableFloatingWidget,
         showSettingsWindow,
+        restart,
         quit
       })
     )
@@ -274,6 +275,7 @@ function updateTray(state) {
         showMainWindow,
         showFloatingWidget: enableFloatingWidget,
         showSettingsWindow,
+        restart,
         quit
       })
     )
@@ -408,6 +410,12 @@ function sendView(view) {
 }
 
 function quit() {
+  app.isQuitting = true;
+  app.quit();
+}
+
+function restart() {
+  app.relaunch();
   app.isQuitting = true;
   app.quit();
 }
