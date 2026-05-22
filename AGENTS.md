@@ -86,8 +86,11 @@ scripts/
   check-syntax.js # syntax-only lint pass
   after-build.cjs # post-build SHA-256 checksum generator
 assets/
-  tray*.png       # tray icons for ok/warn/high/danger quota levels
-  installer/      # NSIS installer icon and artwork
+  tray*.png             # tray icons for ok/warn/high/danger quota levels
+  notificationReset.mp3 # played when session resets (playResetSound)
+  notificationFull.mp3  # played when session hits 100% (playFullSound)
+  notificationAlert.mp3 # played when session hits 70% or 90% (playLimitSound)
+  installer/            # NSIS installer icon and artwork
 ```
 
 ## Data + state on disk
@@ -126,7 +129,7 @@ assets/
 - **Double-click** the tray icon → main window shows.
 - Tray tooltip and the top of the right-click menu show session %, weekly %,
   session reset time, and last update. The menu actions remain
-  *Mostrar aplicativo* / *Mostrar widget* / *Configurações* / *Sair*.
+  *Mostrar aplicativo* / *Mostrar widget* / *Configurações* / separator / *Reiniciar* / *Sair*.
   Built in `appLifecycle.buildTrayMenuTemplate` and `shared/trayStatus.js`.
 - Closing the window hides it instead of quitting (`event.preventDefault()`
   + `window.hide()`); only `app.isQuitting` (set by *Sair*) actually exits.
@@ -156,6 +159,8 @@ npm run build:win  # electron-builder NSIS installer
   internal logs / errors stay in English.
 - When touching the scheduler, run `test/resetNotificationScheduler.test.js`
   — it covers the tricky `setTimer` clamp and persistence paths.
+- When adding new notification preferences, add their paths to the `ALLOWED`
+  set in `main.js` `registerIpc()` — unknown paths are silently dropped.
 - When touching behavior reflected in `AGENTS.md` or `CLAUDE.md`, update both
   files together so future agents get accurate project context.
 

@@ -60,6 +60,9 @@ const elements = {
   settingsSoundToggle: document.querySelector('#settingsSoundToggle'),
   testSoundButton: document.querySelector('#testSoundButton'),
   settingsSoundVolume: document.querySelector('#settingsSoundVolume'),
+  settingsExpireSoundToggle: document.querySelector('#settingsExpireSoundToggle'),
+  testExpireSoundButton: document.querySelector('#testExpireSoundButton'),
+  settingsExpireSoundVolume: document.querySelector('#settingsExpireSoundVolume'),
   settingsLimitSoundToggle: document.querySelector('#settingsLimitSoundToggle'),
   testLimitSoundButton: document.querySelector('#testLimitSoundButton'),
   settingsLimitSoundVolume: document.querySelector('#settingsLimitSoundVolume'),
@@ -169,6 +172,23 @@ elements.settingsSoundVolume.addEventListener('input', async event => {
     await window.siphon.setPreference('notifications.soundVolume', Number(event.target.value));
   } catch (error) {
     logSafeError('Failed to save volume preference:', error);
+  }
+});
+elements.settingsExpireSoundToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('notifications.expireSound', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save expire sound preference:', error);
+    event.target.checked = !event.target.checked;
+  }
+});
+elements.testExpireSoundButton.addEventListener('click', () => playFullSound());
+elements.settingsExpireSoundVolume.addEventListener('input', async event => {
+  updateSliderFill(event.target);
+  try {
+    await window.siphon.setPreference('notifications.expireSoundVolume', Number(event.target.value));
+  } catch (error) {
+    logSafeError('Failed to save expire volume preference:', error);
   }
 });
 elements.settingsLimitSoundToggle.addEventListener('change', async event => {
@@ -379,6 +399,8 @@ function render(state) {
   const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const soundEnabled = state.preferences?.notifications?.sound ?? false;
   const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
+  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
+  const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
   const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
   const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
@@ -395,10 +417,11 @@ function render(state) {
     localHistory: state.localHistory
   });
 
-  // Threshold crossing detection — play limit sound on upward cross
-  if (prevSessionPercent !== null && limitSoundEnabled) {
-    if (prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
-    else if (prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
+  // Threshold crossing detection — play sound on upward cross
+  if (prevSessionPercent !== null) {
+    if (expireSoundEnabled && prevSessionPercent < 100 && sessionPercent >= 100) playFullSound();
+    else if (limitSoundEnabled && prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
+    else if (limitSoundEnabled && prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
   }
   // Reset dismissed state when percent drops back below threshold
   if (sessionPercent < 70) {
@@ -450,9 +473,15 @@ function render(state) {
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsSoundToggle.checked = soundEnabled;
   elements.settingsSoundVolume.value = String(soundVolume);
+  elements.settingsSoundVolume.disabled = !soundEnabled;
   updateSliderFill(elements.settingsSoundVolume);
+  elements.settingsExpireSoundToggle.checked = expireSoundEnabled;
+  elements.settingsExpireSoundVolume.value = String(expireSoundVolume);
+  elements.settingsExpireSoundVolume.disabled = !expireSoundEnabled;
+  updateSliderFill(elements.settingsExpireSoundVolume);
   elements.settingsLimitSoundToggle.checked = limitSoundEnabled;
   elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
+  elements.settingsLimitSoundVolume.disabled = !limitSoundEnabled;
   updateSliderFill(elements.settingsLimitSoundVolume);
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
@@ -686,15 +715,21 @@ function applyTranslations(lang) {
 }
 
 function playResetSound() {
-  const audio = new Audio('../../assets/notification.mp3');
+  const audio = new Audio('../../assets/notificationReset.mp3');
   audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
   audio.play().catch(error => console.warn('Could not play reset sound', redactSensitive(error)));
 }
 
 function playLimitSound() {
-  const audio = new Audio('../../assets/notification2.mp3');
+  const audio = new Audio('../../assets/notificationAlert.mp3');
   audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.limitSoundVolume ?? 1.0)));
-  audio.play().catch(error => console.warn('Could not play limit sound', redactSensitive(error)));
+  audio.play().catch(error => console.warn('Could not play alert sound', redactSensitive(error)));
+}
+
+function playFullSound() {
+  const audio = new Audio('../../assets/notificationFull.mp3');
+  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.expireSoundVolume ?? 1.0)));
+  audio.play().catch(error => console.warn('Could not play full sound', redactSensitive(error)));
 }
 
 function updateSliderFill(slider) {

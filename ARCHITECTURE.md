@@ -60,8 +60,8 @@ nearest the tray, with a 16-px margin.
 Two pure functions, kept apart from `main.js` so they're testable
 (`test/appLifecycle.test.js`):
 
-- `buildTrayMenuTemplate({ showMainWindow, showFloatingWidget, showSettingsWindow, quit })` —
-  *Mostrar aplicativo*, *Mostrar widget*, *Configurações*, separator, *Sair*.
+- `buildTrayMenuTemplate({ showMainWindow, showFloatingWidget, showSettingsWindow, restart, quit })` —
+  *Mostrar aplicativo*, *Mostrar widget*, *Configurações*, separator, *Reiniciar*, *Sair*.
 - `startApplication({ loadWindow, showWindow, showOnStart, startController, onControllerError })` —
   load the renderer file, optionally show the window, start the controller.
 
@@ -86,10 +86,13 @@ and forwards `state-changed` to the widget renderer.
 `PreferencesService` (EventEmitter) wraps a `JsonStore` over
 `%APPDATA%\Siphon\preferences.json`. Exposes `load() / get(path) / set(path, value)`,
 deep-merges over `DEFAULT_PREFERENCES`, and emits `'change'` on writes.
-Schema: `language`, `notifications.{sessionReset, sound}`,
-`floating.{enabled, x, y}`, `startup.{openAtLogin, showWindowOnLogin}`,
-`refresh.intervalSeconds`, `claudePath`. Refresh interval supports 30 seconds,
-5 minutes, 15 minutes, and 30 minutes.
+Schema: `language`, `notifications.{sessionReset, sound, soundVolume, expireSound, expireSoundVolume, limitSound, limitSoundVolume}`,
+`floating.{enabled, expanded, style, x, y}`, `startup.{openAtLogin, showWindowOnLogin}`,
+`refresh.intervalSeconds`, `integration.launchWithClaudeCode`, `claudePath`.
+Refresh interval supports 30 seconds, 1, 5, 15, and 30 minutes.
+
+**Important:** new preference paths must be added to the `ALLOWED` set in
+`main.js` `registerIpc()` — `prefs:set` silently drops unknown paths.
 
 ### `src/main/startupService.js`
 Small testable wrapper around Electron login items. It translates

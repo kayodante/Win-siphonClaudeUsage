@@ -13,7 +13,7 @@ test('buildTrayMenuTemplate exposes only the required right-click options', () =
 
   assert.deepEqual(
     template.map(item => item.type ?? item.label),
-    ['Mostrar aplicativo', 'Mostrar widget', 'Configurações', 'separator', 'Sair']
+    ['Mostrar aplicativo', 'Mostrar widget', 'Configurações', 'separator', 'Reiniciar', 'Sair']
   );
 });
 
@@ -39,6 +39,7 @@ test('buildTrayMenuTemplate can prepend disabled status items', () => {
       'Mostrar widget:undefined',
       'Configurações:undefined',
       'separator',
+      'Reiniciar:undefined',
       'Sair:undefined'
     ]
   );

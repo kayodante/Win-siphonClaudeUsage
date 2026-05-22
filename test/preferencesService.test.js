@@ -18,7 +18,7 @@ test('load merges partial stored preferences with defaults', async () => {
 
   assert.deepEqual(await preferences.load(), {
     language: 'en',
-    notifications: { sessionReset: false, sound: false, soundVolume: 1, limitSound: false, limitSoundVolume: 1 },
+    notifications: { sessionReset: false, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, limitSound: false, limitSoundVolume: 1 },
     floating: { enabled: false, expanded: false, style: 'classic', x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
@@ -57,7 +57,7 @@ test('set persists a nested change and returns the full snapshot', async () => {
 
   assert.deepEqual(snapshot, {
     language: 'en',
-    notifications: { sessionReset: false, sound: false, soundVolume: 1, limitSound: false, limitSoundVolume: 1 },
+    notifications: { sessionReset: false, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, limitSound: false, limitSoundVolume: 1 },
     floating: { enabled: false, expanded: false, style: 'classic', x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
@@ -75,7 +75,7 @@ test('set creates deep paths without dropping sibling defaults', async () => {
 
   assert.deepEqual(snapshot, {
     language: 'en',
-    notifications: { sessionReset: true, sound: false, soundVolume: 1, limitSound: false, limitSoundVolume: 1 },
+    notifications: { sessionReset: true, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, limitSound: false, limitSoundVolume: 1 },
     floating: { enabled: false, expanded: false, style: 'classic', x: 120, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
@@ -110,7 +110,7 @@ test('set emits one change event after persisting', async () => {
     value: false,
     preferences: {
       language: 'en',
-      notifications: { sessionReset: false, sound: false, soundVolume: 1, limitSound: false, limitSoundVolume: 1 },
+      notifications: { sessionReset: false, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, limitSound: false, limitSoundVolume: 1 },
       floating: { enabled: false, expanded: false, style: 'classic', x: null, y: null },
       startup: { openAtLogin: false, showWindowOnLogin: false },
       refresh: { intervalSeconds: 30 },

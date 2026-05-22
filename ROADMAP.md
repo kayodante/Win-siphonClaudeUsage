@@ -175,12 +175,14 @@ Shipped. Captured here so it's not re-litigated:
 - `60` adicionado a `allowedIntervals` na validação de `refresh.intervalSeconds`.
 - Sem esse fix, as preferências de volume e som de limite eram silenciosamente ignoradas.
 
-**Alerta sonoro para limite atingido**
+**Sistema de sons de notificação — 3 canais independentes**
 
-- Toggle `notifications.limitSound` nas configurações (compartilha slider de volume).
-- Botão "Tocar som de limite" para testar `notification2.mp3`.
-- Detecção de cruzamento em `renderer.js`: `prevSessionPercent` rastreia o valor anterior;
-  som toca no primeiro cruzamento upward para 70% ou 90%.
+- 3 arquivos de áudio separados: `notificationReset.mp3` (reset), `notificationFull.mp3` (100%), `notificationAlert.mp3` (70%/90%).
+- Settings/Notification reorganizado em 3 seções: *Play sound on reset*, *Play sound when session expires*, *Play sound when session hits 70/90%*.
+- Cada seção tem toggle independente, botão de teste e slider de volume próprio.
+- Novas preferências: `notifications.expireSound`, `notifications.expireSoundVolume`.
+- Slider de volume desabilita visualmente (cor `--muted-foreground`) quando o toggle está off.
+- Cruzamentos: reset = `onResetSound` IPC; 100% = `playFullSound`; 70%/90% = `playLimitSound`.
 
 **Alerta de Uso Elevado + Alerta Crítico**
 

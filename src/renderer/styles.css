@@ -1946,7 +1946,7 @@ button:focus-visible {
 .switch-track {
   position: absolute;
   inset: 0;
-  background: var(--muted);
+  background: var(--muted-foreground);
   border-radius: var(--radius-pill);
   transition: background var(--duration-slow) var(--ease);
 }
@@ -2077,8 +2077,8 @@ button:focus-visible {
     to right,
     var(--accent) 0%,
     var(--accent) var(--slider-fill, 100%),
-    var(--muted) var(--slider-fill, 100%),
-    var(--muted) 100%
+    var(--border-strong) var(--slider-fill, 100%),
+    var(--border-strong) 100%
   );
   outline: none;
   cursor: pointer;
@@ -2093,6 +2093,25 @@ button:focus-visible {
   background: var(--foreground);
   cursor: pointer;
   box-shadow: 0 1px 3px oklch(0% 0 0 / 0.4);
+}
+
+.settings-volume-slider:disabled {
+  cursor: not-allowed;
+  background: linear-gradient(
+    to right,
+    var(--accent-soft) 0%,
+    var(--accent-soft) var(--slider-fill, 100%),
+    var(--border-strong) var(--slider-fill, 100%),
+    var(--border-strong) 100%
+  );
+}
+
+.settings-volume-slider:disabled::-webkit-slider-thumb {
+  background: var(--muted-foreground);
+}
+
+.settings-row:has(.settings-volume-slider:disabled) .settings-row-label {
+  color: var(--muted-foreground);
 }
 
 .settings-volume-slider:focus-visible {

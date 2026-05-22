@@ -28,6 +28,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint
 * **Cost tracking** | Today's and this month's spend in USD, computed locally from Claude Code's usage and pricing files
 * **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened
+* **Sound alerts** | Three independent audio cues: session reset, session exhausted (100%), and quota warnings (70%/90%) — each with its own toggle, test button, and volume slider
 * **Floating widget** | Always-on-top mini widget (PiP-style) you can drag anywhere on screen
 * **Configurable refresh** | Local refresh defaults to 30 seconds, with 5, 15, and 30 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login
