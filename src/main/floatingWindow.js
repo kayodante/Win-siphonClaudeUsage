@@ -175,10 +175,11 @@ export class FloatingWindowController {
 
     if (typeof this.window.showInactive === 'function') {
       this.window.showInactive();
-      return;
+    } else {
+      this.window.show();
     }
 
-    this.window.show();
+    this.window.setAlwaysOnTop(true, 'floating');
   }
 
   applySize(style, expanded) {
