@@ -14,6 +14,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Tooling / local
+.impeccable/
 .claude/
 .agents
 .codex
