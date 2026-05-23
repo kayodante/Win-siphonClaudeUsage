@@ -220,6 +220,20 @@ Shipped. Captured here so it's not re-litigated:
   - Implementar atualizações de UI conforme design no Figma do link compartilhado.
   - https://www.figma.com/design/ZA62Ne6n8JQczrsKyErVag/siphon?node-id=136-4312&t=aPeKFBVdZy479xRi-4
 
+**Camada de animação (motion layer)**
+
+- Banners (`#highUsageBanner`, `#criticalBanner`, `#offlineBanner`, `#updateBanner`) animam entrada e saída via `showBanner(el)` / `hideBanner(el)` com `@keyframes bannerEnter` / `bannerLeave`.
+- Meter atualiza segmentos in-place para preservar transições CSS de `background-color` entre níveis de quota sem snaps.
+- `flashUpdate(el)` pulsa opacidade nos dados numéricos a cada atualização.
+- Ícones de notificação cruzam via opacidade CSS em `.notif-icon-wrap` controlada pelo atributo `[data-notif-off]`.
+- Todas as animações respeitam `prefers-reduced-motion`.
+
+**CSS — consolidação de estilos**
+
+- `.footer-link` e `.footer-quit-btn` fundidos em seletor múltiplo (eliminadas ~20 linhas duplicadas).
+- Três seções de banner (USAGE ALERT, OFFLINE, UPDATE) consolidadas em seção BANNERS única com estrutura compartilhada e regras de variante separadas.
+- Tokens de easing `--ease-out-quart` e `--ease-out-expo` adicionados ao `:root`.
+
 ## Now
 
 *(sem itens pendentes)*

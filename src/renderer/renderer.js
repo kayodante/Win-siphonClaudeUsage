@@ -110,6 +110,8 @@ let criticalDismissed = false;
 let currentSettingsTab = 'system';
 let _tabTransitioning = false;
 let prevSessionPercent = null;
+let prevRenderedSessionPct = null;
+let prevRenderedWeeklyPct = null;
 let updateUrl = null;
 let isEntering = false;
 let lastEnterTime = 0;
@@ -117,6 +119,36 @@ const animatingElements = new Map();
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function cubicEaseOut(t) { return 1 - (1 - t) ** 3; }
+
+function showBanner(el) {
+  if (!el.hidden && !el.hasAttribute('data-leaving')) return;
+  el.removeAttribute('data-leaving');
+  el.hidden = false;
+  if (reducedMotion()) return;
+  requestAnimationFrame(() => {
+    el.setAttribute('data-entering', '');
+    el.addEventListener('animationend', () => el.removeAttribute('data-entering'), { once: true });
+  });
+}
+
+function hideBanner(el) {
+  if (el.hidden || el.hasAttribute('data-leaving')) return;
+  el.removeAttribute('data-entering');
+  if (reducedMotion()) { el.hidden = true; return; }
+  el.setAttribute('data-leaving', '');
+  el.addEventListener('animationend', () => {
+    el.hidden = true;
+    el.removeAttribute('data-leaving');
+  }, { once: true });
+}
+
+function flashUpdate(el) {
+  if (reducedMotion()) return;
+  el.classList.remove('data-updated');
+  void el.offsetWidth;
+  el.classList.add('data-updated');
+  el.addEventListener('animationend', () => el.classList.remove('data-updated'), { once: true });
+}
 
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
@@ -210,11 +242,11 @@ elements.settingsLimitSoundVolume.addEventListener('input', async event => {
 });
 elements.highUsageBannerDismiss.addEventListener('click', () => {
   highUsageDismissed = true;
-  elements.highUsageBanner.hidden = true;
+  hideBanner(elements.highUsageBanner);
 });
 elements.criticalBannerDismiss.addEventListener('click', () => {
   criticalDismissed = true;
-  elements.criticalBanner.hidden = true;
+  hideBanner(elements.criticalBanner);
 });
 elements.settingsRefreshInterval.addEventListener('change', async event => {
   const previousValue = String(currentState?.preferences?.refresh?.intervalSeconds ?? 30);
@@ -298,12 +330,12 @@ elements.githubLink.addEventListener('click', event => {
 });
 elements.offlineBannerDismiss.addEventListener('click', () => {
   offlineDismissed = true;
-  elements.offlineBanner.hidden = true;
+  hideBanner(elements.offlineBanner);
 });
 
 elements.updateBannerDismiss.addEventListener('click', () => {
   updateDismissed = true;
-  elements.updateBanner.hidden = true;
+  hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
   if (updateUrl) window.siphon.openExternal(updateUrl);
@@ -314,7 +346,7 @@ window.siphon.onUpdateAvailable(({ version, url }) => {
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
     lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
-  if (!updateDismissed) elements.updateBanner.hidden = false;
+  if (!updateDismissed) showBanner(elements.updateBanner);
 });
 
 elements.notificationState.addEventListener('click', async () => {
@@ -454,11 +486,23 @@ function render(state) {
     countUpPercent(elements.weeklyPercent, weeklyPercent, { delay: 380 });
     countUpCost(elements.todayCost, state.todayStats?.cost, { delay: 440 });
     countUpCost(elements.monthCost, state.monthStats?.cost, { delay: 470 });
+    prevRenderedSessionPct = sessionPercent;
+    prevRenderedWeeklyPct = weeklyPercent;
   } else {
     cancelCountUp(elements.sessionPercent);
     elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
+    if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
+      flashUpdate(elements.sessionPercent);
+    }
+    prevRenderedSessionPct = sessionPercent;
+
     cancelCountUp(elements.weeklyPercent);
     elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
+    if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
+      flashUpdate(elements.weeklyPercent);
+    }
+    prevRenderedWeeklyPct = weeklyPercent;
+
     if (!animatingElements.has(elements.todayCost))
       setCostValue(elements.todayCost, state.todayStats?.cost);
     if (!animatingElements.has(elements.monthCost))
@@ -495,11 +539,14 @@ function render(state) {
   elements.settingsLaunchWithClaudeCodeToggle.checked = launchWithClaudeCode;
   elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
 
-  elements.criticalBanner.hidden = sessionPercent < 90 || criticalDismissed;
-  elements.highUsageBanner.hidden = sessionPercent < 70 || sessionPercent >= 90 || highUsageDismissed;
+  if (sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
+  else hideBanner(elements.criticalBanner);
+  if (sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
+  else hideBanner(elements.highUsageBanner);
 
   if (!state.isOffline) offlineDismissed = false;
-  elements.offlineBanner.hidden = !state.isOffline || offlineDismissed;
+  if (state.isOffline && !offlineDismissed) showBanner(elements.offlineBanner);
+  else hideBanner(elements.offlineBanner);
   elements.reauthButton.hidden = !state.needsReauth;
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   elements.errorText.textContent = [
@@ -523,8 +570,11 @@ function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   elements.notificationStateText.textContent =
     t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
-  elements.notificationIconOn.hidden = !enabled;
-  elements.notificationIconOff.hidden = enabled;
+  if (enabled) {
+    delete elements.notificationState.dataset.notifOff;
+  } else {
+    elements.notificationState.dataset.notifOff = '';
+  }
   elements.notificationState.setAttribute('aria-pressed', String(enabled));
 }
 
@@ -581,12 +631,18 @@ function renderMeter(meter, percent) {
   if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
   meter.dataset.level = level;
   meter.dataset.filled = String(filled);
-  meter.replaceChildren();
+  if (meter.children.length !== total) {
+    meter.replaceChildren();
+    for (let i = 0; i < total; i++) {
+      const seg = document.createElement('div');
+      seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
+      seg.style.setProperty('--i', i);
+      meter.appendChild(seg);
+    }
+    return;
+  }
   for (let i = 0; i < total; i++) {
-    const seg = document.createElement('div');
-    seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
-    seg.style.setProperty('--i', i);
-    meter.appendChild(seg);
+    meter.children[i].classList.toggle('active', i < filled);
   }
 }
 

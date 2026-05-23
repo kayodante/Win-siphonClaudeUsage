@@ -301,9 +301,31 @@ and ESM preload has caveats.
 
 ### `src/renderer/`
 Vanilla. `renderer.js` queries DOM nodes once, listens for state, and
-re-renders. View switching is just toggling `[hidden]` between `#mainView`
-and `#settingsView`. `formatResetDistance` and `formatDayTime` from
+re-renders. View switching toggles `[hidden]` between `#mainView` and
+`#settingsView`. `formatResetDistance` and `formatDayTime` from
 `src/shared/format.js` produce all the time strings.
+
+**Banner show/hide** — `showBanner(el)` / `hideBanner(el)` drive animated
+entry and exit via CSS `@keyframes` (`bannerEnter` / `bannerLeave`).
+`[data-entering]` and `[data-leaving]` attributes trigger the animations;
+`animationend` removes them. The element stays in the render tree until the
+leave animation completes (avoids `hidden` during animation). Both helpers
+short-circuit when `prefers-reduced-motion` is active.
+
+**Meter color transitions** — `renderMeter(el, percent)` updates segment
+`active` classes in-place rather than calling `replaceChildren()`. Persistent
+DOM nodes let the CSS `background-color: 250ms` transition animate between
+quota levels. A full rebuild only happens when the total segment count
+changes.
+
+**Data-update flash** — `flashUpdate(el)` removes and re-adds the
+`data-updated` class (with a forced reflow) to retrigger a `@keyframes
+dataUpdate` opacity pulse whenever quota or cost numbers change.
+
+**Notification icon crossfade** — both SVGs (`#notificationIconOn` /
+`#notificationIconOff`) live in the DOM inside `.notif-icon-wrap`.
+`renderNotificationPill()` sets `dataset.notifOff` on `.notif-badge`; CSS
+selects on `[data-notif-off]` to crossfade opacity between the two icons.
 
 ### `src/shared/diagnostics.js`
 Pure redaction helpers, no Electron deps. `redactSensitive(value)` strips
