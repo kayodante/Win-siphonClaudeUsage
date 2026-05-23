@@ -283,6 +283,7 @@ function createFakeBrowserWindow(windows) {
       this.backgroundMaterialCalls = [];
       this.showInactiveCalls = 0;
       this.showCalls = 0;
+      this.alwaysOnTopCalls = [];
       windows.push(this);
     }
 
@@ -314,6 +315,10 @@ function createFakeBrowserWindow(windows) {
 
     setBackgroundMaterial(material) {
       this.backgroundMaterialCalls.push(material);
+    }
+
+    setAlwaysOnTop(flag, level) {
+      this.alwaysOnTopCalls.push([flag, level]);
     }
 
     showInactive() {
