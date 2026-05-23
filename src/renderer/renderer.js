@@ -12,13 +12,6 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
-const ONBOARD_ANIMATION_FRAMES = [
-  '..::..\n.::::.\n::..::\n.::::.',
-  '.::..:\n::::::\n:....:\n::::::',
-  '::..::\n.::::.\n..::..\n.::::.',
-  ':..::.\n::::::\n....::\n::::::'
-];
-const ONBOARD_ANIMATION_INTERVAL_MS = 120;
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
@@ -409,7 +402,6 @@ elements.notificationState.addEventListener('click', async () => {
 });
 
 initDotMatrix();
-initOnboardAnimation();
 
 try {
   appInfo = await window.siphon.getAppInfo();
@@ -901,17 +893,6 @@ function initDotMatrix() {
   requestAnimationFrame(tick);
 }
 
-function initOnboardAnimation() {
-  const container = document.getElementById('onboardAnimationContainer');
-  if (!container) return;
-  let frameIndex = 0;
-
-  setInterval(() => {
-    const frame = ONBOARD_ANIMATION_FRAMES[frameIndex++ % ONBOARD_ANIMATION_FRAMES.length];
-    const lines = frame.split('\n');
-    container.textContent = lines.map(line => line.repeat(200)).join('\n');
-  }, ONBOARD_ANIMATION_INTERVAL_MS);
-}
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {

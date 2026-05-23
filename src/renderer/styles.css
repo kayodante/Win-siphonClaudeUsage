@@ -57,7 +57,7 @@
 
   /* ── Colors: Accent ── */
   --accent:            oklch(84.1% 0.238 128.85);
-  --accent-light:            oklch(100% 0 0);
+  --accent-light:            oklch(98% 0 0);
   --accent-soft:       oklch(84.1% 0.238 128.85 / 0.14);
   --accent-foreground: oklch(15% 0.01 270);
   --ring:              oklch(84.1% 0.238 128.85);
@@ -474,7 +474,8 @@ body[data-view="onboard"] .app-footer {
   filter: brightness(0.88);
 }
 
-.footer-link:focus-visible {
+.footer-link:focus-visible,
+.footer-quit-btn:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: var(--space-0);
 }
@@ -513,21 +514,6 @@ body[data-view="onboard"] .app-footer {
   padding: 18px var(--space-7) 22px;
 }
 
-.onboard-animation {
-  width: 100%;
-  overflow: hidden;
-  white-space: pre;
-  font-family: var(--font-pixel);
-  font-size: var(--text-base);
-  color: var(--accent);
-  text-align: center;
-  line-height: 1;
-  user-select: none;
-  pointer-events: none;
-  margin-top: var(--space-6);
-  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-}
 
 .onboard-logo {
   width: 132px;
@@ -637,7 +623,7 @@ body[data-view="onboard"] .app-footer {
   font-family: var(--font-sans);
   font-size: var(--text-xl);
   font-weight: var(--weight-medium);
-  line-height: 20px;
+  line-height: var(--leading-none);
 }
 
 .auth-form-fields {
@@ -654,7 +640,7 @@ body[data-view="onboard"] .app-footer {
   padding: var(--space-3) var(--space-4);
   border: 1px solid oklch(100% 0 0 / 0.10);
   border-radius: var(--radius-sm);
-  background: oklch(20.5% 0 0);
+  background: var(--card);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -867,7 +853,7 @@ body[data-view="onboard"] .app-footer {
   font-size: 20px;
   font-weight: var(--weight-normal);
   line-height: var(--leading-none);
-  letter-spacing: -1.2px;
+  letter-spacing: -0.06em;
   font-variant-numeric: tabular-nums;
   color: var(--accent-light);
 }
@@ -899,12 +885,12 @@ body[data-refreshing="true"] .card {
 
 .cost-symbol {
   font-size: 20px;
-  letter-spacing: -1.2px;
+  letter-spacing: -0.06em;
 }
 
 .cost-amount {
   font-size: 20px;
-  letter-spacing: -1.2px;
+  letter-spacing: -0.06em;
 }
 
 .cost-estimate-row {
@@ -1202,6 +1188,12 @@ body[data-refreshing="true"] .card {
   border-color: var(--accent);
 }
 
+.update-banner-download:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-xs);
+}
+
 /* ═══════════════════════════════════════════════════════════
    ERROR
 ═══════════════════════════════════════════════════════════ */
@@ -1330,7 +1322,7 @@ body[data-refreshing="true"] .card {
   font-family: var(--font-pixel);
   font-size: var(--text-3xl);
   line-height: var(--leading-none);
-  letter-spacing: -1.08px;
+  letter-spacing: -0.03em;
   color: var(--foreground);
   text-align: center;
 }
@@ -1402,7 +1394,7 @@ body[data-refreshing="true"] .card {
 }
 
 .settings-select:focus-visible {
-  outline: 2px solid var(--subtle-foreground);
+  outline: 2px solid var(--ring);
   outline-offset: var(--space-2);
   border-radius: var(--radius-xs);
 }
@@ -1440,7 +1432,7 @@ body[data-refreshing="true"] .card {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-none);
+  gap: var(--space-1);
 }
 
 .settings-path-eyebrow {
@@ -1463,7 +1455,7 @@ body[data-refreshing="true"] .card {
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1686,11 +1678,11 @@ body[data-refreshing="true"] .card {
   flex: 1;
   height: var(--space-1);
   border-radius: 1px;
-  background: #043d2d;
+  background: var(--level-ok-soft);
 }
 
 .floating-meter-bar .meter-segment.active {
-  background: #19c88b;
+  background: var(--level-ok);
 }
 
 .floating-expanded-panel {
@@ -1711,7 +1703,7 @@ body[data-refreshing="true"] .card {
   justify-content: space-between;
   gap: var(--space-5);
   min-height: 31px;
-  border-top: 1px solid #2b2b2d;
+  border-top: 1px solid var(--border-strong);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
@@ -1860,7 +1852,7 @@ button:focus-visible {
 }
 
 .icon-button:hover {
-  background: var(--card);
+  background: var(--card-elevated);
   color: var(--foreground);
   filter: none;
 }
@@ -2049,9 +2041,15 @@ button:focus-visible {
 }
 
 .settings-test-btn:hover {
-  background: var(--border-subtle);
+  background: var(--card-elevated);
   color: var(--foreground);
   filter: none;
+}
+
+.settings-test-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-xs);
 }
 
 .settings-test-btn svg {
@@ -2443,6 +2441,12 @@ body[data-refreshing="true"] #refreshButton svg {
 
 .settings-style-card[data-active="true"] {
   border-color: var(--accent);
+}
+
+.settings-style-card:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-xs);
 }
 
 .settings-style-label {
