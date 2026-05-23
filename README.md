@@ -109,7 +109,7 @@ npm run lint  # syntax-only check
 
 Tests live in `test/` and mirror the `src/main/` module structure. The test for `resetNotificationScheduler.test.js` covers the tricky timer-clamp and persistence paths — run it whenever you touch the scheduler.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagrams, and [ROADMAP.md](ROADMAP.md) for what's planned next.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full module map and data-flow diagrams, [DESIGN.md](DESIGN.md) for the visual design system, and [ROADMAP.md](ROADMAP.md) for what's planned next.
 
 ## Tech stack
 

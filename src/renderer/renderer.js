@@ -150,6 +150,47 @@ function flashUpdate(el) {
   el.addEventListener('animationend', () => el.classList.remove('data-updated'), { once: true });
 }
 
+function triggerResetFlash() {
+  if (reducedMotion()) return;
+  const el = elements.sessionPercent;
+  el.removeAttribute('data-just-reset');
+  void el.offsetWidth;
+  el.dataset.justReset = '';
+  el.addEventListener('animationend', () => delete el.dataset.justReset, { once: true });
+}
+
+const QUOTA_COLOR_WAYPOINTS = [
+  { at: 0,   l: 90, c: 0,     h: 92 },
+  { at: 65,  l: 90, c: 0,     h: 92 },
+  { at: 70,  l: 88, c: 0.163, h: 92 },
+  { at: 90,  l: 72, c: 0.181, h: 46 },
+  { at: 100, l: 58, c: 0.214, h: 17 }
+];
+
+function interpolateQuotaColor(pct) {
+  const wps = QUOTA_COLOR_WAYPOINTS;
+  if (pct <= wps[0].at) return wps[0];
+  if (pct >= wps[wps.length - 1].at) return wps[wps.length - 1];
+  for (let i = 0; i < wps.length - 1; i++) {
+    if (wps[i].at <= pct && pct <= wps[i + 1].at) {
+      const t = (pct - wps[i].at) / (wps[i + 1].at - wps[i].at);
+      return {
+        l: wps[i].l + t * (wps[i + 1].l - wps[i].l),
+        c: wps[i].c + t * (wps[i + 1].c - wps[i].c),
+        h: wps[i].h + t * (wps[i + 1].h - wps[i].h)
+      };
+    }
+  }
+  return wps[wps.length - 1];
+}
+
+function setQuotaColorDrift(element, pct) {
+  const { l, c, h } = interpolateQuotaColor(pct);
+  element.style.setProperty('--quota-l', `${l.toFixed(2)}%`);
+  element.style.setProperty('--quota-c', c.toFixed(4));
+  element.style.setProperty('--quota-h', h.toFixed(2));
+}
+
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
 elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
@@ -353,6 +394,14 @@ elements.notificationState.addEventListener('click', async () => {
   const enabled = currentState?.preferences?.notifications?.sessionReset ?? true;
   try {
     await window.siphon.setPreference('notifications.sessionReset', !enabled);
+    if (!reducedMotion()) {
+      elements.notificationState.classList.remove('notif-pop');
+      void elements.notificationState.offsetWidth;
+      elements.notificationState.classList.add('notif-pop');
+      elements.notificationState.addEventListener('animationend', () => {
+        elements.notificationState.classList.remove('notif-pop');
+      }, { once: true });
+    }
   } catch (error) {
     logSafeError('Failed to toggle notifications:', error);
     elements.errorText.textContent = t('error.saveNotification', currentLanguage());
@@ -371,6 +420,12 @@ try {
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
+  console.log(
+    '%c⚡ Siphon %creads your Claude session before you think to check.',
+    'font-family:monospace;font-weight:bold;font-size:12px;color:oklch(84.1% 0.238 128.85)',
+    'font-family:monospace;font-size:12px;color:#555'
+  );
+  console.log('%cgithub.com/kayodante/Win-siphonClaudeUsage', 'font-family:monospace;font-size:10px;color:#3a3a3a');
 } catch (error) {
   logSafeError('Renderer bootstrap failed:', error);
   if (elements.errorText) {
@@ -464,6 +519,9 @@ function render(state) {
   }
   prevSessionPercent = sessionPercent;
 
+  setQuotaColorDrift(elements.sessionPercent, sessionPercent);
+  setQuotaColorDrift(elements.weeklyPercent, weeklyPercent);
+
   renderActiveView();
 
   renderMeter(elements.sessionMeter, sessionPercent);
@@ -491,7 +549,9 @@ function render(state) {
   } else {
     cancelCountUp(elements.sessionPercent);
     elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
-    if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
+    if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
+      triggerResetFlash();
+    } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
       flashUpdate(elements.sessionPercent);
     }
     prevRenderedSessionPct = sessionPercent;

@@ -459,13 +459,19 @@ body[data-view="onboard"] .app-footer {
   font-weight: var(--weight-medium);
   text-decoration: none;
   box-shadow: inset 0 2px 3px -2px var(--border-strong);
-  transition: filter var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .footer-link:hover,
 .footer-quit-btn:hover {
   filter: brightness(1.15);
   color: var(--foreground);
+}
+
+.footer-link:active,
+.footer-quit-btn:active {
+  transform: translateY(1px);
+  filter: brightness(0.88);
 }
 
 .footer-link:focus-visible {
@@ -771,8 +777,11 @@ body[data-view="onboard"] .app-footer {
   font-weight: var(--weight-normal);
   line-height: 0.9;
   letter-spacing: -0.02em;
-  color: var(--accent-light);
+  color: oklch(var(--quota-l) var(--quota-c) var(--quota-h));
   font-variant-numeric: tabular-nums;
+  transition: --quota-l 1100ms var(--ease-out-quart),
+    --quota-c 1100ms var(--ease-out-quart),
+    --quota-h 1100ms var(--ease-out-quart);
 }
 
 .quota-meta {
@@ -1367,12 +1376,17 @@ body[data-refreshing="true"] .card {
   font-weight: var(--weight-medium);
   cursor: pointer;
   box-shadow: inset 0 2px 3px -2px var(--border-strong);
-  transition: filter var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .btn-secondary:hover {
   filter: brightness(1.15);
   background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px);
+  filter: brightness(0.88);
 }
 
 .settings-select {
@@ -1811,11 +1825,16 @@ button:focus-visible {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  transition: filter var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .btn-primary:hover {
   filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.92);
 }
 
 .btn-primary svg {
@@ -1837,12 +1856,17 @@ button:focus-visible {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted-foreground);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease), transform 80ms var(--ease);
 }
 
 .icon-button:hover {
   background: var(--card);
   color: var(--foreground);
   filter: none;
+}
+
+.icon-button:active {
+  transform: scale(0.87);
 }
 
 .icon-button svg {
@@ -1912,10 +1936,22 @@ button:focus-visible {
    METER
 ═══════════════════════════════════════════════════════════ */
 
+/* Typed custom properties enable OKLCH-space interpolation during level transitions.
+   --seg-* inherits so the meter sets it once; segments inherit and transition. */
+@property --seg-l { syntax: '<percentage>'; inherits: true; initial-value: 84.59%; }
+@property --seg-c { syntax: '<number>'; inherits: true; initial-value: 0.2026; }
+@property --seg-h { syntax: '<number>'; inherits: true; initial-value: 156.3; }
+@property --quota-l { syntax: '<percentage>'; inherits: false; initial-value: 90%; }
+@property --quota-c { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --quota-h { syntax: '<number>'; inherits: false; initial-value: 156; }
+
 .meter {
   display: flex;
   gap: var(--space-0);
   height: var(--space-3);
+  --seg-l: 84.59%;
+  --seg-c: 0.2026;
+  --seg-h: 156.3;
 }
 
 .meter-segment {
@@ -1923,11 +1959,20 @@ button:focus-visible {
   height: var(--space-3);
   border-radius: var(--space-0);
   background: var(--level-ok-soft);
-  transition: background-color 250ms var(--ease-out-quart);
+  transition: background-color 250ms var(--ease-out-quart),
+    --seg-l 900ms var(--ease-out-quart),
+    --seg-c 900ms var(--ease-out-quart),
+    --seg-h 900ms var(--ease-out-quart);
 }
 
 .meter-segment.active {
-  background: var(--level-ok);
+  background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+}
+
+.meter[data-level="warn"] {
+  --seg-l: 88%;
+  --seg-c: 0.163;
+  --seg-h: 92;
 }
 
 .meter[data-level="warn"] .meter-segment,
@@ -1935,9 +1980,18 @@ button:focus-visible {
   background: var(--level-warn-soft);
 }
 
-.meter[data-level="warn"] .meter-segment.active,
+.meter[data-level="warn"] .meter-segment.active {
+  background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+}
+
 .floating-meter-bar[data-level="warn"] .meter-segment.active {
   background: var(--level-warn);
+}
+
+.meter[data-level="high"] {
+  --seg-l: 72%;
+  --seg-c: 0.181;
+  --seg-h: 46;
 }
 
 .meter[data-level="high"] .meter-segment,
@@ -1945,9 +1999,18 @@ button:focus-visible {
   background: var(--level-high-soft);
 }
 
-.meter[data-level="high"] .meter-segment.active,
+.meter[data-level="high"] .meter-segment.active {
+  background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+}
+
 .floating-meter-bar[data-level="high"] .meter-segment.active {
   background: var(--level-high);
+}
+
+.meter[data-level="critical"] {
+  --seg-l: 58%;
+  --seg-c: 0.214;
+  --seg-h: 17;
 }
 
 .meter[data-level="critical"] .meter-segment,
@@ -1955,7 +2018,10 @@ button:focus-visible {
   background: var(--level-critical-soft);
 }
 
-.meter[data-level="critical"] .meter-segment.active,
+.meter[data-level="critical"] .meter-segment.active {
+  background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+}
+
 .floating-meter-bar[data-level="critical"] .meter-segment.active {
   background: var(--level-critical);
 }
@@ -2211,8 +2277,9 @@ body[data-entering] #monthTokens {
 }
 
 @keyframes dataUpdate {
-  from { opacity: 0.45; }
-  to   { opacity: 1; }
+  0%   { opacity: 0.4;  filter: brightness(1.5); }
+  55%  { opacity: 1;    filter: brightness(1.07); }
+  100% { opacity: 1;    filter: brightness(1); }
 }
 
 .usage-alert-banner[data-entering],
@@ -2230,6 +2297,60 @@ body[data-entering] #monthTokens {
 
 .data-updated {
   animation: dataUpdate 200ms var(--ease-out-quart) both;
+}
+
+/* ── Refresh icon spin ──────────────────────────────────── */
+
+@keyframes iconSpin {
+  to { transform: rotate(360deg); }
+}
+
+body[data-refreshing="true"] #refreshButton svg {
+  animation: iconSpin 650ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center;
+}
+
+/* ── Notif-badge toggle pop ─────────────────────────────── */
+
+@keyframes notifPop {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(0.89); }
+  68%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+.notif-badge.notif-pop {
+  animation: notifPop 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Session reset reveal ───────────────────────────────── */
+
+@keyframes sessionResetReveal {
+  0%   { opacity: 0.45; filter: brightness(1.8); }
+  45%  { opacity: 1;    filter: brightness(1.12); }
+  100% { opacity: 1;    filter: brightness(1); }
+}
+
+#sessionPercent[data-just-reset] {
+  animation: sessionResetReveal 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Critical meter pulse ───────────────────────────────── */
+
+@keyframes criticalPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+#sessionMeter[data-level="critical"][data-filled="20"] .meter-segment.active {
+  animation: criticalPulse 1700ms ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 32ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sessionMeter[data-level="critical"][data-filled="20"] .meter-segment.active {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

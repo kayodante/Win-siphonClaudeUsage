@@ -25,9 +25,11 @@ coverage/
 /docs/superpowers
 
 # Docs (local only)
+AGENTS.md
 ARCHITECTURE.md
 CLAUDE.md
-AGENTS.md
+DESIGN.md
+ROADMAP.md
 skills-lock.json
 
 # Secrets / credentials
