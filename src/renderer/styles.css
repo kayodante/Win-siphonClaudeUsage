@@ -57,7 +57,7 @@
 
   /* ── Colors: Accent ── */
   --accent:            oklch(84.1% 0.238 128.85);
-  --accent-light:            oklch(98% 0 0);
+  --accent-light:      oklch(100 0 0);
   --accent-soft:       oklch(84.1% 0.238 128.85 / 0.14);
   --accent-foreground: oklch(15% 0.01 270);
   --ring:              oklch(84.1% 0.238 128.85);
@@ -754,7 +754,7 @@ body[data-view="onboard"] .app-footer {
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-5);
-  margin-top: var(--space-8);
+  margin-top: var(--space-7);
 }
 
 .quota-percent {
@@ -763,7 +763,7 @@ body[data-view="onboard"] .app-footer {
   font-weight: var(--weight-normal);
   line-height: 0.9;
   letter-spacing: -0.02em;
-  color: oklch(var(--quota-l) var(--quota-c) var(--quota-h));
+  color: var(--accent-light);
   font-variant-numeric: tabular-nums;
   transition: --quota-l 1100ms var(--ease-out-quart),
     --quota-c 1100ms var(--ease-out-quart),

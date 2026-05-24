@@ -33,6 +33,7 @@ DESIGN.md
 PRODUCT.md
 ROADMAP.md
 skills-lock.json
+.mcp.json
 
 # Secrets / credentials
 .env
