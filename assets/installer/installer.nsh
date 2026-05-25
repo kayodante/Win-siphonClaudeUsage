@@ -1,3 +1,11 @@
+; Welcome/Finish inner panel — match sidebar dark background
+!define MUI_BGCOLOR "000000"
+!define MUI_TEXTCOLOR "E6E6E6"
+
+; Welcome page copy
+!define MUI_WELCOMEPAGE_TITLE "Bem-vindo ao Siphon"
+!define MUI_WELCOMEPAGE_TEXT "Este assistente instalará $(^Name) no seu computador.$\r$\n$\r$\nClique em Próximo para continuar."
+
 !macro customInit
   SetShellVarContext current
   Delete "$SMPROGRAMS\${PRODUCT_NAME}.lnk"
@@ -17,7 +25,15 @@
   !define MUI_FINISHPAGE_SHOWREADME ""
   !define MUI_FINISHPAGE_SHOWREADME_TEXT "Abrir Siphon"
   !define MUI_FINISHPAGE_SHOWREADME_FUNCTION siphonLaunchApp
+  !define MUI_PAGE_CUSTOMFUNCTION_SHOW siphonFinishPageShow
   !insertmacro MUI_PAGE_FINISH
+
+  Function siphonFinishPageShow
+    System::Call 'uxtheme::SetWindowTheme(i $mui.FinishPage.Run, w " ", w " ")'
+    System::Call 'uxtheme::SetWindowTheme(i $mui.FinishPage.ShowReadme, w " ", w " ")'
+    SetCtlColors $mui.FinishPage.Run "E6E6E6" "000000"
+    SetCtlColors $mui.FinishPage.ShowReadme "E6E6E6" "000000"
+  FunctionEnd
 
   Function siphonCreateDesktopShortcut
     CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${APP_EXECUTABLE_FILENAME}" "" "$INSTDIR\resources\app.asar.unpacked\assets\installer\icon.ico" 0 "" "" "${APP_DESCRIPTION}"
