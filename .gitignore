@@ -24,6 +24,7 @@ graphify-out/
 coverage/
 .nyc_output/
 /docs/superpowers
+.superpowers/
 
 # Docs (local only)
 AGENTS.md
