@@ -91,6 +91,27 @@ test('scheduler does not refire same resetKey after notification has fired', asy
   assert.equal(notificationCount, 1);
 });
 
+test('scheduler marks reset as fired even when notify() throws', async () => {
+  const store = new Map();
+  const scheduler = new ResetNotificationScheduler({
+    now: () => new Date('2026-04-27T13:00:00Z'),
+    setTimer: () => assert.fail('should not schedule a future timer'),
+    clearTimer: () => {},
+    notify: async () => { throw new Error('notification failed'); },
+    loadState: async () => ({
+      resetKey: '2026-04-27T12:00:00.000Z',
+      resetsAt: '2026-04-27T12:00:00.000Z'
+    }),
+    saveState: async state => store.set('state', state)
+  });
+
+  await scheduler.restore();
+
+  assert.equal(scheduler.lastFiredResetKey, '2026-04-27T12:00:00.000Z');
+  assert.equal(scheduler.currentResetKey, null);
+  assert.equal(store.get('state'), null);
+});
+
 test('scheduler clears stale reset when a new session starts', async () => {
   const savedStates = [];
   const scheduler = new ResetNotificationScheduler({

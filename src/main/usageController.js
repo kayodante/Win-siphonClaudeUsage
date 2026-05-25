@@ -42,7 +42,7 @@ export class UsageController extends EventEmitter {
     this.rateLimitedUntil = null;
     this.localInFlight = false;
     this.quotaInFlight = false;
-    this.lastEmittedSnapshot = null;
+    this._dirty = false;
     this.started = false;
     this.state = {
       todayStats: emptyStats(),
@@ -61,7 +61,9 @@ export class UsageController extends EventEmitter {
       isOffline: false,
       needsReauth: false
     };
-    this.preferences.on?.('change', event => this.#handlePreferenceChange(event));
+    this.preferences.on?.('change', event =>
+      this.#handlePreferenceChange(event).catch(err => logSafeError('[controller] preference change failed:', err))
+    );
   }
 
   async start() {
@@ -117,6 +119,7 @@ export class UsageController extends EventEmitter {
     } finally {
       this.localInFlight = false;
     }
+    this._dirty = true;
     this.#emit();
   }
 
@@ -142,7 +145,7 @@ export class UsageController extends EventEmitter {
       if (error instanceof QuotaError && error.code === 'rate_limited') {
         this.rateLimitedUntil = Date.now() + error.retryAfter * 1000;
         this.state.quotaError = null;
-      } else if (error instanceof QuotaError && error.code === 'not_signed_in') {
+      } else if (error instanceof QuotaError && (error.code === 'not_signed_in' || error.code === 'unauthorized')) {
         this.state.isSignedIn = false;
         this.state.quota = null;
       } else if (error instanceof QuotaError && error.code === 'scope_insufficient') {
@@ -159,6 +162,7 @@ export class UsageController extends EventEmitter {
     } finally {
       this.quotaInFlight = false;
     }
+    this._dirty = true;
     this.#emit();
   }
 
@@ -166,6 +170,7 @@ export class UsageController extends EventEmitter {
     this.state.authError = null;
     this.authFlow = this.oauthService.prepareFlow();
     this.state.awaitingCode = true;
+    this._dirty = true;
     this.#emit();
     await this.openExternal(this.authFlow.url);
     return this.authFlow.url;
@@ -189,6 +194,7 @@ export class UsageController extends EventEmitter {
       await this.refreshQuota();
     } catch (error) {
       this.state.authError = safeErrorMessage(error, 'Authentication failed. Please try again.');
+      this._dirty = true;
       this.#emit();
     }
   }
@@ -205,6 +211,7 @@ export class UsageController extends EventEmitter {
     this.state.authError = null;
     this.state.quotaError = null;
     this.state.needsReauth = false;
+    this._dirty = true;
     this.#emit();
   }
 
@@ -212,6 +219,7 @@ export class UsageController extends EventEmitter {
     this.authFlow = null;
     this.state.awaitingCode = false;
     this.state.authError = null;
+    this._dirty = true;
     this.#emit();
   }
 
@@ -222,6 +230,7 @@ export class UsageController extends EventEmitter {
       logSafeError('[profile] refresh failed:', error);
       this.state.profile = null;
     }
+    this._dirty = true;
     this.#emit();
   }
 
@@ -233,6 +242,7 @@ export class UsageController extends EventEmitter {
     if (event.path === 'refresh.intervalSeconds' && this.started) {
       this.#scheduleTimers();
     }
+    this._dirty = true;
     this.#emit();
   }
 
@@ -268,9 +278,8 @@ export class UsageController extends EventEmitter {
   }
 
   #emit() {
-    const snapshot = JSON.stringify(this.state);
-    if (snapshot === this.lastEmittedSnapshot) return;
-    this.lastEmittedSnapshot = snapshot;
+    if (!this._dirty) return;
+    this._dirty = false;
     this.emit('state', this.state);
   }
 }

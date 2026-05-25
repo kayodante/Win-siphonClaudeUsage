@@ -9,6 +9,9 @@ export class ClaudeSettingsService {
   }
 
   _buildHookEntry() {
+    if (/["`]/.test(this.exePath)) {
+      throw new Error('exePath contains characters unsafe for shell embedding');
+    }
     const safePath = this.exePath.replace(/'/g, "''");
     return {
       _siphon: true,

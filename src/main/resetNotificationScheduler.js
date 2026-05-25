@@ -78,10 +78,14 @@ export class ResetNotificationScheduler {
   }
 
   async #fire(resetKey) {
-    this.notify({
-      title: 'Claude session reset',
-      body: 'Your Claude session limit should be available again.'
-    });
+    try {
+      await this.notify({
+        title: 'Claude session reset',
+        body: 'Your Claude session limit should be available again.'
+      });
+    } catch {
+      // notification delivery failed; proceed to mark as fired
+    }
     this.lastFiredResetKey = resetKey;
     if (this.currentResetKey === resetKey) {
       this.currentResetKey = null;

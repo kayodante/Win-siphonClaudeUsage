@@ -529,7 +529,7 @@ function render(state) {
   updateLastUpdatedLine();
 
   const entering = isEntering;
-  if (entering) isEntering = false;
+  isEntering = false;
 
   if (entering) {
     countUpPercent(elements.sessionPercent, sessionPercent, { delay: 310 });

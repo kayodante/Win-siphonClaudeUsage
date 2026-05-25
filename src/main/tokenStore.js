@@ -52,8 +52,17 @@ export class TokenStore {
       const buf = await fs.readFile(this.filePath);
       if (buf[0] === MARKER_LEGACY) {
         // Legacy plaintext JSON — migrate once
-        const creds = JSON.parse(buf.toString('utf8'));
-        await this.save(creds);
+        let creds;
+        try {
+          creds = JSON.parse(buf.toString('utf8'));
+        } catch {
+          return null;
+        }
+        try {
+          await this.save(creds);
+        } catch {
+          // migration save failed; return credentials anyway
+        }
         return creds;
       }
       const json = await this.crypto.decrypt(buf);

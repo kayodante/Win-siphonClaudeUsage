@@ -38,20 +38,30 @@ export class PreferencesService extends EventEmitter {
     super();
     this.store = store;
     this.writeQueue = Promise.resolve();
+    this._cache = null;
   }
 
   async load() {
-    return mergePreferences(await this.store.load());
+    if (!this._cache) {
+      this._cache = mergePreferences(await this.store.load());
+    }
+    return structuredClone(this._cache);
   }
 
   async get(path) {
-    return getPath(await this.load(), path);
+    if (!this._cache) {
+      this._cache = mergePreferences(await this.store.load());
+    }
+    return getPath(this._cache, path);
   }
 
   async set(path, value) {
     return this.enqueueWrite(async () => {
-      const preferences = await this.load();
-      setPath(preferences, path, value);
+      if (!this._cache) {
+        this._cache = mergePreferences(await this.store.load());
+      }
+      setPath(this._cache, path, value);
+      const preferences = structuredClone(this._cache);
       await this.store.save(preferences);
       this.emit('change', { path, value, preferences });
       return preferences;

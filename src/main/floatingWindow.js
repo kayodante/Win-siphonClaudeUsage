@@ -35,6 +35,7 @@ export class FloatingWindowController {
 
     if (!this.window || this.window.isDestroyed()) {
       this.createWindow();
+      await this.restorePosition();
       await this.window.loadFile(this.htmlPath);
       this.loaded = true;
       this.syncState(this.pendingState);
@@ -108,7 +109,6 @@ export class FloatingWindowController {
       }
     });
 
-    this.restorePosition();
     this.window.on('move', () => this.schedulePositionSave());
     this.window.on('closed', () => {
       this.window = null;
@@ -116,9 +116,9 @@ export class FloatingWindowController {
     });
   }
 
-  restorePosition() {
-    const x = this.preferences.get('floating.x');
-    const y = this.preferences.get('floating.y');
+  async restorePosition() {
+    const x = await this.preferences.get('floating.x');
+    const y = await this.preferences.get('floating.y');
     if (Number.isFinite(x) && Number.isFinite(y) && this.isOnAnyDisplay(x, y)) {
       this.window.setPosition(x, y, false);
     } else if (this.screen) {

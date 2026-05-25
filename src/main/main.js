@@ -162,7 +162,7 @@ async function onReady() {
     if (preferencePath === 'claudePath') {
       const effectiveDir = value || path.join(os.homedir(), '.claude');
       controller.updateClaudePath(effectiveDir);
-      void controller.refreshLocal();
+      void controller.refreshLocal().catch(err => logSafeError('[prefs] claudePath refresh failed:', err));
     }
     if (preferencePath.startsWith('startup.')) {
       if (app.isPackaged) applyStartupSettings(app, nextPreferences.startup);
@@ -317,7 +317,11 @@ function registerIpc() {
     if (preferencePath === 'floating.style') {
       if (value !== 'classic' && value !== 'mini') return;
     }
-    await controller.preferences.set(preferencePath, value);
+    try {
+      await controller.preferences.set(preferencePath, value);
+    } catch (err) {
+      logSafeError('[prefs:set] write failed:', err);
+    }
   });
   ipcMain.handle('view:show-main', () => showMainWindow());
   ipcMain.handle('view:show-settings', () => showSettingsWindow());
@@ -351,7 +355,7 @@ function registerIpc() {
   ipcMain.handle('shell:open-external', (_event, url) => {
     try {
       const parsed = new URL(url);
-      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
+      if (parsed.protocol !== 'https:') return;
       shell.openExternal(url);
     } catch { /* invalid URL */ }
   });

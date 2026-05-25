@@ -233,3 +233,15 @@ test('hasSiphonHook returns false after disable', async () => {
   assert.equal(await svc.hasSiphonHook(), false);
   await fs.rm(dir, { recursive: true });
 });
+
+// ── _buildHookEntry injection guard ───────────────────────────────────────────
+
+test('_buildHookEntry throws when exePath contains a backtick', () => {
+  const svc = new ClaudeSettingsService({ exePath: 'C:\\foo`bar.exe', settingsPath: '/x' });
+  assert.throws(() => svc._buildHookEntry(), /unsafe/);
+});
+
+test('_buildHookEntry throws when exePath contains a double-quote', () => {
+  const svc = new ClaudeSettingsService({ exePath: 'C:\\"bad".exe', settingsPath: '/x' });
+  assert.throws(() => svc._buildHookEntry(), /unsafe/);
+});

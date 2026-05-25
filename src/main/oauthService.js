@@ -58,7 +58,7 @@ export class OAuthService {
     });
 
     if (response.status !== 200) {
-      const text = await response.text();
+      const text = (await response.text()).slice(0, 1024);
       throw new Error(safeErrorMessage(`Auth failed: ${text || response.status}`, 'Auth failed.'));
     }
 

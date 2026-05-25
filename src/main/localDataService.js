@@ -229,44 +229,45 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
     return summarizeUsage(null, null, now);
   }
 
-  for (const entry of projectEntries) {
-    if (!entry.isDirectory()) continue;
-    const projectPath = path.join(projectsDir, entry.name);
-
-    let files;
-    try {
-      files = await fsImpl.readdir(projectPath);
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      if (!file.endsWith('.jsonl')) continue;
-      const filePath = path.join(projectPath, file);
-
-      let stat;
-      try {
-        stat = await fsImpl.stat(filePath);
-        if (stat.mtimeMs < cutoff.getTime()) continue;
-      } catch {
-        continue;
-      }
-
-      const previous = cache.files[filePath];
-      if (isUnchanged(previous, stat)) {
-        nextFiles[filePath] = previous;
-        continue;
-      }
-
-      nextFiles[filePath] = await parseJsonlFile({
-        filePath,
-        stat,
-        previous,
-        cutoff,
-        fsImpl
-      });
-    }
-  }
+  await Promise.all(
+    projectEntries
+      .filter(e => e.isDirectory())
+      .map(async entry => {
+        const projectPath = path.join(projectsDir, entry.name);
+        let files;
+        try {
+          files = await fsImpl.readdir(projectPath);
+        } catch {
+          return;
+        }
+        await Promise.all(
+          files
+            .filter(f => f.endsWith('.jsonl'))
+            .map(async file => {
+              const filePath = path.join(projectPath, file);
+              let stat;
+              try {
+                stat = await fsImpl.stat(filePath);
+                if (stat.mtimeMs < cutoff.getTime()) return;
+              } catch {
+                return;
+              }
+              const previous = cache.files[filePath];
+              if (isUnchanged(previous, stat)) {
+                nextFiles[filePath] = previous;
+                return;
+              }
+              nextFiles[filePath] = await parseJsonlFile({
+                filePath,
+                stat,
+                previous,
+                cutoff,
+                fsImpl
+              });
+            })
+        );
+      })
+  );
 
   const nextCache = {
     version: CACHE_VERSION,
@@ -510,5 +511,9 @@ async function readJson(filePath, fsImpl = fs) {
     if (error.code === 'ENOENT') return null;
     throw error;
   }
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
