@@ -39,5 +39,22 @@ contextBridge.exposeInMainWorld('siphon', {
     const listener = (_event, update) => callback(update);
     ipcRenderer.on('update-available', listener);
     return () => ipcRenderer.removeListener('update-available', listener);
+  },
+  downloadUpdate: payload => ipcRenderer.invoke('update:download', payload),
+  installUpdate: filePath => ipcRenderer.invoke('update:install', filePath),
+  onUpdateProgress: callback => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update:progress', listener);
+    return () => ipcRenderer.removeListener('update:progress', listener);
+  },
+  onUpdateDownloaded: callback => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update:downloaded', listener);
+    return () => ipcRenderer.removeListener('update:downloaded', listener);
+  },
+  onUpdateError: callback => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update:error', listener);
+    return () => ipcRenderer.removeListener('update:error', listener);
   }
 });
