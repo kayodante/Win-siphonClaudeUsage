@@ -56,6 +56,7 @@ let controller = null;
 let claudeSettingsService = null;
 let preferences = null;
 let trayIconKey = 'ok-ok';
+let pendingInstallPath = null;
 
 app.setAppUserModelId('com.kayodantes.siphon');
 
@@ -361,19 +362,37 @@ function registerIpc() {
   });
 
   ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
+    if (!/^\d+\.\d+\.\d+$/.test(version)) {
+      window?.webContents.send('update:error', { message: 'invalid version' });
+      return;
+    }
+    let parsedUrl;
+    try { parsedUrl = new URL(downloadUrl); } catch {
+      window?.webContents.send('update:error', { message: 'invalid download URL' });
+      return;
+    }
+    const TRUSTED_HOSTS = ['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com'];
+    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.includes(parsedUrl.hostname)) {
+      window?.webContents.send('update:error', { message: 'untrusted download URL' });
+      return;
+    }
     const destPath = path.join(app.getPath('temp'), `Siphon-Setup-${version}.exe`);
     try {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
       });
+      pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
       window?.webContents.send('update:error', { message: err.message });
     }
   });
 
-  ipcMain.handle('update:install', async (_event, filePath) => {
-    await shell.openPath(filePath);
+  ipcMain.handle('update:install', async () => {
+    if (!pendingInstallPath) return;
+    const pathToOpen = pendingInstallPath;
+    pendingInstallPath = null;
+    await shell.openPath(pathToOpen);
   });
 }
 
