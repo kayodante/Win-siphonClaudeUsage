@@ -394,6 +394,7 @@ elements.offlineBannerDismiss.addEventListener('click', () => {
 
 elements.updateBannerDismiss.addEventListener('click', () => {
   updateDismissed = true;
+  setDownloadUI('idle', 0);
   hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
@@ -407,9 +408,11 @@ elements.updateBannerDownload.addEventListener('click', () => {
 });
 
 window.siphon.onUpdateAvailable(({ version, url, downloadUrl }) => {
-  updateUrl = url;
-  updateVersion = version;
-  updateDownloadUrl = downloadUrl ?? null;
+  if (downloadState !== 'downloading') {
+    updateUrl = url;
+    updateVersion = version;
+    updateDownloadUrl = downloadUrl ?? null;
+  }
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
     lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
