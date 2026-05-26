@@ -1194,6 +1194,13 @@ body[data-refreshing="true"] .card {
   border-radius: var(--radius-xs);
 }
 
+.update-banner-download[data-state="downloading"] {
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ═══════════════════════════════════════════════════════════
    ERROR
 ═══════════════════════════════════════════════════════════ */
