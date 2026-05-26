@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import https from 'node:https';
 
 const REPO = 'kayodante/Win-siphonClaudeUsage';
@@ -47,10 +48,50 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
     const release = await fetchLatest(httpImpl);
     if (release.draft || release.prerelease) return null;
     if (isNewer(release.tag_name, version)) {
-      return { version: release.tag_name.replace(/^v/, ''), url: RELEASES_URL };
+      const asset = release.assets?.find(
+        a => a.name.endsWith('.exe') && !a.name.includes('Portable')
+      );
+      return {
+        version: release.tag_name.replace(/^v/, ''),
+        url: RELEASES_URL,
+        downloadUrl: asset?.browser_download_url ?? null
+      };
     }
   } catch {
     // network error — silently ignore
   }
   return null;
+}
+
+export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https) {
+  return new Promise((resolve, reject) => {
+    function get(url) {
+      const req = httpImpl.get(url, { headers: { 'User-Agent': 'Siphon-Windows' }, timeout: 30000 }, res => {
+        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303) {
+          res.resume();
+          const loc = res.headers?.location;
+          if (!loc) return reject(new Error('redirect missing location'));
+          return get(loc);
+        }
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        const total = parseInt(res.headers?.['content-length'] || '0', 10);
+        let received = 0;
+        const file = fs.createWriteStream(destPath);
+        file.on('error', err => { fs.unlink(destPath, () => {}); reject(err); });
+        res.on('data', chunk => {
+          received += chunk.length;
+          file.write(chunk);
+          if (total > 0) onProgress?.(Math.round((received / total) * 100));
+        });
+        res.on('end', () => file.end(() => resolve(destPath)));
+        res.on('error', err => { file.destroy(); fs.unlink(destPath, () => {}); reject(err); });
+      });
+      req.on('error', err => { fs.unlink(destPath, () => {}); reject(err); });
+      req.on('timeout', () => { req.destroy(); reject(new Error('download timeout')); });
+    }
+    get(downloadUrl);
+  });
 }
