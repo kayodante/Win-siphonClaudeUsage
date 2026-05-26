@@ -106,6 +106,10 @@ let prevSessionPercent = null;
 let prevRenderedSessionPct = null;
 let prevRenderedWeeklyPct = null;
 let updateUrl = null;
+let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
+let downloadedFilePath = null;
+let updateVersion = null;
+let updateDownloadUrl = null;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -141,6 +145,27 @@ function flashUpdate(el) {
   void el.offsetWidth;
   el.classList.add('data-updated');
   el.addEventListener('animationend', () => el.classList.remove('data-updated'), { once: true });
+}
+
+function setDownloadUI(state, percent) {
+  const btn = elements.updateBannerDownload;
+  const dismiss = elements.updateBannerDismiss;
+  const lang = currentState?.preferences?.language ?? 'en';
+  downloadState = state;
+  btn.dataset.state = state;
+  if (state === 'downloading') {
+    btn.textContent = `${percent}%`;
+    btn.disabled = true;
+    dismiss.hidden = true;
+  } else if (state === 'ready') {
+    btn.textContent = lang === 'pt-BR' ? 'Instalar' : 'Install';
+    btn.disabled = false;
+    dismiss.hidden = false;
+  } else {
+    btn.textContent = 'Download';
+    btn.disabled = false;
+    dismiss.hidden = false;
+  }
 }
 
 function triggerResetFlash() {
@@ -372,15 +397,36 @@ elements.updateBannerDismiss.addEventListener('click', () => {
   hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
-  if (updateUrl) window.siphon.openExternal(updateUrl);
+  if (downloadState === 'idle') {
+    if (!updateDownloadUrl) { if (updateUrl) window.siphon.openExternal(updateUrl); return; }
+    setDownloadUI('downloading', 0);
+    window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, version: updateVersion });
+  } else if (downloadState === 'ready') {
+    window.siphon.installUpdate(downloadedFilePath);
+  }
 });
 
-window.siphon.onUpdateAvailable(({ version, url }) => {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl }) => {
   updateUrl = url;
+  updateVersion = version;
+  updateDownloadUrl = downloadUrl ?? null;
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
     lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
   if (!updateDismissed) showBanner(elements.updateBanner);
+});
+
+window.siphon.onUpdateProgress(({ percent }) => {
+  if (downloadState === 'downloading') setDownloadUI('downloading', percent);
+});
+
+window.siphon.onUpdateDownloaded(({ filePath }) => {
+  downloadedFilePath = filePath;
+  setDownloadUI('ready', 100);
+});
+
+window.siphon.onUpdateError(() => {
+  setDownloadUI('idle', 0);
 });
 
 elements.notificationState.addEventListener('click', async () => {
