@@ -65,13 +65,14 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
 
 export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https) {
   return new Promise((resolve, reject) => {
-    function get(url) {
+    function get(url, depth = 0) {
+      if (depth > 5) return reject(new Error('too many redirects'));
       const req = httpImpl.get(url, { headers: { 'User-Agent': 'Siphon-Windows' }, timeout: 30000 }, res => {
         if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303) {
           res.resume();
           const loc = res.headers?.location;
           if (!loc) return reject(new Error('redirect missing location'));
-          return get(loc);
+          return get(loc, depth + 1);
         }
         if (res.statusCode !== 200) {
           res.resume();
@@ -80,7 +81,7 @@ export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https
         const total = parseInt(res.headers?.['content-length'] || '0', 10);
         let received = 0;
         const file = fs.createWriteStream(destPath);
-        file.on('error', err => { fs.unlink(destPath, () => {}); reject(err); });
+        file.on('error', err => { res.destroy(); fs.unlink(destPath, () => {}); reject(err); });
         res.on('data', chunk => {
           received += chunk.length;
           file.write(chunk);

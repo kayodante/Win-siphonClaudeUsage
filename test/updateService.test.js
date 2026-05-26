@@ -221,3 +221,16 @@ test('downloadFile rejects on HTTP error status', async () => {
     /HTTP 404/
   );
 });
+
+test('downloadFile resolves correctly when content-length is absent', async (t) => {
+  const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
+  const body = 'no content length';
+  const httpImpl = makeDownloadHttps([
+    { statusCode: 200, headers: {}, body }
+  ]);
+  const progress = [];
+  await downloadFile('https://example.com/setup.exe', dest, p => progress.push(p), httpImpl);
+  assert.equal(fs.readFileSync(dest, 'utf8'), body);
+  assert.equal(progress.length, 0);
+  t.after(() => fs.unlink(dest, () => {}));
+});
