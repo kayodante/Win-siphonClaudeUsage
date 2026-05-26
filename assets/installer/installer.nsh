@@ -1,5 +1,7 @@
 ; Welcome/Finish inner panel — match sidebar dark background
-!define MUI_BGCOLOR "000000"
+BrandingText "Siphon · v${VERSION}"
+!define MUI_HEADER_TRANSPARENT_TEXT
+!define MUI_BGCOLOR "0F0F0F"
 !define MUI_TEXTCOLOR "DEDEDE"
 
 ; Welcome page copy
@@ -31,8 +33,8 @@
   Function siphonFinishPageShow
     System::Call 'uxtheme::SetWindowTheme(i $mui.FinishPage.Run, w " ", w " ")'
     System::Call 'uxtheme::SetWindowTheme(i $mui.FinishPage.ShowReadme, w " ", w " ")'
-    SetCtlColors $mui.FinishPage.Run "DEDEDE" "000000"
-    SetCtlColors $mui.FinishPage.ShowReadme "DEDEDE" "000000"
+    SetCtlColors $mui.FinishPage.Run "DEDEDE" "0F0F0F"
+    SetCtlColors $mui.FinishPage.ShowReadme "DEDEDE" "0F0F0F"
   FunctionEnd
 
   Function siphonCreateDesktopShortcut
