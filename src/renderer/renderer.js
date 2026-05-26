@@ -162,7 +162,7 @@ function setDownloadUI(state, percent) {
     btn.disabled = false;
     dismiss.hidden = false;
   } else {
-    btn.textContent = 'Download';
+    btn.textContent = lang === 'pt-BR' ? 'Baixar' : 'Download';
     btn.disabled = false;
     dismiss.hidden = false;
   }
