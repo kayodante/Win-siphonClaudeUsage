@@ -36,7 +36,7 @@ import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
-import { checkForUpdate } from './updateService.js';
+import { checkForUpdate, downloadFile } from './updateService.js';
 import { UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
 import { levelForPercent } from '../shared/format.js';
@@ -358,6 +358,22 @@ function registerIpc() {
       if (parsed.protocol !== 'https:') return;
       shell.openExternal(url);
     } catch { /* invalid URL */ }
+  });
+
+  ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
+    const destPath = path.join(app.getPath('temp'), `Siphon-Setup-${version}.exe`);
+    try {
+      await downloadFile(downloadUrl, destPath, percent => {
+        window?.webContents.send('update:progress', { percent });
+      });
+      window?.webContents.send('update:downloaded', { filePath: destPath });
+    } catch (err) {
+      window?.webContents.send('update:error', { message: err.message });
+    }
+  });
+
+  ipcMain.handle('update:install', async (_event, filePath) => {
+    await shell.openPath(filePath);
   });
 }
 
