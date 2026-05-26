@@ -116,10 +116,10 @@ const STRINGS = Object.freeze({
 
     'error.local.missing': 'No usage data yet. Run Claude Code to generate data.',
     'error.local.corrupted': 'Usage cache is corrupted. Try restarting Claude Code.',
-    'error.offline.title': 'No connection',
-    'error.offline.body': 'Quota data unavailable. Check your internet connection.',
+    'error.offline.title': 'No connection — Quota data unavailable.',
+    'error.offline.body': 'Check your internet connection.',
 
-    'update.title': 'Update available',
+    'update.title': 'New version available.',
     'update.download': 'Download',
 
     'error.scope_insufficient': 'Re-authentication required. Click to sign in again.',
@@ -244,10 +244,10 @@ const STRINGS = Object.freeze({
 
     'error.local.missing': 'Sem dados de uso ainda. Execute o Claude Code para gerar dados.',
     'error.local.corrupted': 'Cache de uso corrompido. Tente reiniciar o Claude Code.',
-    'error.offline.title': 'Sem conexão',
-    'error.offline.body': 'Dados de cota indisponíveis. Verifique sua conexão.',
+    'error.offline.title': 'Sem conexão — Dados de cota indisponíveis.',
+    'error.offline.body': 'Verifique sua conexão com a internet.',
 
-    'update.title': 'Atualização disponível',
+    'update.title': 'Nova versão disponível.',
     'update.download': 'Baixar',
 
     'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.',

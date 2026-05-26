@@ -85,6 +85,57 @@
         </div>
       </section>
 
+        <div id="highUsageBanner" class="usage-alert-banner" data-level="warn" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="usage-alert-text">
+            <span class="usage-alert-title" data-i18n="alert.highUsage.title">High usage</span>
+            <span class="usage-alert-body" data-i18n="alert.highUsage.body">Session has reached 70%.</span>
+          </div>
+          <button class="usage-alert-dismiss" id="highUsageBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
+        <div id="updateBanner" class="update-banner" hidden>
+          <div class="update-banner-header">
+            <!-- Carbon: WarningAlt -->
+            <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+            <div class="update-banner-text">
+              <span class="update-banner-title" data-i18n="update.title">Update available</span>
+              <span class="update-banner-body" id="updateBannerVersion"></span>
+              <button class="update-banner-download" id="updateBannerDownload">Download</button>
+            </div>
+            <button class="update-banner-dismiss" id="updateBannerDismiss" aria-label="Dismiss">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="criticalBanner" class="usage-alert-banner" data-level="critical" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="usage-alert-text">
+            <span class="usage-alert-title" data-i18n="alert.critical.title">Critical usage</span>
+            <span class="usage-alert-body" data-i18n="alert.critical.body">Session has reached 90%.</span>
+          </div>
+          <button class="usage-alert-dismiss" id="criticalBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
+        <div id="offlineBanner" class="offline-banner" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="offline-banner-text">
+            <span class="offline-banner-title" data-i18n="error.offline.title">No connection</span>
+            <span class="offline-banner-body" data-i18n="error.offline.body">Quota data unavailable. Check your internet connection.</span>
+          </div>
+          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
       <section id="mainView" class="view" hidden>
         <section class="card quota-panel">
           <div class="card-eyebrow card-eyebrow-row">
@@ -128,47 +179,6 @@
           </div>
         </section>
 
-        <div id="highUsageBanner" class="usage-alert-banner" data-level="warn" hidden>
-          <div class="usage-alert-text">
-            <span class="usage-alert-title" data-i18n="alert.highUsage.title">High usage</span>
-            <span class="usage-alert-body" data-i18n="alert.highUsage.body">Session has reached 70%.</span>
-          </div>
-          <button class="usage-alert-dismiss" id="highUsageBannerDismiss" aria-label="Dismiss">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
-          </button>
-        </div>
-
-        <div id="criticalBanner" class="usage-alert-banner" data-level="critical" hidden>
-          <div class="usage-alert-text">
-            <span class="usage-alert-title" data-i18n="alert.critical.title">Critical usage</span>
-            <span class="usage-alert-body" data-i18n="alert.critical.body">Session has reached 90%.</span>
-          </div>
-          <button class="usage-alert-dismiss" id="criticalBannerDismiss" aria-label="Dismiss">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
-          </button>
-        </div>
-
-        <div id="offlineBanner" class="offline-banner" hidden>
-          <div class="offline-banner-text">
-            <span class="offline-banner-title" data-i18n="error.offline.title">No connection</span>
-            <span class="offline-banner-body" data-i18n="error.offline.body">Quota data unavailable. Check your internet connection.</span>
-          </div>
-          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
-          </button>
-        </div>
-
-        <div id="updateBanner" class="update-banner" hidden>
-          <div class="update-banner-text">
-            <span class="update-banner-title" data-i18n="update.title">Update available</span>
-            <span class="update-banner-body" id="updateBannerVersion"></span>
-          </div>
-          <button class="update-banner-download" id="updateBannerDownload">Download</button>
-          <button class="update-banner-dismiss" id="updateBannerDismiss" aria-label="Dismiss">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
-          </button>
-        </div>
-
         <section class="grid">
           <article class="card cost-card">
             <span class="card-eyebrow" data-i18n="home.today">Today</span>
@@ -196,7 +206,8 @@
           </article>
         </section>
 
-
+        <p id="errorText" class="error"></p>
+        <button id="reauthButton" class="reauth-button" hidden></button>
       </section>
 
       <section id="settingsView" class="view settings-stack" hidden>
@@ -403,8 +414,6 @@
         </div>
       </section>
 
-      <p id="errorText" class="error"></p>
-      <button id="reauthButton" class="reauth-button" hidden></button>
       </div><!-- end shell-scroll -->
 
       <footer class="app-footer">
