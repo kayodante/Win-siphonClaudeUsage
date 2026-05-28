@@ -98,7 +98,7 @@ const STRINGS = Object.freeze({
     'settings.tabs.widget': 'Widget',
     'settings.widget.style': 'Style',
     'settings.widget.styleClassic': 'Classic',
-    'settings.widget.styleMini': 'Mini',
+    'settings.widget.styleMini': 'Pill',
 
     'footer.openClaude': 'Open claude.ai',
     'footer.quit': 'Shut down',
@@ -226,7 +226,7 @@ const STRINGS = Object.freeze({
     'settings.tabs.widget': 'Widget',
     'settings.widget.style': 'Estilo',
     'settings.widget.styleClassic': 'Clássico',
-    'settings.widget.styleMini': 'Mini',
+    'settings.widget.styleMini': 'Pill',
 
     'footer.openClaude': 'Abrir claude.ai',
     'footer.quit': 'Desligar',
