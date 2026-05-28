@@ -1,6 +1,6 @@
 import { logSafeError } from '../shared/diagnostics.js';
 
-const MINI_SIZE     = Object.freeze({ width: 73,  height: 34  });
+const MINI_SIZE     = Object.freeze({ width: 71,  height: 32  });
 const COMPACT_SIZE  = Object.freeze({ width: 220, height: 104 });
 const EXPANDED_SIZE = Object.freeze({ width: 220, height: 192 });
 const WIDGET_MARGIN = 20;
@@ -34,11 +34,16 @@ export class FloatingWindowController {
     this.pendingState = state ?? this.pendingState;
 
     if (!this.window || this.window.isDestroyed()) {
-      this.createWindow();
-      await this.restorePosition();
-      await this.window.loadFile(this.htmlPath);
-      this.loaded = true;
-      this.syncState(this.pendingState);
+      try {
+        this.createWindow();
+        await this.restorePosition();
+        await this.window.loadFile(this.htmlPath);
+        this.loaded = true;
+        this.syncState(this.pendingState);
+      } catch (error) {
+        this.destroyWindow();
+        throw error;
+      }
     }
 
     this.showWindow();
@@ -51,12 +56,7 @@ export class FloatingWindowController {
       this.persistPosition();
     }
 
-    if (this.window && !this.window.isDestroyed()) {
-      this.window.destroy();
-    }
-
-    this.window = null;
-    this.loaded = false;
+    this.destroyWindow();
   }
 
   syncState(state) {
@@ -119,18 +119,24 @@ export class FloatingWindowController {
   async restorePosition() {
     const x = await this.preferences.get('floating.x');
     const y = await this.preferences.get('floating.y');
-    if (Number.isFinite(x) && Number.isFinite(y) && this.isOnAnyDisplay(x, y)) {
+    if (Number.isFinite(x) && Number.isFinite(y) && this.fitsOnAnyDisplay(x, y)) {
       this.window.setPosition(x, y, false);
     } else if (this.screen) {
       this.positionTopRight();
     }
   }
 
-  isOnAnyDisplay(x, y) {
+  fitsOnAnyDisplay(x, y) {
     if (!this.screen) return true;
+    const { width, height } = this.window.getBounds();
     return this.screen.getAllDisplays().some(d => {
       const b = d.bounds;
-      return x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+      return (
+        x >= b.x &&
+        y >= b.y &&
+        x + width <= b.x + b.width &&
+        y + height <= b.y + b.height
+      );
     });
   }
 
@@ -199,6 +205,15 @@ export class FloatingWindowController {
     const appearance = appearanceOptions(style);
     this.window.setBackgroundMaterial?.(appearance.backgroundMaterial);
     this.window.setBackgroundColor?.(appearance.backgroundColor);
+  }
+
+  destroyWindow() {
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.destroy();
+    }
+
+    this.window = null;
+    this.loaded = false;
   }
 }
 

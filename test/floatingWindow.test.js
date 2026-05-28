@@ -139,6 +139,23 @@ test('restorePosition uses saved position when it lies on a connected display', 
   assert.deepEqual(windows[0].position, { x: 42, y: 84 });
 });
 
+test('restorePosition falls back when the saved window would be partially offscreen', async () => {
+  const windows = [];
+  const screen = createFakeScreen([{ bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]);
+  const preferences = new MemoryPreferences({ floating: { enabled: true, expanded: false, x: 1850, y: 1000 } });
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences,
+    screen
+  });
+
+  await controller.show(sampleState());
+
+  assert.deepEqual(windows[0].position, { x: 1680, y: 20 });
+});
+
 test('hide destroys the active floating window', async () => {
   const windows = [];
   const controller = new FloatingWindowController({
@@ -202,7 +219,7 @@ test('setExpanded persists preference and resizes an open widget', async () => {
   assert.deepEqual(windows[0].contentSizeCalls.at(-1), [220, 104, false]);
 });
 
-test('show creates a 73x34 mini widget when style is mini', async () => {
+test('show creates a 71x32 mini widget when style is mini', async () => {
   const windows = [];
   const preferences = new MemoryPreferences({
     floating: { enabled: true, expanded: false, style: 'mini', x: null, y: null }
@@ -230,19 +247,19 @@ test('show creates a 73x34 mini widget when style is mini', async () => {
       'backgroundMaterial'
     ]),
     {
-      width: 73,
-      height: 34,
-      minWidth: 73,
-      minHeight: 34,
-      maxWidth: 73,
-      maxHeight: 34,
+      width: 71,
+      height: 32,
+      minWidth: 71,
+      minHeight: 32,
+      maxWidth: 71,
+      maxHeight: 32,
       thickFrame: false,
       useContentSize: true,
       backgroundColor: '#00000000',
       backgroundMaterial: 'none'
     }
   );
-  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [73, 34, false]);
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [71, 32, false]);
 });
 
 test('syncState clears native acrylic when an open widget switches to mini', async () => {
@@ -259,12 +276,41 @@ test('syncState clears native acrylic when an open widget switches to mini', asy
   await controller.show(sampleState({ style: 'classic' }));
   controller.syncState(sampleState({ style: 'mini' }));
 
-  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [73, 34, false]);
+  assert.deepEqual(windows[0].contentSizeCalls.at(-1), [71, 32, false]);
   assert.deepEqual(windows[0].backgroundMaterialCalls.at(-1), 'none');
   assert.deepEqual(windows[0].backgroundColorCalls.at(-1), '#00000000');
 });
 
-function createFakeBrowserWindow(windows) {
+test('show cleans up a failed load so the next call can retry with a fresh window', async () => {
+  const windows = [];
+  let loadAttempts = 0;
+  const controller = new FloatingWindowController({
+    BrowserWindow: createFakeBrowserWindow(windows, {
+      loadFile: async function loadFile(file) {
+        loadAttempts += 1;
+        this.loadedFile = file;
+        if (loadAttempts === 1) throw new Error('load failed');
+      }
+    }),
+    htmlPath: 'floating.html',
+    preloadPath: 'preload.cjs',
+    preferences: new MemoryPreferences({ floating: { enabled: true, expanded: false, x: null, y: null } })
+  });
+
+  await assert.rejects(() => controller.show(sampleState()), /load failed/);
+
+  assert.equal(windows[0].destroyed, true);
+  assert.equal(controller.window, null);
+  assert.equal(controller.loaded, false);
+
+  await controller.show(sampleState());
+
+  assert.equal(windows.length, 2);
+  assert.equal(windows[1].loadedFile, 'floating.html');
+  assert.equal(windows[1].showInactiveCalls, 1);
+});
+
+function createFakeBrowserWindow(windows, { loadFile: loadFileOverride } = {}) {
   return class FakeBrowserWindow extends EventEmitter {
     constructor(options) {
       super();
@@ -288,6 +334,9 @@ function createFakeBrowserWindow(windows) {
     }
 
     async loadFile(file) {
+      if (loadFileOverride) {
+        return loadFileOverride.call(this, file);
+      }
       this.loadedFile = file;
     }
 
