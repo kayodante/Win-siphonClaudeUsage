@@ -1,7 +1,8 @@
 export function buildTrayMenuTemplate({
+  floatingWidgetEnabled = false,
   statusItems = [],
   showMainWindow,
-  showFloatingWidget,
+  toggleFloatingWidget,
   showSettingsWindow,
   restart,
   quit
@@ -21,8 +22,10 @@ export function buildTrayMenuTemplate({
       click: showMainWindow
     },
     {
-      label: 'Mostrar widget',
-      click: showFloatingWidget
+      label: 'Widget flutuante',
+      type: 'checkbox',
+      checked: Boolean(floatingWidgetEnabled),
+      click: toggleFloatingWidget
     },
     {
       label: 'Configurações',

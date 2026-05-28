@@ -244,8 +244,9 @@ function createTray() {
   tray.setContextMenu(
     Menu.buildFromTemplate(
       buildTrayMenuTemplate({
+        floatingWidgetEnabled: Boolean(controller.getState().preferences?.floating?.enabled),
         showMainWindow,
-        showFloatingWidget: enableFloatingWidget,
+        toggleFloatingWidget,
         showSettingsWindow,
         restart,
         quit
@@ -272,9 +273,10 @@ function updateTray(state) {
   tray.setContextMenu(
     Menu.buildFromTemplate(
       buildTrayMenuTemplate({
+        floatingWidgetEnabled: Boolean(state.preferences?.floating?.enabled),
         statusItems: trayStatus.menuItems,
         showMainWindow,
-        showFloatingWidget: enableFloatingWidget,
+        toggleFloatingWidget,
         showSettingsWindow,
         restart,
         quit
@@ -406,8 +408,9 @@ function showSettingsWindow() {
   sendView('settings');
 }
 
-async function enableFloatingWidget() {
-  await controller.preferences.set('floating.enabled', true);
+async function toggleFloatingWidget() {
+  const enabled = Boolean(controller.getState().preferences?.floating?.enabled);
+  await controller.preferences.set('floating.enabled', !enabled);
 }
 
 function openFloatingWidget(state = controller?.getState()) {

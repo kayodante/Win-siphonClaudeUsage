@@ -5,8 +5,8 @@ BrandingText "Siphon · v${VERSION}"
 !define MUI_TEXTCOLOR "DEDEDE"
 
 ; Welcome page copy
-!define MUI_WELCOMEPAGE_TITLE "Bem-vindo ao Siphon"
-!define MUI_WELCOMEPAGE_TEXT "Este assistente instalará $(^Name) no seu computador.$\r$\n$\r$\nClique em Próximo para continuar."
+!define MUI_WELCOMEPAGE_TITLE "Welcome to Siphon"
+!define MUI_WELCOMEPAGE_TEXT "This setup wizard will install $(^Name) on your computer.$\r$\n$\r$\nSelect Next to continue."
 
 !macro customInit
   SetShellVarContext current
@@ -22,10 +22,10 @@ BrandingText "Siphon · v${VERSION}"
 
 !macro customFinishPage
   !define MUI_FINISHPAGE_RUN ""
-  !define MUI_FINISHPAGE_RUN_TEXT "Criar atalho na area de trabalho"
+  !define MUI_FINISHPAGE_RUN_TEXT "Create desktop shortcut"
   !define MUI_FINISHPAGE_RUN_FUNCTION siphonCreateDesktopShortcut
   !define MUI_FINISHPAGE_SHOWREADME ""
-  !define MUI_FINISHPAGE_SHOWREADME_TEXT "Abrir Siphon"
+  !define MUI_FINISHPAGE_SHOWREADME_TEXT "Open Siphon"
   !define MUI_FINISHPAGE_SHOWREADME_FUNCTION siphonLaunchApp
   !define MUI_PAGE_CUSTOMFUNCTION_SHOW siphonFinishPageShow
   !insertmacro MUI_PAGE_FINISH

@@ -6,15 +6,17 @@ import { buildTrayMenuTemplate, startApplication } from '../src/main/appLifecycl
 test('buildTrayMenuTemplate exposes only the required right-click options', () => {
   const template = buildTrayMenuTemplate({
     showMainWindow: () => {},
-    showFloatingWidget: () => {},
+    toggleFloatingWidget: () => {},
     showSettingsWindow: () => {},
     quit: () => {}
   });
 
   assert.deepEqual(
-    template.map(item => item.type ?? item.label),
-    ['Mostrar aplicativo', 'Mostrar widget', 'Configurações', 'separator', 'Reiniciar', 'Sair']
+    template.map(labelOrSeparator),
+    ['Mostrar aplicativo', 'Widget flutuante', 'Configurações', 'separator', 'Reiniciar', 'Sair']
   );
+  assert.equal(template[1].type, 'checkbox');
+  assert.equal(template[1].checked, false);
 });
 
 test('buildTrayMenuTemplate can prepend disabled status items', () => {
@@ -24,19 +26,19 @@ test('buildTrayMenuTemplate can prepend disabled status items', () => {
       { label: 'Atualizado: agora', enabled: false }
     ],
     showMainWindow: () => {},
-    showFloatingWidget: () => {},
+    toggleFloatingWidget: () => {},
     showSettingsWindow: () => {},
     quit: () => {}
   });
 
   assert.deepEqual(
-    template.map(item => item.type ?? `${item.label}:${item.enabled}`),
+    template.map(item => item.type === 'separator' ? 'separator' : `${item.label}:${item.enabled}`),
     [
       'Sessão: 42%:false',
       'Atualizado: agora:false',
       'separator',
       'Mostrar aplicativo:undefined',
-      'Mostrar widget:undefined',
+      'Widget flutuante:undefined',
       'Configurações:undefined',
       'separator',
       'Reiniciar:undefined',
@@ -44,6 +46,24 @@ test('buildTrayMenuTemplate can prepend disabled status items', () => {
     ]
   );
 });
+
+test('buildTrayMenuTemplate marks the widget checkbox when floating is enabled', () => {
+  const template = buildTrayMenuTemplate({
+    floatingWidgetEnabled: true,
+    showMainWindow: () => {},
+    toggleFloatingWidget: () => {},
+    showSettingsWindow: () => {},
+    quit: () => {}
+  });
+
+  assert.equal(template[1].label, 'Widget flutuante');
+  assert.equal(template[1].type, 'checkbox');
+  assert.equal(template[1].checked, true);
+});
+
+function labelOrSeparator(item) {
+  return item.type === 'separator' ? item.type : item.label;
+}
 
 test('startApplication shows the window before controller startup resolves', async () => {
   const calls = [];
