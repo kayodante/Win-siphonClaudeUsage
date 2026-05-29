@@ -2492,9 +2492,9 @@ body[data-refreshing="true"] #refreshButton svg {
 .settings-style-preview--mini {
   display: flex;
   gap: 2px;
-  padding: var(--space-1);
+  padding: var(--space-2);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-pill);
   width: 50%;
 }
 
