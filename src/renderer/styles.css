@@ -1545,7 +1545,7 @@ body[data-refreshing="true"] .card {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-none);
   padding: var(--space-5) var(--space-5) 17px;
 }
 
@@ -1693,7 +1693,7 @@ body[data-refreshing="true"] .card {
   gap: var(--space-0);
   width: 100%;
   height: var(--space-1);
-  margin-top: var(--space-3);
+  margin-top: var(--space-0);
 }
 
 .floating-meter-bar .meter-segment {
@@ -2527,11 +2527,11 @@ body[data-refreshing="true"] #refreshButton svg {
 .floating-mini-row {
   display: none;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-none) var(--space-4);
+  gap: var(--space-1);
+  padding: var(--space-none);
   background: oklch(0 0 0 / 0.85);
-  border-left: 3px dashed var(--subtle-foreground);
   border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
   -webkit-app-region: drag;
 }
 
@@ -2543,6 +2543,14 @@ body[data-style="mini"] .floating-mini-row {
 
 body[data-style="mini"] .floating-widget {
   display: none;
+}
+
+.floating-mini-drag-icon {
+  width: var(--space-5);
+  height: var(--space-5);
+  color: var(--subtle-foreground);
+  fill: currentColor;
+  flex-shrink: 0;
 }
 
 .floating-mini-icon {
