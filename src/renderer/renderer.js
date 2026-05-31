@@ -56,9 +56,11 @@ const elements = {
   settingsExpireSoundToggle: document.querySelector('#settingsExpireSoundToggle'),
   testExpireSoundButton: document.querySelector('#testExpireSoundButton'),
   settingsExpireSoundVolume: document.querySelector('#settingsExpireSoundVolume'),
+  settingsExpireAlertToggle: document.querySelector('#settingsExpireAlertToggle'),
   settingsLimitSoundToggle: document.querySelector('#settingsLimitSoundToggle'),
   testLimitSoundButton: document.querySelector('#testLimitSoundButton'),
   settingsLimitSoundVolume: document.querySelector('#settingsLimitSoundVolume'),
+  settingsLimitAlertToggle: document.querySelector('#settingsLimitAlertToggle'),
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
@@ -299,6 +301,20 @@ elements.settingsLimitSoundVolume.addEventListener('input', async event => {
     logSafeError('Failed to save limit volume preference:', error);
   }
 });
+elements.settingsExpireAlertToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('notifications.expireAlert', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save expire alert preference:', error);
+  }
+});
+elements.settingsLimitAlertToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('notifications.limitAlert', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save limit alert preference:', error);
+  }
+});
 elements.highUsageBannerDismiss.addEventListener('click', () => {
   highUsageDismissed = true;
   hideBanner(elements.highUsageBanner);
@@ -531,6 +547,8 @@ function render(state) {
   const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
   const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
   const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
+  const expireAlertEnabled = state.preferences?.notifications?.expireAlert ?? false;
+  const limitAlertEnabled = state.preferences?.notifications?.limitAlert ?? false;
   const floatingEnabled = state.preferences?.floating?.enabled ?? false;
   const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
   const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
@@ -628,6 +646,8 @@ function render(state) {
   elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
   elements.settingsLimitSoundVolume.disabled = !limitSoundEnabled;
   updateSliderFill(elements.settingsLimitSoundVolume);
+  elements.settingsExpireAlertToggle.checked = expireAlertEnabled;
+  elements.settingsLimitAlertToggle.checked = limitAlertEnabled;
   elements.settingsRefreshInterval.value = String(refreshInterval);
   elements.settingsFloatingToggle.checked = floatingEnabled;
   const floatingStyle = state.preferences?.floating?.style ?? 'classic';
