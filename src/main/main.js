@@ -56,6 +56,7 @@ let controller = null;
 let claudeSettingsService = null;
 let preferences = null;
 let trayIconKey = 'ok-ok';
+let lastKnownSessionPercent = null;
 let pendingInstallPath = null;
 
 app.setAppUserModelId('com.kayodantes.siphon');
@@ -146,6 +147,7 @@ async function onReady() {
     window?.webContents.send('state-changed', state);
     syncFloatingWindow(state);
     updateTray(state);
+    void checkUsageAlerts(state).catch(err => logSafeError('[alerts] checkUsageAlerts failed:', err));
   });
 
   preferences.on('change', ({ path: preferencePath, value, preferences: nextPreferences }) => {
@@ -290,6 +292,49 @@ function updateTray(state) {
   );
 }
 
+async function checkUsageAlerts(state) {
+  const percent = state.quota?.session?.percent ?? null;
+  if (percent === null) return;
+
+  const lang = state.preferences?.language ?? 'en';
+  const expireAlert = state.preferences?.notifications?.expireAlert ?? false;
+  const limitAlert = state.preferences?.notifications?.limitAlert ?? false;
+  const prev = lastKnownSessionPercent;
+  lastKnownSessionPercent = percent;
+
+  if (prev === null) return;
+
+  if (expireAlert && prev < 100 && percent >= 100) {
+    const notif = new Notification({
+      title: t('notification.expireTitle', lang),
+      body: t('notification.expireBody', lang),
+      silent: true
+    });
+    notif.on('click', () => showMainWindow());
+    notif.show();
+  }
+
+  if (limitAlert) {
+    if (prev < 90 && percent >= 90) {
+      const notif = new Notification({
+        title: t('alert.critical.title', lang),
+        body: t('alert.critical.body', lang),
+        silent: true
+      });
+      notif.on('click', () => showMainWindow());
+      notif.show();
+    } else if (prev < 70 && percent >= 70) {
+      const notif = new Notification({
+        title: t('alert.highUsage.title', lang),
+        body: t('alert.highUsage.body', lang),
+        silent: true
+      });
+      notif.on('click', () => showMainWindow());
+      notif.show();
+    }
+  }
+}
+
 function registerIpc() {
   ipcMain.handle('state:get', () => controller.getState());
   ipcMain.handle('refresh', () => controller.refreshAll());
@@ -302,7 +347,9 @@ function registerIpc() {
     const ALLOWED = new Set([
       'language', 'notifications.sessionReset', 'notifications.sound',
       'notifications.soundVolume', 'notifications.expireSound', 'notifications.expireSoundVolume',
+      'notifications.expireAlert',
       'notifications.limitSound', 'notifications.limitSoundVolume',
+      'notifications.limitAlert',
       'floating.enabled', 'floating.expanded', 'floating.x', 'floating.y', 'floating.style',
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
