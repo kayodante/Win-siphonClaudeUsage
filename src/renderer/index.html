@@ -343,6 +343,13 @@
             <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
             <input type="range" id="settingsLimitSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
           </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.limitAlert">Notify on 70/90%</span>
+            <label class="switch" for="settingsLimitAlertToggle">
+              <input id="settingsLimitAlertToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.expireSound">Play sound when session expires</span>
@@ -362,6 +369,13 @@
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
             <input type="range" id="settingsExpireSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.expireAlert">Notify when session expires</span>
+            <label class="switch" for="settingsExpireAlertToggle">
+              <input id="settingsExpireAlertToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
           </div>
         </div>
 
