@@ -10,8 +10,10 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     soundVolume: 1.0,
     expireSound: false,
     expireSoundVolume: 1.0,
+    expireAlert: false,
     limitSound: false,
-    limitSoundVolume: 1.0
+    limitSoundVolume: 1.0,
+    limitAlert: false
   }),
   floating: Object.freeze({
     enabled: false,

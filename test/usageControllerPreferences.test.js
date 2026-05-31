@@ -46,7 +46,7 @@ test('controller state includes preferences snapshot', async () => {
 
   assert.deepEqual(controller.getState().preferences, {
     language: 'en',
-    notifications: { sessionReset: false, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, limitSound: false, limitSoundVolume: 1 },
+    notifications: { sessionReset: false, sound: false, soundVolume: 1, expireSound: false, expireSoundVolume: 1, expireAlert: false, limitSound: false, limitSoundVolume: 1, limitAlert: false },
     floating: { enabled: false, expanded: false, style: 'classic', x: null, y: null },
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
