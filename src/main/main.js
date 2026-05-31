@@ -72,6 +72,11 @@ app.on('second-instance', () => {
   if (window) showMainWindow();
 });
 
+// Re-assert widget z-order whenever any window gains focus (Windows drops topmost on focus switch)
+app.on('browser-window-focus', () => {
+  floatingWindow?.reAssertAlwaysOnTop();
+});
+
 console.log('[siphon] registering whenReady handler');
 app.whenReady().then(onReady).catch(error => {
   logSafeError('[siphon] whenReady failed:', error);

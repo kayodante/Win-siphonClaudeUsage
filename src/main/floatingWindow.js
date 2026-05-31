@@ -114,6 +114,13 @@ export class FloatingWindowController {
       this.window = null;
       this.loaded = false;
     });
+    // Windows can drop z-order on focus change; re-assert on blur
+    this.window.on('blur', () => this.reAssertAlwaysOnTop());
+  }
+
+  reAssertAlwaysOnTop() {
+    if (!this.window || this.window.isDestroyed()) return;
+    this.window.setAlwaysOnTop(true, 'floating');
   }
 
   async restorePosition() {
