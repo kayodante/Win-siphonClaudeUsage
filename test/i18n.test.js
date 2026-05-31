@@ -70,3 +70,12 @@ test('error.scope_insufficient exists in both languages', () => {
     assert.notEqual(t('error.scope_insufficient', lang), 'error.scope_insufficient');
   }
 });
+
+test('threshold notification strings exist in both languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('notification.expireTitle', lang), 'notification.expireTitle');
+    assert.notEqual(t('notification.expireBody', lang), 'notification.expireBody');
+    assert.notEqual(t('settings.expireAlert', lang), 'settings.expireAlert');
+    assert.notEqual(t('settings.limitAlert', lang), 'settings.limitAlert');
+  }
+});

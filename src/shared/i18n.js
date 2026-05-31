@@ -80,6 +80,8 @@ const STRINGS = Object.freeze({
     'settings.testExpireSound': 'Test expire sound',
     'settings.limitSound': 'Play sound when session hits 70/90%',
     'settings.testLimitSound': 'Test alert sound',
+    'settings.expireAlert': 'Notify when session expires',
+    'settings.limitAlert': 'Notify on 70/90%',
     'settings.floating': 'Floating widget',
     'settings.startupOpenAtLogin': 'Start with Windows',
     'settings.startupShowWindow': 'Show window after login',
@@ -105,6 +107,8 @@ const STRINGS = Object.freeze({
 
     'notification.resetTitle': 'Claude session reset',
     'notification.resetBody': 'Your Claude session limit should be available again.',
+    'notification.expireTitle': 'Session expired',
+    'notification.expireBody': 'Your Claude session has reached its limit.',
 
     'error.saveNotification': 'Could not save notification preference.',
     'error.saveFloating': 'Could not save floating widget preference.',
@@ -208,6 +212,8 @@ const STRINGS = Object.freeze({
     'settings.testExpireSound': 'Testar som de expiração',
     'settings.limitSound': 'Tocar som ao atingir 70/90%',
     'settings.testLimitSound': 'Testar som de alerta',
+    'settings.expireAlert': 'Notificar ao expirar sessão',
+    'settings.limitAlert': 'Notificar em 70/90%',
     'settings.floating': 'Widget flutuante',
     'settings.startupOpenAtLogin': 'Iniciar com o Windows',
     'settings.startupShowWindow': 'Mostrar janela ao entrar',
@@ -233,6 +239,8 @@ const STRINGS = Object.freeze({
 
     'notification.resetTitle': 'Sessão do Claude reiniciada',
     'notification.resetBody': 'Seu limite de sessão do Claude deve estar disponível novamente.',
+    'notification.expireTitle': 'Sessão expirada',
+    'notification.expireBody': 'Sua sessão do Claude atingiu o limite.',
 
     'error.saveNotification': 'Não foi possível salvar a preferência de notificação.',
     'error.saveFloating': 'Não foi possível salvar a preferência do widget flutuante.',
