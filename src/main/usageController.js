@@ -9,7 +9,7 @@ import { logSafeError, safeErrorMessage } from '../shared/diagnostics.js';
 
 const DEFAULT_LOCAL_INTERVAL_MS = 30_000;
 const MIN_QUOTA_INTERVAL_MS = 120_000;
-const ALLOWED_REFRESH_INTERVALS = new Set([30, 60, 300, 900, 1800]);
+const ALLOWED_REFRESH_INTERVALS = new Set([30, 60, 300, 900]);
 const MAX_QUOTA_HISTORY_POINTS = 96;
 
 export class UsageController extends EventEmitter {

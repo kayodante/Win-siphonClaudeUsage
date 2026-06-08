@@ -17,7 +17,7 @@ Feature-by-feature comparison against the macOS Swift original.
 | Today's USD cost                                  |   ✓   |    ✓    |  |
 | This month's USD cost                             |   ✓   |    ✓    |  |
 | Recent days breakdown                             |   ✓   |    ✗    | Removed; backing data dropped. May return as a dedicated view later. |
-| Local cost data refresh (~30 s)                   |   ✓   |    ✓    | Default 30 s; configurable to 5, 15, or 30 min. |
+| Local cost data refresh (~30 s)                   |   ✓   |    ✓    | Default 30 s; configurable to 1, 5, or 15 min. |
 | OAuth quota refresh                               |   ✓   |    ✓    | Uses the chosen refresh interval with a 120 s minimum on Windows. |
 | OAuth PKCE sign-in (paste-redirect flow)          |   ✓   |    ✓    | Same client ID and endpoints as Claude Code. |
 | Token auto-refresh                                |   ✓   |    ✓    | 30-second skew before expiry. |
@@ -124,8 +124,8 @@ Shipped. Captured here so it's not re-litigated:
   expose `localHistory.hourly` and `localHistory.daily` for cost/token trends.
 - `UsageController` keeps an in-memory `quotaHistory.session` trend for
   successful OAuth quota refreshes.
-- Settings now has a refresh interval preference: 30 s, 5 min, 15 min, or
-  30 min. Local polling uses the selected value; OAuth quota polling keeps a
+- Settings now has a refresh interval preference: 30 s, 1 min, 5 min, or
+  15 min. Local polling uses the selected value; OAuth quota polling keeps a
   120 s floor and timers are rescheduled live.
 
 **Usage pace, rich tray surface, and refresh glow**
@@ -268,6 +268,12 @@ Shipped. Captured here so it's not re-litigated:
 - Toast ao atingir 70% e 90% (`notifications.limitAlert`), e ao expirar sessão em 100% (`notifications.expireAlert`).
 - Toggles independentes na aba Notificação em Configurações.
 - Click no toast abre janela principal.
+
+**Refresh interval — opção de 30 minutos removida**
+
+- Opção `1800` removida de `ALLOWED_REFRESH_INTERVALS` (`usageController.js`) e `allowedIntervals` (`main.js` `registerIpc()`).
+- `<option value="1800">` removida do select em `index.html`; chaves `settings.refresh30m` removidas do i18n (en + pt-BR) e do teste correspondente.
+- Docs atualizados: README, AGENTS, CLAUDE.md, ARCHITECTURE.md, docs/api-and-data.md, ROADMAP — todos agora citam só 30 s / 1 / 5 / 15 min.
 
 ## Now
 

@@ -358,7 +358,7 @@ function registerIpc() {
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     if (preferencePath === 'refresh.intervalSeconds') {
-      const allowedIntervals = new Set([30, 60, 300, 900, 1800]);
+      const allowedIntervals = new Set([30, 60, 300, 900]);
       if (!allowedIntervals.has(Number(value))) return;
     }
     if (preferencePath === 'integration.launchWithClaudeCode') {

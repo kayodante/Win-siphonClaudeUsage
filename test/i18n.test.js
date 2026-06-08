@@ -47,7 +47,6 @@ test('refresh interval strings exist in both languages', () => {
     assert.notEqual(t('settings.refresh30s', lang), 'settings.refresh30s');
     assert.notEqual(t('settings.refresh5m', lang), 'settings.refresh5m');
     assert.notEqual(t('settings.refresh15m', lang), 'settings.refresh15m');
-    assert.notEqual(t('settings.refresh30m', lang), 'settings.refresh30m');
     assert.notEqual(t('error.saveRefresh', lang), 'error.saveRefresh');
   }
 });

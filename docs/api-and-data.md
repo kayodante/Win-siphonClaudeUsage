@@ -333,8 +333,8 @@ with defaults on load so old files remain valid.
 ```
 
 `language` supports `en` and `pt-BR`; unknown values fall back to English in
-the renderer. `refresh.intervalSeconds` supports `30`, `300`, `900`, and
-`1800`; local JSONL refresh uses that value, while OAuth quota polling keeps a
+the renderer. `refresh.intervalSeconds` supports `30`, `60`, `300`, and `900`;
+local JSONL refresh uses that value, while OAuth quota polling keeps a
 120-second minimum. `startup.showWindowOnLogin` only affects app-managed
 Windows login launches; normal/manual launches still show the main window.
 
