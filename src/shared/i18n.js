@@ -9,10 +9,10 @@ const STRINGS = Object.freeze({
 
     'onboarding.welcome': 'Welcome to Siphon',
     'onboarding.lead':
-      'Track your Claude AI usage and Claude Code costs from your Windows tray. Get notified when your session resets.',
+      'Track your Claude AI usage and Claude Code token usage from your Windows tray. Get notified when your session resets.',
     'onboarding.copy.sessionStrong': 'Live session quota',
     'onboarding.copy.sessionMuted': 'from your Claude AI plan.',
-    'onboarding.copy.costStrong': 'Token cost',
+    'onboarding.copy.costStrong': 'Token usage',
     'onboarding.copy.costMuted': 'read from your local Claude Code cache.',
     'onboarding.copy.notifyStrong': 'Reset notifications',
     'onboarding.copy.notifyMuted': 'the moment a new session opens.',
@@ -29,7 +29,7 @@ const STRINGS = Object.freeze({
     'home.month': 'This Month',
     'home.notif.on': 'Notify reset',
     'home.notif.off': "Don't notify reset",
-    'home.costEstimate': 'Estimated cost',
+    'home.costEstimate': 'Usage estimate',
     'home.costTooltip': 'Computed from local Claude Code cache × pricing table. May differ from actual billing.',
     'pace.no_data': 'No pace yet',
     'pace.on_track': 'On track',
@@ -143,10 +143,10 @@ const STRINGS = Object.freeze({
 
     'onboarding.welcome': 'Boas-vindas ao Siphon',
     'onboarding.lead':
-      'Acompanhe seu uso do Claude AI e os custos do Claude Code pela bandeja do Windows. Receba um aviso quando sua sessão reiniciar.',
+      'Acompanhe seu uso do Claude AI e o uso de tokens do Claude Code pela bandeja do Windows. Receba um aviso quando sua sessão reiniciar.',
     'onboarding.copy.sessionStrong': 'Cota de sessão ao vivo',
     'onboarding.copy.sessionMuted': 'do seu plano Claude AI.',
-    'onboarding.copy.costStrong': 'Custo do token',
+    'onboarding.copy.costStrong': 'Uso de tokens',
     'onboarding.copy.costMuted': 'lido do seu cache local do Claude Code.',
     'onboarding.copy.notifyStrong': 'Notificações de redefinição',
     'onboarding.copy.notifyMuted': 'no momento em que uma nova sessão se abre.',
@@ -163,7 +163,7 @@ const STRINGS = Object.freeze({
     'home.month': 'Este mês',
     'home.notif.on': 'Notificar reset',
     'home.notif.off': 'Não notificar reset',
-    'home.costEstimate': 'Custo estimado',
+    'home.costEstimate': 'Uso estimado',
     'home.costTooltip': 'Calculado a partir do cache local do Claude Code × tabela de preços. Pode divergir da fatura real.',
     'pace.no_data': 'Sem ritmo ainda',
     'pace.on_track': 'No ritmo',
