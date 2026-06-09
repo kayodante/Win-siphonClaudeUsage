@@ -26,10 +26,11 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 * **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown
 * **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint
-* **Usage tracking** | Today's and this month's token usage in USD, computed locally from Claude Code's usage and pricing files
-* **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened
+* **Usage tracking** | Today's and this month's usage in USD, computed locally from Claude Code's usage and pricing files
+* **Quota alerts** | In-app warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100% thresholds — each independently configurable
+* **Reset notification** | Windows toast when your session becomes available again — fires on next launch if the app was closed during the reset window
 * **Sound alerts** | Three independent audio cues: session reset, session exhausted (100%), and quota warnings (70%/90%) — each with its own toggle, test button, and volume slider
-* **Floating widget** | Always-on-top widget (PiP-style) you can drag anywhere on screen — two layouts: classic (full stats) and pill (compact single-line)
+* **Floating widget** | Always-on-top widget (PiP-style) you can drag anywhere on screen — two layouts: classic (session progress + expandable stats panel) and pill (compact icon + percentage bar)
 * **Configurable refresh** | Local refresh defaults to 30 seconds, with 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login
 * **Pace indicator** | Session card shows whether your usage pace is on track or likely to exhaust the quota before it resets
@@ -75,6 +76,7 @@ Main process (Node, ESM)
   │     ├── QuotaService       — polls api.anthropic.com/api/oauth/usage with a 120 s minimum
   │     ├── OAuthService       — PKCE sign-in flow (same client ID as Claude Code)
   │     └── ResetNotificationScheduler — arms Windows toasts on quota exhaustion
+  ├── FloatingWindow           — always-on-top mini widget (classic / pill layouts)
   └── IPC bridge
 Preload (CJS)       — exposes window.siphon.* to the renderer
 Renderer (ESM)      — vanilla JS + CSS, no framework
@@ -108,14 +110,6 @@ npm run lint  # syntax-only check
 ```
 
 Tests live in `test/` and mirror the `src/main/` module structure. The test for `resetNotificationScheduler.test.js` covers the tricky timer-clamp and persistence paths — run it whenever you touch the scheduler.
-
-## Tech stack
-
-- **[Electron 41](https://www.electronjs.org/)** — `type: "module"` (main process is ESM, preload is CJS)
-- **No bundler** — renderer loads `index.html` directly via `loadFile`
-- **No UI framework** — vanilla JS and hand-written CSS
-- **[Geist](https://vercel.com/font)** — display font (Geist, Geist Mono, Geist Pixel Line)
-- **[Carbon Icons](https://carbondesignsystem.com/elements/icons/library/)** — UI iconography
 
 ## Privacy
 
