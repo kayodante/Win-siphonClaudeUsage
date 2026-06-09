@@ -16,7 +16,7 @@ ShortDescription: Windows tray app that tracks Claude Code usage in real time.
 Description: >-
   Siphon is an unofficial, community-built Windows tray utility for developers
   who use Claude Code. It sits in the system tray and surfaces the current 5-hour
-  session quota, the rolling weekly limit, and daily and monthly cost totals, reading
+  session quota, the rolling weekly limit, and daily and monthly usage totals, reading
   from the local Claude Code data files and the OAuth usage endpoint that
   Claude Code itself uses for authentication.
   

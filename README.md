@@ -16,7 +16,7 @@
 
 ---
 
-Siphon sits quietly in your system tray and shows session quota, weekly limits, and daily/monthly costs — all pulled directly from Claude Code's local files and the Anthropic OAuth usage endpoint. No API keys, no configuration: if you use Claude Code, it just works.
+Siphon sits quietly in your system tray and shows session quota, weekly limits, and daily/monthly usage — all pulled directly from Claude Code's local files and the Anthropic OAuth usage endpoint. No API keys, no configuration: if you use Claude Code, it just works.
 
 The Windows-specific addition is a **reset notification**: when your five-hour session quota hits 100%, Siphon schedules a Windows toast for the exact moment it becomes available again. If the app was closed during that window, it fires the missed notification on the next launch.
 
@@ -26,7 +26,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 * **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown
 * **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint
-* **Cost tracking** | Today's and this month's spend in USD, computed locally from Claude Code's usage and pricing files
+* **Usage tracking** | Today's and this month's token usage in USD, computed locally from Claude Code's usage and pricing files
 * **Reset notification** | Windows toast when your session resets — even if the app was closed when it happened
 * **Sound alerts** | Three independent audio cues: session reset, session exhausted (100%), and quota warnings (70%/90%) — each with its own toggle, test button, and volume slider
 * **Floating widget** | Always-on-top widget (PiP-style) you can drag anywhere on screen — two layouts: classic (full stats) and pill (compact single-line)
@@ -80,12 +80,12 @@ Preload (CJS)       — exposes window.siphon.* to the renderer
 Renderer (ESM)      — vanilla JS + CSS, no framework
 ```
 
-Cost figures are computed locally from Claude Code's usage data. Siphon first
+Usage figures are computed locally from Claude Code's usage data. Siphon first
 uses the legacy token cache (`readout-cost-cache.json`) when present; otherwise
 it scans modern per-session JSONL files under `~/.claude/projects/` and keeps an
 internal incremental cache so unchanged session files are not re-read. Pricing
 comes from `readout-pricing.json` when available, with bundled fallback prices
-for known Claude models. No data leaves your machine for cost calculations.
+for known Claude models. No data leaves your machine for usage calculations.
 
 ### Data stored on disk
 
