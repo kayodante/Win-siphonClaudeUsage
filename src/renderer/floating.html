@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none';" />
+    <title>Siphon Widget</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="floating-body">
+    <div class="floating-mini-row">
+      <!-- Carbon: Draggable -->
+      <svg class="floating-mini-drag-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="10" y="6" width="4" height="4" />
+        <rect x="18" y="6" width="4" height="4" />
+        <rect x="10" y="14" width="4" height="4" />
+        <rect x="18" y="14" width="4" height="4" />
+        <rect x="10" y="22" width="4" height="4" />
+        <rect x="18" y="22" width="4" height="4" />
+      </svg>
+      <img id="floatingMiniLogo" class="floating-mini-icon" src="../../assets/f-icon/f-icon-ok.png" alt="" aria-hidden="true" />
+      <span id="floatingMiniPercent" class="floating-mini-percent">--</span>
+    </div>
+    <main class="floating-widget" aria-label="Siphon floating widget">
+      <header class="floating-header">
+        <div class="floating-title">
+          <img id="floatingLogo" class="floating-logo" src="../../assets/tray.png" alt="" aria-hidden="true" />
+          <span class="floating-label" id="floatingTitleLabel"></span>
+        </div>
+        <div class="floating-actions">
+          <button id="floatingRefreshButton" class="floating-action-btn">
+            <!-- Carbon: Restart -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
+          </button>
+          <button id="floatingCloseButton" class="floating-action-btn">
+            <!-- Carbon: CloseLarge -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17.4141 16L26 7.4141 24.5859 6 16 14.5859 7.4143 6 6 7.4141 14.5859 16 6 24.5859 7.4143 26 16 17.4141 24.5859 26 26 24.5859 17.4141 16z"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="floating-info">
+        <button id="floatingOpenButton" class="floating-percent-button">
+          <span class="floating-percent" id="floatingPercent">--</span>
+        </button>
+        <span class="floating-reset" aria-live="polite">
+          <span id="floatingResetLabel" class="floating-reset-label"></span><span id="floatingResetTime" class="floating-reset-time"></span>
+        </span>
+      </div>
+      <div id="floatingMeter" class="floating-meter-bar" aria-hidden="true"></div>
+      <section id="floatingExpandedPanel" class="floating-expanded-panel" hidden>
+        <div class="floating-metric">
+          <span id="floatingWeeklyLabel" class="floating-metric-label"></span>
+          <span id="floatingWeeklyValue" class="floating-metric-value">--</span>
+        </div>
+        <div class="floating-metric">
+          <span id="floatingTodayLabel" class="floating-metric-label"></span>
+          <span id="floatingTodayValue" class="floating-metric-value">--</span>
+        </div>
+        <div class="floating-metric">
+          <span id="floatingMonthLabel" class="floating-metric-label"></span>
+          <span id="floatingMonthValue" class="floating-metric-value">--</span>
+        </div>
+      </section>
+      <button id="floatingExpandButton" class="floating-expand-btn" type="button">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.2 6.2 8 10l3.8-3.8 1.1 1.1L8 12.2 3.1 7.3z" />
+        </svg>
+      </button>
+    </main>
+
+    <script type="module" src="./floating.js"></script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+/Siphon Setup *.exe
+/*.exe
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tooling / local
+.impeccable/
+.claude/
+.agents
+.codex
+.jules
+.graphifyignore
+graphify-out/
+coverage/
+.nyc_output/
+/docs/superpowers
+.superpowers/
+
+# Docs (local only)
+AGENTS.md
+ARCHITECTURE.md
+CLAUDE.md
+DESIGN.md
+PRODUCT.md
+ROADMAP.md
+skills-lock.json
+.mcp.json
+
+# Secrets / credentials
+.env
+.env.*
+.npmrc
+credentials.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+
+# Editors
+.vscode/
+.idea/
+.vs/
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

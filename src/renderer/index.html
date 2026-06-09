@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'none';" />
+    <title>Siphon</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-view="onboard">
+    <main class="shell">
+      <header class="topbar">
+        <div class="topbar-card">
+        <div class="brand">
+          <img class="brand-logo" src="../../assets/Logo.png" alt="Siphon" />
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
+            <!-- Carbon: Restart -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
+          </button>
+          <button class="icon-button" id="settingsButton" title="Settings" aria-label="Settings" data-i18n-title="topbar.settings" data-i18n-aria-label="topbar.settings">
+            <!-- Carbon: Settings -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,16.76c0-.25,0-.5,0-.76s0-.51,0-.77l1.92-1.68A2,2,0,0,0,29.3,11L26.94,7a2,2,0,0,0-1.73-1,2,2,0,0,0-.64.1l-2.43.82a11.35,11.35,0,0,0-1.31-.75l-.51-2.52a2,2,0,0,0-2-1.61H13.64a2,2,0,0,0-2,1.61l-.51,2.52a11.48,11.48,0,0,0-1.32.75L7.43,6.06A2,2,0,0,0,6.79,6,2,2,0,0,0,5.06,7L2.7,11a2,2,0,0,0,.41,2.51L5,15.24c0,.25,0,.5,0,.76s0,.51,0,.77L3.11,18.45A2,2,0,0,0,2.7,21L5.06,25a2,2,0,0,0,1.73,1,2,2,0,0,0,.64-.1l2.43-.82a11.35,11.35,0,0,0,1.31.75l.51,2.52a2,2,0,0,0,2,1.61h4.72a2,2,0,0,0,2-1.61l.51-2.52a11.48,11.48,0,0,0,1.32-.75l2.42.82a2,2,0,0,0,.64.1,2,2,0,0,0,1.73-1L29.3,21a2,2,0,0,0-.41-2.51ZM25.21,24l-3.43-1.16a8.86,8.86,0,0,1-2.71,1.57L18.36,28H13.64l-.71-3.55a9.36,9.36,0,0,1-2.7-1.57L6.79,24,4.43,20l2.72-2.4a8.9,8.9,0,0,1,0-3.13L4.43,12,6.79,8l3.43,1.16a8.86,8.86,0,0,1,2.71-1.57L13.64,4h4.72l.71,3.55a9.36,9.36,0,0,1,2.7,1.57L25.21,8,27.57,12l-2.72,2.4a8.9,8.9,0,0,1,0,3.13L27.57,20Z"/><path d="M16,22a6,6,0,1,1,6-6A5.94,5.94,0,0,1,16,22Zm0-10a3.91,3.91,0,0,0-4,4,3.91,3.91,0,0,0,4,4,3.91,3.91,0,0,0,4-4A3.91,3.91,0,0,0,16,12Z"/></svg>
+          </button>
+          <div class="top-actions-divider" aria-hidden="true"></div>
+          <div class="window-controls">
+            <button class="window-control-btn" id="minimizeButton" title="Minimize" aria-label="Minimize" data-i18n-title="topbar.minimize" data-i18n-aria-label="topbar.minimize">
+              <!-- Carbon: Subtract -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 15H24V17H8z"/></svg>
+            </button>
+            <button class="window-control-btn" id="closeButton" title="Close" aria-label="Close" data-i18n-title="topbar.close" data-i18n-aria-label="topbar.close">
+              <!-- Carbon: Close -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+            </button>
+          </div>
+        </div>
+        </div>
+      </header>
+
+      <div class="shell-scroll">
+      <section id="onboardView" class="view onboard">
+        <div class="onboard-center">
+          <img class="onboard-logo" src="../../assets/Logo.png" alt="Siphon" />
+
+          <p class="onboard-copy">
+            <span class="feature-chip feature-chip-roadmap" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 7h8v2H7v2h5a4 4 0 0 1 0 8H5v-2h7a2 2 0 0 0 0-4H5V7Zm11 0h3v2h-3V7Zm0 5h3v2h-3v-2Zm0 5h3v2h-3v-2Z"/></svg>
+            </span>
+            <span class="copy-strong" data-i18n="onboarding.copy.sessionStrong">Live session quota</span>
+            <span class="copy-muted" data-i18n="onboarding.copy.sessionMuted">from your Claude AI plan.</span>
+            <span class="copy-strong" data-i18n="onboarding.copy.costStrong">Token cost</span>
+            <span class="feature-chip feature-chip-currency" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm1 14h-2v-2H8v-2h5a1 1 0 0 0 0-2h-2a3 3 0 0 1 0-6h1V3h2v2h2v2h-5a1 1 0 0 0 0 2h2a3 3 0 0 1 0 6v2Z"/></svg>
+            </span>
+            <span class="copy-muted" data-i18n="onboarding.copy.costMuted">read from your local Claude Code cache.</span>
+            <span class="copy-strong" data-i18n="onboarding.copy.notifyStrong">Reset notifications</span>
+            <span class="feature-chip feature-chip-bullhorn" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 10v4h3l7 4V6l-7 4H4Zm12-1.6v7.2a4 4 0 0 0 0-7.2Zm0-2.2a6 6 0 0 1 0 11.6v-2.1a4 4 0 0 0 0-7.4V6.2Z"/></svg>
+            </span>
+            <span class="copy-muted" data-i18n="onboarding.copy.notifyMuted">the moment a new session opens.</span>
+          </p>
+        </div>
+
+        <div class="onboard-auth-card">
+          <button class="btn-primary" id="onboardSignInButton">
+            <img src="../../assets/claude-icon.svg" alt="" aria-hidden="true" />
+            <span data-i18n="onboarding.cta">Log in with Claude AI</span>
+          </button>
+
+          <p class="onboard-secondary" data-i18n="onboarding.redirect">
+            You will be redirected to claude.ai. After authorizing, come back and paste the code.
+          </p>
+
+          <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
+            <p class="auth-title" data-i18n="onboarding.authTitle">Código de autenticação</p>
+            <div class="auth-form-fields">
+              <textarea id="onboardCodeInput" rows="2" spellcheck="false" data-i18n-placeholder="onboarding.pasteLabel" placeholder="Cole a URL de redirecionamento completa ou o código"></textarea>
+              <div class="auth-button-stack">
+                <button type="submit" class="btn-save" data-i18n="onboarding.submit">Salvar</button>
+                <button type="button" class="btn-cancel" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancelar</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+        <div id="highUsageBanner" class="usage-alert-banner" data-level="warn" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="usage-alert-text">
+            <span class="usage-alert-title" data-i18n="alert.highUsage.title">High usage</span>
+            <span class="usage-alert-body" data-i18n="alert.highUsage.body">Session has reached 70%.</span>
+          </div>
+          <button class="usage-alert-dismiss" id="highUsageBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
+        <div id="updateBanner" class="update-banner" hidden>
+          <div class="update-banner-header">
+            <!-- Carbon: WarningAlt -->
+            <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+            <div class="update-banner-text">
+              <span class="update-banner-title" data-i18n="update.title">Update available</span>
+              <span class="update-banner-body" id="updateBannerVersion"></span>
+              <button class="update-banner-download" id="updateBannerDownload">Download</button>
+            </div>
+            <button class="update-banner-dismiss" id="updateBannerDismiss" aria-label="Dismiss">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="criticalBanner" class="usage-alert-banner" data-level="critical" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="usage-alert-text">
+            <span class="usage-alert-title" data-i18n="alert.critical.title">Critical usage</span>
+            <span class="usage-alert-body" data-i18n="alert.critical.body">Session has reached 90%.</span>
+          </div>
+          <button class="usage-alert-dismiss" id="criticalBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
+        <div id="offlineBanner" class="offline-banner" hidden>
+          <!-- Carbon: WarningAlt -->
+          <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <div class="offline-banner-text">
+            <span class="offline-banner-title" data-i18n="error.offline.title">No connection</span>
+            <span class="offline-banner-body" data-i18n="error.offline.body">Quota data unavailable. Check your internet connection.</span>
+          </div>
+          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+
+      <section id="mainView" class="view" hidden>
+        <section class="card quota-panel">
+          <div class="card-eyebrow card-eyebrow-row">
+            <span class="card-eyebrow-left">
+              <!-- Carbon: Lightning -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
+              <span data-i18n="home.session">Current Session</span>
+            </span>
+            <button type="button" class="notif-badge" id="notificationState" data-tone="accent">
+              <span id="notificationStateText" data-i18n="home.notif.on">Notify reset</span>
+              <span class="notif-icon-wrap" aria-hidden="true">
+                <!-- Carbon: Notification -->
+                <svg id="notificationIconOn" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M28.7071,19.293,26,16.5859V13a10.0136,10.0136,0,0,0-9-9.9492V1H15V3.0508A10.0136,10.0136,0,0,0,6,13v3.5859L3.2929,19.293A1,1,0,0,0,3,20v3a1,1,0,0,0,1,1h7v.7768a5.152,5.152,0,0,0,4.5,5.1987A5.0057,5.0057,0,0,0,21,25V24h7a1,1,0,0,0,1-1V20A1,1,0,0,0,28.7071,19.293ZM19,25a3,3,0,0,1-6,0V24h6Zm8-3H5V20.4141L7.707,17.707A1,1,0,0,0,8,17V13a8,8,0,0,1,16,0v4a1,1,0,0,0,.293.707L27,20.4141Z"/></svg>
+                <!-- Carbon: NotificationOff -->
+                <svg id="notificationIconOff" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M26,16.5859V13a9.9217,9.9217,0,0,0-1.0833-4.5024L30,3.4141,28.5859,2,2,28.5859,3.4141,30l6-6H11v1a5,5,0,0,0,10,0V24h7a1,1,0,0,0,1-1V20a1,1,0,0,0-.293-.707ZM19,25a3,3,0,0,1-6,0V24h6Zm8-3H11.4141L23.4119,10.0024A7.949,7.949,0,0,1,24,13v4a1,1,0,0,0,.293.707L27,20.4141Z"/><path d="M7.707,17.707A1,1,0,0,0,8,17V13a8.0092,8.0092,0,0,1,8-8,7.9253,7.9253,0,0,1,4.9857,1.7681l1.4264-1.4263A9.934,9.934,0,0,0,17,3.0508V1H15V3.0508A10.0136,10.0136,0,0,0,6,13v3.5859l-3,3L4.4141,21Z"/></svg>
+              </span>
+            </button>
+          </div>
+          <div class="quota-headline">
+            <span class="quota-percent" id="sessionPercent">--</span>
+            <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
+          </div>
+          <div id="sessionMeter" class="meter" aria-hidden="true"></div>
+          <div class="quota-meta">
+            <span id="sessionReset" class="reset-line">--</span>
+          </div>
+        </section>
+
+        <section class="card quota-panel">
+          <div class="card-eyebrow">
+            <!-- Carbon: ArrayDateTime -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20,14c-3.3137,0-6,2.6863-6,6s2.6863,6,6,6,6-2.6863,6-6-2.6863-6-6-6ZM21.5859,23l-2.5859-2.5854v-4.4143h2v3.5857l2,2-1.4141,1.4141ZM8,9h3v2.0001h2v-2.0001h6v2.0001h2v-2.0001h3v4h2v-4c0-1.1-.9-2-2-2h-3v-2h-2v2h-6v-2h-2v2h-3c-1.1,0-2,.9-2,2v14c0,1.1.9,2,2,2h4v-2h-4v-14ZM4,24h-2v4c0,1.1.9,2,2,2h4v-2h-4v-4ZM28,28h-4v2h4c1.1,0,2-.9,2-2v-4h-2v4ZM4,4h4v-2h-4c-1.1,0-2,.9-2,2v4h2v-4ZM28,2h-4v2h4v4h2v-4c0-1.1-.9-2-2-2Z"/></svg>
+            <span data-i18n="home.weekly">Weekly Limit</span>
+          </div>
+          <div class="quota-headline">
+            <span class="quota-percent" id="weeklyPercent">--</span>
+          </div>
+          <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
+          <div class="quota-meta">
+            <span id="weeklyReset" class="reset-line">--</span>
+          </div>
+        </section>
+
+        <section class="grid">
+          <article class="card cost-card">
+            <span class="card-eyebrow" data-i18n="home.today">Today</span>
+            <span class="cost-estimate-row">
+              <span data-i18n="home.costEstimate">Estimated cost</span>
+              <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Cost calculation info">
+                <!-- Carbon: Information -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+              </button>
+            </span>
+            <span class="stat-value" id="todayCost">--</span>
+            <span class="cost-tokens" id="todayTokens"></span>
+          </article>
+          <article class="card cost-card">
+            <span class="card-eyebrow" data-i18n="home.month">This Month</span>
+            <span class="cost-estimate-row">
+              <span data-i18n="home.costEstimate">Estimated cost</span>
+              <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Cost calculation info">
+                <!-- Carbon: Information -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+              </button>
+            </span>
+            <span class="stat-value" id="monthCost">--</span>
+            <span class="cost-tokens" id="monthTokens"></span>
+          </article>
+        </section>
+
+        <p id="errorText" class="error"></p>
+        <button id="reauthButton" class="reauth-button" hidden></button>
+      </section>
+
+      <section id="settingsView" class="view settings-stack" hidden>
+        <div class="settings-back">
+          <button class="back-btn" id="backButton">
+            <!-- Carbon: ArrowLeft -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 26L4 16 14 6l1.41 1.41L6.83 16l8.58 8.59z"/><path d="M5 15h23v2H5z"/></svg>
+            <span data-i18n="settings.back">Back</span>
+          </button>
+          <span class="settings-title" data-i18n="settings.title">Settings</span>
+        </div>
+
+        <div class="account-card">
+          <div class="account-inner">
+            <p class="account-name" id="settingsName">--</p>
+            <p class="account-email" id="settingsEmail">--</p>
+            <div id="settingsPlanRow" class="account-badge-row" hidden>
+              <span id="settingsPlan" class="plan-pill">Plano - </span>
+            </div>
+          </div>
+          <button class="btn-secondary" id="signOutButton" data-i18n="settings.signOut">Sign out</button>
+        </div>
+
+        <div class="settings-card settings-tabs-card">
+
+        <!-- Tab bar -->
+        <div class="settings-tabs" role="tablist">
+          <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" data-i18n="settings.tabs.system">System</button>
+          <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" data-i18n="settings.tabs.notification">Notification</button>
+          <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" data-i18n="settings.tabs.widget">Widget</button>
+        </div>
+
+        <!-- System panel -->
+        <div id="settingsTabSystemPanel" class="settings-tab-panel">
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.language">Language</span>
+            <select id="settingsLanguage" class="settings-select">
+              <option value="en" data-i18n="settings.languageEN">English</option>
+              <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
+            </select>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-path-block">
+            <div class="settings-path-eyebrow" data-i18n="settings.claudePath">Claude Code data</div>
+            <div class="settings-path-row">
+              <span id="claudePath" class="settings-path-value">--</span>
+              <button id="editClaudePathButton" class="icon-button" title="Edit path" aria-label="Edit path" data-i18n-title="settings.editPath" data-i18n-aria-label="settings.editPath">
+                <!-- Carbon: Edit -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 26h28v2H2zM25.4 9c.8-.8.8-2 0-2.8l-3.6-3.6c-.8-.8-2-.8-2.8 0l-15 15V24h6.4l15-15zm-5-5L24 7.6l-3 3L17.4 7l3-3zM6 22v-3.6l10-10 3.6 3.6-10 10H6z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.refreshInterval">Refresh interval</span>
+            <select id="settingsRefreshInterval" class="settings-select">
+              <option value="30" data-i18n="settings.refresh30s">30 seconds</option>
+              <option value="60" data-i18n="settings.refresh1m">1 minute</option>
+              <option value="300" data-i18n="settings.refresh5m">5 minutes</option>
+              <option value="900" data-i18n="settings.refresh15m">15 minutes</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.launchWithClaudeCode">Open with Claude Code</span>
+            <label class="switch" for="settingsLaunchWithClaudeCodeToggle">
+              <input id="settingsLaunchWithClaudeCodeToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
+            <label class="switch" for="settingsStartupToggle">
+              <input id="settingsStartupToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.startupShowWindow">Show window after login</span>
+            <label class="switch" for="settingsStartupShowWindowToggle">
+              <input id="settingsStartupShowWindowToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Notification panel -->
+        <div id="settingsTabNotificationPanel" class="settings-tab-panel" hidden>
+          <p class="settings-section-eyebrow" data-i18n="settings.section.reset">Notify on session reset</p>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.notifReset">Notify</span>
+            <label class="switch" for="settingsNotificationsToggle">
+              <input id="settingsNotificationsToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.sound">Play sound</span>
+            <label class="switch" for="settingsSoundToggle">
+              <input id="settingsSoundToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.testSound">Test reset sound</span>
+            <button type="button" class="settings-test-btn" id="testSoundButton">
+              <!-- Carbon: PlayOutline -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28ZM12,23l12-7L12,9Z"/></svg>
+              <span data-i18n="settings.testSoundBtn">Test</span>
+            </button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+          </div>
+          <div class="settings-divider"></div>
+          <p class="settings-section-eyebrow" data-i18n="settings.section.limit">Notify on 70/90%</p>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.limitAlert">Notify</span>
+            <label class="switch" for="settingsLimitAlertToggle">
+              <input id="settingsLimitAlertToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.limitSound">Play sound</span>
+            <label class="switch" for="settingsLimitSoundToggle">
+              <input id="settingsLimitSoundToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.testLimitSound">Test alert sound</span>
+            <button type="button" class="settings-test-btn" id="testLimitSoundButton">
+              <!-- Carbon: PlayOutline -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28ZM12,23l12-7L12,9Z"/></svg>
+              <span data-i18n="settings.testSoundBtn">Test</span>
+            </button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsLimitSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+          </div>
+          <div class="settings-divider"></div>
+          <p class="settings-section-eyebrow" data-i18n="settings.section.expire">Notify when session expires</p>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.expireAlert">Notify</span>
+            <label class="switch" for="settingsExpireAlertToggle">
+              <input id="settingsExpireAlertToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.expireSound">Play sound</span>
+            <label class="switch" for="settingsExpireSoundToggle">
+              <input id="settingsExpireSoundToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.testExpireSound">Test expire sound</span>
+            <button type="button" class="settings-test-btn" id="testExpireSoundButton">
+              <!-- Carbon: PlayOutline -->
+              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28ZM12,23l12-7L12,9Z"/></svg>
+              <span data-i18n="settings.testSoundBtn">Test</span>
+            </button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsExpireSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+          </div>
+        </div>
+
+        <!-- Widget panel -->
+        <div id="settingsTabWidgetPanel" class="settings-tab-panel" hidden>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
+            <label class="switch" for="settingsFloatingToggle">
+              <input id="settingsFloatingToggle" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-style-group">
+          <p class="settings-section-heading" data-i18n="settings.widget.style">Style</p>
+          <div class="settings-style-picker">
+            <button class="settings-style-card" id="settingsStyleClassic" data-active="true">
+              <span class="settings-style-label" data-i18n="settings.widget.styleClassic">Classic</span>
+              <div class="settings-style-preview--classic">
+                <div class="ssp-row">
+                  <div class="ssp-bar ssp-bar--flex"></div>
+                  <div class="ssp-bar ssp-bar--w24"></div>
+                </div>
+                <div class="ssp-col">
+                  <div class="ssp-bar"></div>
+                  <div class="ssp-bar ssp-bar--h3"></div>
+                </div>
+                <div class="ssp-bar ssp-bar--h10"></div>
+              </div>
+            </button>
+            <button class="settings-style-card" id="settingsStyleMini" data-active="false">
+              <span class="settings-style-label" data-i18n="settings.widget.styleMini">Pill</span>
+              <div class="settings-style-preview--mini">
+                <div class="ssp-bar ssp-bar--flex ssp-bar--h9"></div>
+                <div class="ssp-bar ssp-bar--flex ssp-bar--h9"></div>
+              </div>
+            </button>
+          </div>
+          </div><!-- end settings-style-group -->
+        </div>
+
+        </div><!-- end settings-tabs-card -->
+
+        <div class="settings-version-row">
+          <span id="appVersionText" class="settings-version-text">Siphon - Claude Usage</span>
+          <a href="#" id="githubLink" class="settings-github-link" title="GitHub" aria-label="GitHub">
+            <!-- GitHub Mark -->
+            <svg viewBox="0 0 98 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"/></svg>
+          </a>
+        </div>
+      </section>
+
+      </div><!-- end shell-scroll -->
+
+      <footer class="app-footer">
+      <div class="footer-card">
+        <div class="footer-updated-row">
+          <span id="lastUpdatedDot" class="dmx-wrap" aria-hidden="true"></span>
+          <span id="lastUpdated">--</span>
+        </div>
+        <div class="footer-buttons">
+          <a class="footer-link" id="openClaudeLink" href="#" title="Open claude.ai" data-i18n-title="footer.openClaude">
+            <span data-i18n="footer.openClaude">Open claude.ai</span>
+            <!-- Carbon: ArrowUpRight -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26 6H14V8h10.59L6 26.59 7.41 28 26 9.41V20h2V6z"/></svg>
+          </a>
+          <button class="footer-quit-btn" id="footerQuitButton" title="Quit" data-i18n-title="footer.quit">
+            <!-- Carbon: Power -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22.5,5.74l-1,1.73a11,11,0,1,1-11,0l-1-1.73a13,13,0,1,0,13,0Z"/><path d="M15 2H17V16H15z"/></svg>
+            <span data-i18n="footer.quit">Shut down</span>
+          </button>
+        </div>
+      </div>
+      </footer>
+    </main>
+
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>
