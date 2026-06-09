@@ -26,6 +26,6 @@ jobs:
         run: |
           .\wingetcreate.exe update kayodante.Siphon `
             --version ${{ steps.vars.outputs.version }} `
-            --urls "${{ steps.vars.outputs.url }}" `
+            --urls "${{ steps.vars.outputs.url }}|x64" `
             --submit `
             --token ${{ secrets.WINGET_TOKEN }}

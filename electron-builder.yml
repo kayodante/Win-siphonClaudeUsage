@@ -23,6 +23,7 @@ win:
 portable:
   artifactName: Siphon-Portable-${version}.exe
 nsis:
+  artifactName: Siphon.Setup.${version}.exe
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
