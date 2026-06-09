@@ -746,7 +746,7 @@ function setCostValue(element, cost) {
 }
 
 function renderMeter(meter, percent) {
-  const total = 20;
+  const total = 40;
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
   if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;

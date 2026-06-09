@@ -1970,7 +1970,7 @@ button:focus-visible {
 
 .meter-segment {
   flex: 1;
-  height: var(--space-3);
+  height: var(--space-4);
   border-radius: var(--space-0);
   background: var(--level-ok-soft);
   transition: background-color 250ms var(--ease-out-quart),
@@ -2362,13 +2362,13 @@ body[data-refreshing="true"] #refreshButton svg {
   50%       { opacity: 0.5; }
 }
 
-#sessionMeter[data-level="critical"][data-filled="20"] .meter-segment.active {
+#sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
   animation: criticalPulse 1700ms ease-in-out infinite;
   animation-delay: calc(var(--i, 0) * 32ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #sessionMeter[data-level="critical"][data-filled="20"] .meter-segment.active {
+  #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
     animation: none;
   }
 }

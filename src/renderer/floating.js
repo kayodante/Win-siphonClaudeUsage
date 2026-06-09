@@ -2,7 +2,7 @@ import { logSafeError } from '../shared/diagnostics.js';
 import { formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';
 
-const METER_SEGMENTS = 20;
+const METER_SEGMENTS = 40;
 
 const LEVEL_ICONS = {
   ok: '../../assets/f-icon/f-icon-ok.png',
