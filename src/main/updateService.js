@@ -55,7 +55,7 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
         version: release.tag_name.replace(/^v/, ''),
         url: RELEASES_URL,
         downloadUrl: asset?.browser_download_url ?? null,
-        checksumUrl: release.assets?.find(a => a.name === (asset?.name + ".sha256"))?.browser_download_url ?? null
+        checksumUrl: asset ? (release.assets?.find(a => a.name === `${asset.name}.sha256`)?.browser_download_url ?? null) : null
       };
     }
   } catch {
