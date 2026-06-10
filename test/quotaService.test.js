@@ -356,3 +356,81 @@ test('QuotaService.fetchQuota refreshes token if expired but has refresh token',
     globalThis.fetch = originalFetch;
   }
 });
+
+test('QuotaService.fetchQuota maps 429 to QuotaError("rate_limited") with default retryAfter when header is missing/invalid', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({
+      status: 429,
+      headers: {
+        get: name => (name === 'retry-after' ? 'invalid' : null)
+      }
+    })
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'rate_limited');
+    assert.equal(error.retryAfter, 300);
+    return true;
+  });
+});
+
+test('parseUsageResponse handles missing utilization falling back to 0', () => {
+  const quota = parseUsageResponse({
+    five_hour: { resets_at: '2026-04-27T18:30:00.000Z' },
+    seven_day: { resets_at: '2026-04-30T12:00:00Z' }
+  });
+
+  assert.equal(quota.session.percent, 0);
+  assert.equal(quota.weeklyAll.percent, 0);
+});
+
+test('parseUsageResponse handles invalid resets_at date', () => {
+  const quota = parseUsageResponse({
+    five_hour: { utilization: 50, resets_at: 'invalid-date' }
+  });
+
+  assert.equal(quota.session.percent, 50);
+  assert.equal(quota.session.resetsAt, null);
+});
+
+test('QuotaService.fetchQuota validToken returns if credentials lack expiresAt', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok_no_expire'
+        // Missing expiresAt property
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({})
+    })
+  });
+
+  // If validToken didn't throw, we reach fetchImpl which returns a valid but empty json,
+  // then parseUsageResponse returns nulls.
+  const result = await service.fetchQuota();
+  assert.equal(result.session, null);
+});
+
+test('parseUsageResponse handles null value in parseDate', () => {
+  const quota = parseUsageResponse({
+    five_hour: { utilization: 50, resets_at: null }
+  });
+
+  assert.equal(quota.session.percent, 50);
+  assert.equal(quota.session.resetsAt, null);
+});
