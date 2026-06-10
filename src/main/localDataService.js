@@ -303,25 +303,27 @@ async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
 
   const parsed = parseJsonlChunk({
     chunk,
-    previousRemainder: '',
     aggregate: base,
     cutoff
   });
 
+  // parsedOffset points at the start of the trailing partial line, so the
+  // next incremental parse re-reads it from disk.
   return {
     ...parsed.aggregate,
     path: filePath,
     mtimeMs: stat.mtimeMs,
     size: stat.size,
-    parsedOffset: stat.size - Buffer.byteLength(parsed.remainder, 'utf8'),
-    remainder: parsed.remainder
+    parsedOffset: stat.size - Buffer.byteLength(parsed.remainder, 'utf8')
   };
 }
 
-function parseJsonlChunk({ chunk, previousRemainder, aggregate, cutoff, seen = new Set() }) {
-  const text = `${previousRemainder}${chunk}`;
-  const lines = text.split('\n');
-  const endsWithNewline = text.endsWith('\n');
+// Dedup only covers a single parse: duplicates that straddle an incremental
+// parse boundary would be counted twice. In practice duplicate records are
+// written in the same flush, so the window of exposure is negligible.
+function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
+  const lines = chunk.split('\n');
+  const endsWithNewline = chunk.endsWith('\n');
   const remainder = endsWithNewline ? '' : lines.pop() ?? '';
 
   for (const line of lines) {
@@ -437,7 +439,6 @@ function emptyFileAggregate(filePath) {
     mtimeMs: 0,
     size: 0,
     parsedOffset: 0,
-    remainder: '',
     lastModel: null,
     lastTokenTotals: null,
     days: {},

@@ -4,6 +4,7 @@ import test from 'node:test';
 import { PreferencesService } from '../src/main/preferencesService.js';
 import { QuotaError } from '../src/main/quotaService.js';
 import { UsageController } from '../src/main/usageController.js';
+import { MemoryStore } from './helpers.js';
 
 test('controller does not arm reset scheduler when session reset notifications are disabled', async () => {
   const preferences = new PreferencesService(
@@ -273,19 +274,6 @@ class SchedulerSpy {
   }
 }
 
-class MemoryStore {
-  constructor(value) {
-    this.value = value;
-  }
-
-  async load() {
-    return this.value;
-  }
-
-  async save(value) {
-    this.value = value;
-  }
-}
 
 class TimerSpy {
   constructor() {

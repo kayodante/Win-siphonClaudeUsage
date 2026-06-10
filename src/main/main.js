@@ -105,13 +105,7 @@ async function onReady() {
     notify: async () => {
       const lang = (await preferences.get('language')) || 'en';
       const soundEnabled = await preferences.get('notifications.sound');
-      const notif = new Notification({
-        title: t('notification.resetTitle', lang),
-        body: t('notification.resetBody', lang),
-        silent: true
-      });
-      notif.on('click', () => showMainWindow());
-      notif.show();
+      showNotification(t('notification.resetTitle', lang), t('notification.resetBody', lang));
       if (soundEnabled) {
         window?.webContents.send('play-reset-sound');
       }
@@ -306,43 +300,48 @@ async function checkUsageAlerts(state) {
   if (prev === null) return;
 
   if (expireAlert && prev < 100 && percent >= 100) {
-    const notif = new Notification({
-      title: t('notification.expireTitle', lang),
-      body: t('notification.expireBody', lang),
-      silent: true
-    });
-    notif.on('click', () => showMainWindow());
-    notif.show();
+    showNotification(t('notification.expireTitle', lang), t('notification.expireBody', lang));
   }
 
   if (limitAlert) {
     if (prev < 90 && percent >= 90) {
-      const notif = new Notification({
-        title: t('alert.critical.title', lang),
-        body: t('alert.critical.body', lang),
-        silent: true
-      });
-      notif.on('click', () => showMainWindow());
-      notif.show();
+      showNotification(t('alert.critical.title', lang), t('alert.critical.body', lang));
     } else if (prev < 70 && percent >= 70) {
-      const notif = new Notification({
-        title: t('alert.highUsage.title', lang),
-        body: t('alert.highUsage.body', lang),
-        silent: true
-      });
-      notif.on('click', () => showMainWindow());
-      notif.show();
+      showNotification(t('alert.highUsage.title', lang), t('alert.highUsage.body', lang));
     }
   }
 }
 
+function showNotification(title, body) {
+  const notif = new Notification({ title, body, silent: true });
+  notif.on('click', () => showMainWindow());
+  notif.show();
+}
+
 function registerIpc() {
+  registerStateIpc();
+  registerPrefsIpc();
+  registerWindowIpc();
+  registerUpdateIpc();
+}
+
+function registerStateIpc() {
   ipcMain.handle('state:get', () => controller.getState());
   ipcMain.handle('refresh', () => controller.refreshAll());
   ipcMain.handle('auth:start', () => controller.startSignIn());
   ipcMain.handle('auth:submit', (_event, code) => controller.submitCode(code));
   ipcMain.handle('auth:cancel', () => controller.cancelAuth());
   ipcMain.handle('auth:sign-out', () => controller.signOut());
+  ipcMain.handle('app:info', async () => ({
+    configDir: configDir(),
+    claudeDir: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude'),
+    notificationsSupported: Notification.isSupported(),
+    version: app.getVersion(),
+    isPackaged: app.isPackaged
+  }));
+}
+
+function registerPrefsIpc() {
   ipcMain.handle('prefs:get', () => controller.preferences.load());
   ipcMain.handle('prefs:set', async (_event, { path: preferencePath, value }) => {
     const ALLOWED = new Set([
@@ -379,6 +378,17 @@ function registerIpc() {
       logSafeError('[prefs:set] write failed:', err);
     }
   });
+  ipcMain.handle('dialog:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(window, {
+      properties: ['openDirectory'],
+      defaultPath: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude')
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+}
+
+function registerWindowIpc() {
   ipcMain.handle('view:show-main', () => showMainWindow());
   ipcMain.handle('view:show-settings', () => showSettingsWindow());
   ipcMain.handle('floating:open-main', () => showMainWindow());
@@ -387,21 +397,6 @@ function registerIpc() {
   });
   ipcMain.handle('floating:set-expanded', async (_event, expanded) => {
     await floatingWindow?.setExpanded(Boolean(expanded));
-  });
-  ipcMain.handle('app:info', async () => ({
-    configDir: configDir(),
-    claudeDir: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude'),
-    notificationsSupported: Notification.isSupported(),
-    version: app.getVersion(),
-    isPackaged: app.isPackaged
-  }));
-  ipcMain.handle('dialog:pick-folder', async () => {
-    const result = await dialog.showOpenDialog(window, {
-      properties: ['openDirectory'],
-      defaultPath: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude')
-    });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    return result.filePaths[0];
   });
   ipcMain.handle('window:minimize', () => window?.minimize());
   ipcMain.handle('window:close', () => {
@@ -413,7 +408,9 @@ function registerIpc() {
       shell.openExternal(url);
     }
   });
+}
 
+function registerUpdateIpc() {
   ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
     if (!/^\d+\.\d+\.\d+$/.test(version)) {
       window?.webContents.send('update:error', { message: 'invalid version' });
@@ -424,8 +421,8 @@ function registerIpc() {
       window?.webContents.send('update:error', { message: 'invalid download URL' });
       return;
     }
-    const TRUSTED_HOSTS = ['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com'];
-    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.includes(parsedUrl.hostname)) {
+    const TRUSTED_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com']);
+    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedUrl.hostname)) {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
     }
@@ -440,7 +437,7 @@ function registerIpc() {
     try {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
-      });
+      }, undefined, TRUSTED_HOSTS);
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
@@ -494,6 +491,7 @@ function syncFloatingWindow(state) {
 }
 
 function showWindow() {
+  if (!window || window.isDestroyed()) return;
   if (!window.isVisible()) positionWindow();
   if (window.isMinimized()) {
     window.restore();
@@ -503,11 +501,13 @@ function showWindow() {
 }
 
 function sendView(view) {
-  if (!window || window.webContents.isLoading()) {
-    window?.webContents.once('did-finish-load', () => sendView(view));
+  if (!window || window.isDestroyed()) return;
+  const contents = window.webContents;
+  if (contents.isLoading()) {
+    contents.once('did-finish-load', () => sendView(view));
     return;
   }
-  window.webContents.send('view-changed', view);
+  contents.send('view-changed', view);
 }
 
 function quit() {

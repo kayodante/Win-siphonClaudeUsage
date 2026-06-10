@@ -20,24 +20,10 @@ export function levelForPercent(value) {
   return 'ok';
 }
 
-export function formatResetDistance(date, now = new Date(), lang = 'en') {
-  if (!date) return lang === 'pt-BR' ? 'desconhecido' : 'unknown';
-  const diffMs = date.getTime() - now.getTime();
-  if (diffMs <= 0) return lang === 'pt-BR' ? 'em breve' : 'soon';
-  const totalMinutes = Math.ceil(diffMs / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours > 0) return lang === 'pt-BR' ? `${hours} h ${minutes} min` : `${hours} hr ${minutes} min`;
-  return `${minutes} min`;
-}
-
-export function formatDayTime(date) {
-  if (!date) return 'unknown';
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(date);
+export function clampPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
 }
 
 export function formatClockTime(date) {

@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { LocalDataService, summarizeUsage } from '../src/main/localDataService.js';
+import { MemoryStore } from './helpers.js';
 
 test('summarizeUsage aggregates today and month cost from Claude cache files', () => {
   const cache = {
@@ -179,14 +180,12 @@ test('LocalDataService carries an incomplete JSONL line across appends', async (
   let summary = await service.load(new Date('2026-04-27T12:00:00.000Z'));
   assert.equal(summary.todayStats.isEmpty, true);
   assert.equal(cacheStore.value.files[sessionPath].parsedOffset, 0);
-  assert.notEqual(cacheStore.value.files[sessionPath].remainder, '');
 
   await fs.appendFile(sessionPath, '\n');
   summary = await service.load(new Date('2026-04-27T12:00:00.000Z'));
 
   assert.equal(summary.todayStats.inputTokens, 1000);
   assert.equal(summary.todayStats.outputTokens, 500);
-  assert.equal(cacheStore.value.files[sessionPath].remainder, '');
   assert.equal(cacheStore.value.files[sessionPath].parsedOffset, Buffer.byteLength(`${JSON.stringify(record)}\n`));
 });
 
@@ -352,17 +351,4 @@ function countingFs() {
   return api;
 }
 
-class MemoryStore {
-  constructor(value) {
-    this.value = value;
-  }
-
-  async load() {
-    return this.value;
-  }
-
-  async save(value) {
-    this.value = structuredClone(value);
-  }
-}
 
