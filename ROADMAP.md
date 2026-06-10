@@ -275,6 +275,14 @@ Shipped. Captured here so it's not re-litigated:
 - `<option value="1800">` removida do select em `index.html`; chaves `settings.refresh30m` removidas do i18n (en + pt-BR) e do teste correspondente.
 - Docs atualizados: README, AGENTS, CLAUDE.md, ARCHITECTURE.md, docs/api-and-data.md, ROADMAP — todos agora citam só 30 s / 1 / 5 / 15 min.
 
+**Auto-update — verificação no GitHub Releases**
+
+- `checkForUpdate()` (`updateService.js`) roda uma vez no startup do app empacotado: consulta `api.github.com/repos/kayodante/Win-siphonClaudeUsage/releases/latest`, ignora draft/prerelease, compara semver via `isNewer()`.
+- Versão mais nova → envia `update-available` pro renderer (aguarda `did-finish-load` se preciso) → `#updateBanner` mostra "vX.Y.Z disponível para download".
+- Botão "Baixar" dispara IPC `update:download`; `downloadFile()` baixa o `.exe` (não-Portable) pra pasta temp, validando protocolo/host de redirects contra allowlist (`github.com`, `objects.githubusercontent.com`, `github-releases.githubusercontent.com`).
+- Progresso ao vivo via `update:progress`; ao concluir, botão vira "Instalar" → IPC `update:install` abre o instalador via `shell.openPath`.
+- Banner é dismissível por sessão (`updateDismissed`).
+
 ## Now
 
 *(sem itens pendentes)*
@@ -284,8 +292,6 @@ Shipped. Captured here so it's not re-litigated:
 *(sem itens pendentes)*
 
 ## Later
-
-- **Auto-update** with `electron-updater`.
 
 - **Toggle Verificar atualizações automaticamente nas configurações**
 
