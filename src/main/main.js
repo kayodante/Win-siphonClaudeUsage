@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 
 console.log('[siphon] main.js: module start');
 
@@ -438,6 +440,25 @@ function registerUpdateIpc() {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
       }, undefined, TRUSTED_HOSTS);
+
+      const checksumUrl = downloadUrl + '.sha256';
+      const checksumPath = destPath + '.sha256';
+
+      await downloadFile(checksumUrl, checksumPath, undefined, undefined, TRUSTED_HOSTS);
+
+      const checksumText = fs.readFileSync(checksumPath, 'utf8').trim();
+      const expectedHash = checksumText.split(' ')[0];
+
+      const actualHash = createHash('sha256').update(fs.readFileSync(destPath)).digest('hex');
+
+      if (actualHash !== expectedHash) {
+        fs.unlinkSync(destPath);
+        fs.unlinkSync(checksumPath);
+        throw new Error('Checksum verification failed');
+      }
+
+      fs.unlinkSync(checksumPath);
+
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
