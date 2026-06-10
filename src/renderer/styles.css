@@ -87,7 +87,7 @@
   /* ── Typography: Families ── */
   --font-sans:  "Geist", "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono:  "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  --font-pixel: "Geist Pixel Line", "Geist Mono", ui-monospace, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono", ui-monospace, monospace;
 
   /* ── Typography: Scale ── */
   --text-xs:   10px;

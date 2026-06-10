@@ -51,10 +51,14 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
       const asset = release.assets?.find(
         a => a.name.endsWith('.exe') && !a.name.includes('Portable')
       );
+      const sha256Asset = release.assets?.find(
+        a => a.name === `${asset?.name}.sha256`
+      );
       return {
         version: release.tag_name.replace(/^v/, ''),
         url: RELEASES_URL,
-        downloadUrl: asset?.browser_download_url ?? null
+        downloadUrl: asset?.browser_download_url ?? null,
+        sha256Url: sha256Asset?.browser_download_url ?? null
       };
     }
   } catch {
@@ -63,16 +67,24 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
   return null;
 }
 
-export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https) {
+export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https, trustedHosts = null) {
   return new Promise((resolve, reject) => {
     function get(url, depth = 0) {
       if (depth > 5) return reject(new Error('too many redirects'));
       const req = httpImpl.get(url, { headers: { 'User-Agent': 'Siphon-Windows' }, timeout: 30000 }, res => {
-        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303) {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
           res.resume();
           const loc = res.headers?.location;
           if (!loc) return reject(new Error('redirect missing location'));
-          return get(loc, depth + 1);
+          let resolved;
+          try { resolved = new URL(loc, url); } catch {
+            return reject(new Error('invalid redirect location'));
+          }
+          if (resolved.protocol !== 'https:') return reject(new Error('insecure redirect'));
+          if (trustedHosts && !trustedHosts.has(resolved.hostname)) {
+            return reject(new Error('untrusted redirect host'));
+          }
+          return get(resolved.href, depth + 1);
         }
         if (res.statusCode !== 200) {
           res.resume();
@@ -84,7 +96,10 @@ export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https
         file.on('error', err => { res.destroy(); fs.unlink(destPath, () => {}); reject(err); });
         res.on('data', chunk => {
           received += chunk.length;
-          file.write(chunk);
+          if (!file.write(chunk)) {
+            res.pause?.();
+            file.once('drain', () => res.resume?.());
+          }
           if (total > 0) onProgress?.(Math.round((received / total) * 100));
         });
         res.on('end', () => file.end(() => resolve(destPath)));

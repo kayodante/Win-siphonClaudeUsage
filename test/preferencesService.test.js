@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { DEFAULT_PREFERENCES, PreferencesService } from '../src/main/preferencesService.js';
+import { MemoryStore } from './helpers.js';
 
 test('load returns defaults when store is missing', async () => {
   const preferences = new PreferencesService(new MemoryStore(null));
@@ -134,20 +135,6 @@ test('concurrent set calls are serialized without dropping sibling changes', asy
   assert.equal(store.value.floating.y, 256);
   assert.equal(store.value.language, 'pt-BR');
 });
-
-class MemoryStore {
-  constructor(value) {
-    this.value = value;
-  }
-
-  async load() {
-    return this.value;
-  }
-
-  async save(value) {
-    this.value = value;
-  }
-}
 
 class SlowMemoryStore extends MemoryStore {
   async save(value) {

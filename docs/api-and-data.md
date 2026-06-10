@@ -353,7 +353,6 @@ safe to delete; it is rebuilt from Claude Code JSONL files.
       "mtimeMs": 1777393200000,
       "size": 123456,
       "parsedOffset": 123456,
-      "remainder": "",
       "lastModel": "claude-sonnet-4-5-20250929",
       "lastTokenTotals": {
         "input": 120,
