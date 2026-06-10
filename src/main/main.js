@@ -427,7 +427,7 @@ function registerUpdateIpc() {
       window?.webContents.send('update:error', { message: 'invalid URL' });
       return;
     }
-    const TRUSTED_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com']);
+    const TRUSTED_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com', 'release-assets.githubusercontent.com']);
     if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedUrl.hostname) || (parsedChecksumUrl && (parsedChecksumUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedChecksumUrl.hostname)))) {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
@@ -468,10 +468,10 @@ function registerUpdateIpc() {
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
-      fs.unlink(destPath, () => {});
+      await fs.promises.unlink(destPath).catch(() => {});
       window?.webContents.send('update:error', { message: err.message });
     } finally {
-      fs.unlink(checksumPath, () => {});
+      await fs.promises.unlink(checksumPath).catch(() => {});
     }
   });
 

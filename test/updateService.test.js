@@ -215,6 +215,19 @@ test('checkForUpdate sets checksumUrl to null when no matching .sha256 asset exi
   assert.equal(result?.checksumUrl, null);
 });
 
+test('checkForUpdate sets checksumUrl to null when no installer asset', async () => {
+  const release = {
+    tag_name: 'v1.1.0',
+    draft: false,
+    prerelease: false,
+    assets: [
+      { name: 'Siphon Setup 1.1.0.exe.sha256', browser_download_url: 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256' }
+    ]
+  };
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  assert.equal(result?.checksumUrl, null);
+});
+
 // ── downloadFile ──────────────────────────────────────────────────────────────
 
 test('downloadFile writes content to disk and reports progress', async (t) => {
