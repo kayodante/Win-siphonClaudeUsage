@@ -257,6 +257,18 @@ test('downloadFile rejects insecure (non-https) redirects', async () => {
   );
 });
 
+test('downloadFile rejects redirects to untrusted hosts', async () => {
+  const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
+  const httpImpl = makeDownloadHttps([
+    { statusCode: 302, headers: { location: 'https://untrusted.example.com/setup.exe' } }
+  ]);
+  const trustedHosts = new Set(['example.com']);
+  await assert.rejects(
+    () => downloadFile('https://example.com/setup.exe', dest, null, httpImpl, trustedHosts),
+    /untrusted redirect host/
+  );
+});
+
 test('downloadFile rejects on HTTP error status', async () => {
   const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
   const httpImpl = makeDownloadHttps([{ statusCode: 404, headers: {} }]);

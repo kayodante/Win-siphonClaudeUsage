@@ -953,21 +953,25 @@ function initDotMatrix() {
   }
 
   function tick() {
-    if (!document.hidden) {
-      const phase = (performance.now() % CYCLE_MS) / CYCLE_MS;
-      const beat = Math.sin(phase * Math.PI * 2);
-      const spike = Math.sin(phase * Math.PI * 4);
-      const pulse = Math.max(0, beat) + Math.max(0, spike) * 0.55;
-
-      for (const dot of dots) {
-        const z = dot.dataset.zone;
-        if (!z) continue;
-        dot.style.opacity =
-          z === 'c' ? Math.min(1, 0.35 + pulse * 0.95) :
-          z === 'i' ? 0.16 + pulse * 0.44 :
-                      0.08 + pulse * 0.08;
-      }
+    if (document.hidden) {
+      requestAnimationFrame(tick);
+      return;
     }
+
+    const phase = (performance.now() % CYCLE_MS) / CYCLE_MS;
+    const beat = Math.sin(phase * Math.PI * 2);
+    const spike = Math.sin(phase * Math.PI * 4);
+    const pulse = Math.max(0, beat) + Math.max(0, spike) * 0.55;
+
+    for (const dot of dots) {
+      const z = dot.dataset.zone;
+      if (!z) continue;
+      dot.style.opacity =
+        z === 'c' ? Math.min(1, 0.35 + pulse * 0.95) :
+        z === 'i' ? 0.16 + pulse * 0.44 :
+                    0.08 + pulse * 0.08;
+    }
+
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

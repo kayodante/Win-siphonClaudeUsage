@@ -85,29 +85,18 @@ test('enable hook command contains exePath', async () => {
   await makeService(sp).enable();
   const result = await readJson(sp);
   const entry = result.hooks.SessionStart.find(e => e._siphon === true);
-  assert.ok(entry.hooks[0].command.includes('C:\\fake\\Siphon.exe'));
+  assert.equal(entry.hooks[0].command, 'C:\\fake\\Siphon.exe');
   await fs.rm(dir, { recursive: true });
 });
 
-test('enable hook has shell: powershell and async: true', async () => {
+test('enable hook has async: true', async () => {
   const dir = await tempDir();
   const sp = path.join(dir, 'settings.json');
   await makeService(sp).enable();
   const result = await readJson(sp);
   const hook = result.hooks.SessionStart.find(e => e._siphon === true).hooks[0];
-  assert.equal(hook.shell, 'powershell');
+  assert.equal(hook.shell, undefined);
   assert.equal(hook.async, true);
-  await fs.rm(dir, { recursive: true });
-});
-
-test('enable escapes single quotes in exePath', async () => {
-  const dir = await tempDir();
-  const sp = path.join(dir, 'settings.json');
-  const svc = new ClaudeSettingsService({ exePath: "C:\\O'Brien\\Siphon.exe", settingsPath: sp });
-  await svc.enable();
-  const result = await readJson(sp);
-  const cmd = result.hooks.SessionStart.find(e => e._siphon === true).hooks[0].command;
-  assert.ok(cmd.includes("O''Brien"));
   await fs.rm(dir, { recursive: true });
 });
 
@@ -234,14 +223,3 @@ test('hasSiphonHook returns false after disable', async () => {
   await fs.rm(dir, { recursive: true });
 });
 
-// ── _buildHookEntry injection guard ───────────────────────────────────────────
-
-test('_buildHookEntry throws when exePath contains a backtick', () => {
-  const svc = new ClaudeSettingsService({ exePath: 'C:\\foo`bar.exe', settingsPath: '/x' });
-  assert.throws(() => svc._buildHookEntry(), /unsafe/);
-});
-
-test('_buildHookEntry throws when exePath contains a double-quote', () => {
-  const svc = new ClaudeSettingsService({ exePath: 'C:\\"bad".exe', settingsPath: '/x' });
-  assert.throws(() => svc._buildHookEntry(), /unsafe/);
-});

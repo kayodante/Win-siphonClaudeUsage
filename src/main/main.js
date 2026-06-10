@@ -39,6 +39,7 @@ import { createTrayIcon } from './trayIcon.js';
 import { checkForUpdate, downloadFile } from './updateService.js';
 import { UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
+import { isSafeExternalUrl } from './security.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
 import { buildTrayStatus } from '../shared/trayStatus.js';
@@ -403,11 +404,9 @@ function registerWindowIpc() {
   });
   ipcMain.handle('app:quit', () => quit());
   ipcMain.handle('shell:open-external', (_event, url) => {
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== 'https:') return;
+    if (isSafeExternalUrl(url)) {
       shell.openExternal(url);
-    } catch { /* invalid URL */ }
+    }
   });
 }
 
@@ -422,16 +421,23 @@ function registerUpdateIpc() {
       window?.webContents.send('update:error', { message: 'invalid download URL' });
       return;
     }
-    const TRUSTED_HOSTS = ['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com'];
-    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.includes(parsedUrl.hostname)) {
+    const TRUSTED_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com']);
+    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedUrl.hostname)) {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
     }
-    const destPath = path.join(app.getPath('temp'), `Siphon-Setup-${version}.exe`);
+    const tempDir = app.getPath('temp');
+    const destPath = path.resolve(tempDir, `Siphon-Setup-${version}.exe`);
+    const expectedPrefix = tempDir.endsWith(path.sep) ? tempDir : tempDir + path.sep;
+    if (!destPath.startsWith(expectedPrefix)) {
+      window?.webContents.send('update:error', { message: 'invalid destination path' });
+      return;
+    }
+
     try {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
-      });
+      }, undefined, TRUSTED_HOSTS);
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
@@ -495,11 +501,13 @@ function showWindow() {
 }
 
 function sendView(view) {
-  if (!window || window.webContents.isLoading()) {
-    window?.webContents.once('did-finish-load', () => sendView(view));
+  if (!window || window.isDestroyed()) return;
+  const contents = window.webContents;
+  if (contents.isLoading()) {
+    contents.once('did-finish-load', () => sendView(view));
     return;
   }
-  window.webContents.send('view-changed', view);
+  contents.send('view-changed', view);
 }
 
 function quit() {

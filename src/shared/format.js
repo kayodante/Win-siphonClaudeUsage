@@ -21,7 +21,9 @@ export function levelForPercent(value) {
 }
 
 export function clampPercent(value) {
-  return Math.max(0, Math.min(100, Math.round(value)));
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
 }
 
 export function formatClockTime(date) {

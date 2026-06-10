@@ -63,7 +63,7 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
   return null;
 }
 
-export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https) {
+export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https, trustedHosts = null) {
   return new Promise((resolve, reject) => {
     function get(url, depth = 0) {
       if (depth > 5) return reject(new Error('too many redirects'));
@@ -77,6 +77,9 @@ export function downloadFile(downloadUrl, destPath, onProgress, httpImpl = https
             return reject(new Error('invalid redirect location'));
           }
           if (resolved.protocol !== 'https:') return reject(new Error('insecure redirect'));
+          if (trustedHosts && !trustedHosts.has(resolved.hostname)) {
+            return reject(new Error('untrusted redirect host'));
+          }
           return get(resolved.href, depth + 1);
         }
         if (res.statusCode !== 200) {
