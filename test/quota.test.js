@@ -191,3 +191,168 @@ test('QuotaService.fetchQuota maps 403 to QuotaError("scope_insufficient")', asy
     return true;
   });
 });
+test('QuotaService.fetchQuota passes through generic fetch errors', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => {
+      throw new Error('Generic error');
+    }
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.equal(error.message, 'Generic error');
+    return true;
+  });
+});
+
+test('QuotaService.fetchQuota returns parsed usage response on 200 OK', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        five_hour: { utilization: 50, resets_at: '2026-04-27T18:30:00.000Z' },
+        seven_day: { utilization: 25, resets_at: '2026-04-30T12:00:00Z' }
+      })
+    })
+  });
+
+  const quota = await service.fetchQuota();
+  assert.equal(quota.session.percent, 50);
+  assert.equal(quota.weeklyAll.percent, 25);
+});
+
+test('QuotaService.fetchQuota maps 500 status to QuotaError("server")', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() + 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({
+      status: 500,
+      headers: { get: () => null }
+    })
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'server');
+    return true;
+  });
+});
+
+test('QuotaService.fetchQuota throws "not_signed_in" if no credentials', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => null,
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({})
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'not_signed_in');
+    return true;
+  });
+});
+
+test('QuotaService.fetchQuota throws "not_signed_in" if expired and no refresh token', async () => {
+  const service = new QuotaService({
+    tokenStore: {
+      load: async () => ({
+        accessToken: 'tok',
+        refreshToken: null,
+        expiresAt: new Date(Date.now() - 60_000).toISOString()
+      }),
+      clear: async () => {},
+      save: async () => {}
+    },
+    fetchImpl: async () => ({})
+  });
+
+  await assert.rejects(() => service.fetchQuota(), error => {
+    assert.ok(error instanceof QuotaError);
+    assert.equal(error.code, 'not_signed_in');
+    return true;
+  });
+});
+
+test('QuotaService.fetchQuota refreshes token if expired but has refresh token', async () => {
+  // Since we can't easily mock dynamic imports in older Node.js versions without test.mock.module,
+  // we can mock the global fetch used by the imported OAuthService.
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, options) => {
+      if (url === 'https://platform.claude.com/v1/oauth/token') {
+        const body = JSON.parse(options.body);
+        assert.equal(body.grant_type, 'refresh_token');
+        assert.equal(body.refresh_token, 'old_refresh');
+        return {
+          status: 200,
+          json: async () => ({
+            access_token: 'new_tok',
+            refresh_token: 'new_refresh',
+            expires_in: 3600
+          })
+        };
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    };
+
+    let savedCredentials = null;
+    const service = new QuotaService({
+      tokenStore: {
+        load: async () => ({
+          accessToken: 'old_tok',
+          refreshToken: 'old_refresh',
+          expiresAt: new Date(Date.now() - 60_000).toISOString()
+        }),
+        clear: async () => {},
+        save: async (creds) => {
+          savedCredentials = creds;
+        }
+      },
+      fetchImpl: async (url, options) => {
+        assert.match(options.headers.Authorization, /new_tok/);
+        return {
+          status: 200,
+          headers: { get: () => null },
+          json: async () => ({
+            five_hour: { utilization: 10, resets_at: '2026-04-27T18:30:00.000Z' }
+          })
+        };
+      }
+    });
+
+    const quota = await service.fetchQuota();
+    assert.equal(quota.session.percent, 10);
+    assert.equal(savedCredentials.accessToken, 'new_tok');
+    assert.equal(savedCredentials.refreshToken, 'new_refresh');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
