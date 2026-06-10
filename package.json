@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "electron .",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "lint": "node scripts/check-syntax.js",
     "build:win": "electron-builder --win"
   },
@@ -22,8 +22,5 @@
   "devDependencies": {
     "electron": "^41.3.0",
     "electron-builder": "^26.0.12"
-  },
-  "dependencies": {
-    "geist": "^1.7.1"
   }
 }

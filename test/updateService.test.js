@@ -213,6 +213,50 @@ test('downloadFile follows a single redirect', async (t) => {
   t.after(() => fs.unlink(dest, () => {}));
 });
 
+test('downloadFile follows 307/308 redirects', async (t) => {
+  const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
+  const body = 'redirected content';
+  const httpImpl = makeDownloadHttps([
+    { statusCode: 307, headers: { location: 'https://cdn.example.com/a.exe' } },
+    { statusCode: 308, headers: { location: 'https://cdn.example.com/b.exe' } },
+    { statusCode: 200, headers: { 'content-length': String(body.length) }, body }
+  ]);
+  await downloadFile('https://example.com/setup.exe', dest, null, httpImpl);
+  assert.equal(fs.readFileSync(dest, 'utf8'), body);
+  t.after(() => fs.unlink(dest, () => {}));
+});
+
+test('downloadFile resolves relative redirect locations against the current URL', async (t) => {
+  const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
+  const body = 'relative redirect content';
+  const urls = [];
+  const inner = makeDownloadHttps([
+    { statusCode: 302, headers: { location: '/files/setup.exe' } },
+    { statusCode: 200, headers: { 'content-length': String(body.length) }, body }
+  ]);
+  const httpImpl = {
+    get(url, opts, callback) {
+      urls.push(url);
+      return inner.get(url, opts, callback);
+    }
+  };
+  await downloadFile('https://example.com/setup.exe', dest, null, httpImpl);
+  assert.equal(urls[1], 'https://example.com/files/setup.exe');
+  assert.equal(fs.readFileSync(dest, 'utf8'), body);
+  t.after(() => fs.unlink(dest, () => {}));
+});
+
+test('downloadFile rejects insecure (non-https) redirects', async () => {
+  const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
+  const httpImpl = makeDownloadHttps([
+    { statusCode: 302, headers: { location: 'http://evil.example.com/setup.exe' } }
+  ]);
+  await assert.rejects(
+    () => downloadFile('https://example.com/setup.exe', dest, null, httpImpl),
+    /insecure redirect/
+  );
+});
+
 test('downloadFile rejects on HTTP error status', async () => {
   const dest = path.join(os.tmpdir(), `siphon-test-${Date.now()}.exe`);
   const httpImpl = makeDownloadHttps([{ statusCode: 404, headers: {} }]);

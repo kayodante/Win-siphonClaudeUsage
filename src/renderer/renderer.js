@@ -1,4 +1,5 @@
 import {
+  clampPercent,
   formatCurrency,
   formatPercent,
   formatRelativeUpdated,
@@ -537,31 +538,29 @@ function render(state) {
   if (!state.isSignedIn) {
     requestedView = 'main';
   }
-  const now = new Date();
   const session = hydrateSlot(state.quota?.session);
   const weekly = hydrateSlot(state.quota?.weeklyAll);
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
-  const soundEnabled = state.preferences?.notifications?.sound ?? false;
-  const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
-  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
-  const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
-  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
-  const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
-  const expireAlertEnabled = state.preferences?.notifications?.expireAlert ?? false;
-  const limitAlertEnabled = state.preferences?.notifications?.limitAlert ?? false;
-  const floatingEnabled = state.preferences?.floating?.enabled ?? false;
-  const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
-  const startupShowWindow = state.preferences?.startup?.showWindowOnLogin ?? false;
-  const launchWithClaudeCode = state.preferences?.integration?.launchWithClaudeCode ?? false;
-  const refreshInterval = state.preferences?.refresh?.intervalSeconds ?? 30;
   const sessionPercent = clampPercent(session?.percent ?? 0);
   const weeklyPercent = clampPercent(weekly?.percent ?? 0);
-  const sessionPace = buildUsagePace({
-    slot: session,
-    now,
-    windowMs: SESSION_WINDOW_MS,
-    localHistory: state.localHistory
-  });
+
+  handleThresholdSounds(state, sessionPercent);
+
+  renderActiveView();
+  renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
+
+  elements.signOutButton.hidden = !state.isSignedIn;
+  elements.onboardSignInButton.hidden = state.awaitingCode;
+  elements.onboardSecondary.hidden = state.awaitingCode;
+  elements.onboardCodeForm.hidden = !state.awaitingCode;
+
+  renderSettingsControls(state, lang);
+  renderBannersAndErrors(state, sessionPercent, lang);
+  renderSettings(state, lang);
+}
+
+function handleThresholdSounds(state, sessionPercent) {
+  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
+  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
 
   // Threshold crossing detection — play sound on upward cross
   if (prevSessionPercent !== null) {
@@ -577,11 +576,20 @@ function render(state) {
     criticalDismissed = false;
   }
   prevSessionPercent = sessionPercent;
+}
+
+function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
+  const now = new Date();
+  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
+  const sessionPace = buildUsagePace({
+    slot: session,
+    now,
+    windowMs: SESSION_WINDOW_MS,
+    localHistory: state.localHistory
+  });
 
   setQuotaColorDrift(elements.sessionPercent, sessionPercent);
   setQuotaColorDrift(elements.weeklyPercent, weeklyPercent);
-
-  renderActiveView();
 
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
@@ -627,11 +635,19 @@ function render(state) {
     if (!animatingElements.has(elements.monthCost))
       setCostValue(elements.monthCost, state.monthStats?.cost);
   }
+}
 
-  elements.signOutButton.hidden = !state.isSignedIn;
-  elements.onboardSignInButton.hidden = state.awaitingCode;
-  elements.onboardSecondary.hidden = state.awaitingCode;
-  elements.onboardCodeForm.hidden = !state.awaitingCode;
+function renderSettingsControls(state, lang) {
+  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
+  const soundEnabled = state.preferences?.notifications?.sound ?? false;
+  const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
+  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
+  const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
+  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
+  const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
+  const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
+  const floatingStyle = state.preferences?.floating?.style ?? 'classic';
+
   elements.settingsLanguage.value = lang;
   elements.settingsNotificationsToggle.checked = notificationsEnabled;
   elements.settingsSoundToggle.checked = soundEnabled;
@@ -646,20 +662,21 @@ function render(state) {
   elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
   elements.settingsLimitSoundVolume.disabled = !limitSoundEnabled;
   updateSliderFill(elements.settingsLimitSoundVolume);
-  elements.settingsExpireAlertToggle.checked = expireAlertEnabled;
-  elements.settingsLimitAlertToggle.checked = limitAlertEnabled;
-  elements.settingsRefreshInterval.value = String(refreshInterval);
-  elements.settingsFloatingToggle.checked = floatingEnabled;
-  const floatingStyle = state.preferences?.floating?.style ?? 'classic';
+  elements.settingsExpireAlertToggle.checked = state.preferences?.notifications?.expireAlert ?? false;
+  elements.settingsLimitAlertToggle.checked = state.preferences?.notifications?.limitAlert ?? false;
+  elements.settingsRefreshInterval.value = String(state.preferences?.refresh?.intervalSeconds ?? 30);
+  elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
   elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
   elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
   elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
-  elements.settingsStartupShowWindowToggle.checked = startupShowWindow;
+  elements.settingsStartupShowWindowToggle.checked = state.preferences?.startup?.showWindowOnLogin ?? false;
   elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
-  elements.settingsLaunchWithClaudeCodeToggle.checked = launchWithClaudeCode;
+  elements.settingsLaunchWithClaudeCodeToggle.checked = state.preferences?.integration?.launchWithClaudeCode ?? false;
   elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
+}
 
+function renderBannersAndErrors(state, sessionPercent, lang) {
   if (sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
   else hideBanner(elements.criticalBanner);
   if (sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
@@ -675,8 +692,6 @@ function render(state) {
     state.quotaError && !state.needsReauth ? t(state.quotaError, lang) : null,
     state.authError
   ].filter(Boolean).join(' ');
-
-  renderSettings(state, lang);
 }
 
 function updateLastUpdatedLine() {
@@ -717,10 +732,6 @@ function renderPace(element, pace, lang = currentLanguage()) {
   if (!element) return;
   element.dataset.status = pace?.status ?? 'no_data';
   element.textContent = t(`pace.${pace?.status ?? 'no_data'}`, lang);
-}
-
-function clampPercent(value) {
-  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function setCostValue(element, cost) {
@@ -891,22 +902,22 @@ function applyTranslations(lang) {
   });
 }
 
+function playSound(assetPath, volumeKey) {
+  const audio = new Audio(assetPath);
+  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.[volumeKey] ?? 1.0)));
+  audio.play().catch(error => console.warn('Could not play sound', assetPath, redactSensitive(error)));
+}
+
 function playResetSound() {
-  const audio = new Audio('../../assets/notificationReset.mp3');
-  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.soundVolume ?? 1.0)));
-  audio.play().catch(error => console.warn('Could not play reset sound', redactSensitive(error)));
+  playSound('../../assets/notificationReset.mp3', 'soundVolume');
 }
 
 function playLimitSound() {
-  const audio = new Audio('../../assets/notificationAlert.mp3');
-  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.limitSoundVolume ?? 1.0)));
-  audio.play().catch(error => console.warn('Could not play alert sound', redactSensitive(error)));
+  playSound('../../assets/notificationAlert.mp3', 'limitSoundVolume');
 }
 
 function playFullSound() {
-  const audio = new Audio('../../assets/notificationFull.mp3');
-  audio.volume = Math.max(0, Math.min(1, Number(currentState?.preferences?.notifications?.expireSoundVolume ?? 1.0)));
-  audio.play().catch(error => console.warn('Could not play full sound', redactSensitive(error)));
+  playSound('../../assets/notificationFull.mp3', 'expireSoundVolume');
 }
 
 function updateSliderFill(slider) {

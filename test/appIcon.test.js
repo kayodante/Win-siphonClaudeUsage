@@ -4,12 +4,20 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import electronPath from 'electron';
-
 import { resolveAppIconPath } from '../src/main/appIcon.js';
+
+const electronPath = await loadElectronPath();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const probePath = path.join(__dirname, 'fixtures', 'appIconProbe.mjs');
+
+async function loadElectronPath() {
+  try {
+    return (await import('electron')).default;
+  } catch {
+    return null;
+  }
+}
 
 test('resolveAppIconPath points to the installer icon in development', () => {
   const projectRoot = path.join('K:\\', 'Claude', 'PROJECTS', 'siphon');
@@ -20,7 +28,7 @@ test('resolveAppIconPath points to the installer icon in development', () => {
   );
 });
 
-test('createAppIcon returns a non-empty native image', () => {
+test('createAppIcon returns a non-empty native image', { skip: electronPath ? false : 'electron is not installed' }, () => {
   const result = spawnSync(electronPath, [probePath], {
     cwd: path.resolve(__dirname, '..'),
     encoding: 'utf8',
