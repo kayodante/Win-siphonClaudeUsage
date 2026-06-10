@@ -430,7 +430,14 @@ function registerIpc() {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
     }
-    const destPath = path.join(app.getPath('temp'), `Siphon-Setup-${version}.exe`);
+    const tempDir = app.getPath('temp');
+    const destPath = path.resolve(tempDir, `Siphon-Setup-${version}.exe`);
+    const expectedPrefix = tempDir.endsWith(path.sep) ? tempDir : tempDir + path.sep;
+    if (!destPath.startsWith(expectedPrefix)) {
+      window?.webContents.send('update:error', { message: 'invalid destination path' });
+      return;
+    }
+
     try {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
