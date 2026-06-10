@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 
 console.log('[siphon] main.js: module start');
 
@@ -411,18 +413,22 @@ function registerWindowIpc() {
 }
 
 function registerUpdateIpc() {
-  ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
+  ipcMain.handle('update:download', async (_event, { downloadUrl, checksumUrl, version }) => {
     if (!/^\d+\.\d+\.\d+$/.test(version)) {
       window?.webContents.send('update:error', { message: 'invalid version' });
       return;
     }
     let parsedUrl;
-    try { parsedUrl = new URL(downloadUrl); } catch {
-      window?.webContents.send('update:error', { message: 'invalid download URL' });
+    let parsedChecksumUrl;
+    try {
+      parsedUrl = new URL(downloadUrl);
+      if (checksumUrl) parsedChecksumUrl = new URL(checksumUrl);
+    } catch {
+      window?.webContents.send('update:error', { message: 'invalid URL' });
       return;
     }
     const TRUSTED_HOSTS = new Set(['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com']);
-    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedUrl.hostname)) {
+    if (parsedUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedUrl.hostname) || (parsedChecksumUrl && (parsedChecksumUrl.protocol !== 'https:' || !TRUSTED_HOSTS.has(parsedChecksumUrl.hostname)))) {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
     }
@@ -434,14 +440,38 @@ function registerUpdateIpc() {
       return;
     }
 
+    const effectiveChecksumUrl = checksumUrl || (downloadUrl + '.sha256');
+    const checksumPath = destPath + '.sha256';
+
     try {
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
       }, undefined, TRUSTED_HOSTS);
+
+      await downloadFile(effectiveChecksumUrl, checksumPath, undefined, undefined, TRUSTED_HOSTS);
+
+      const checksumText = fs.readFileSync(checksumPath, 'utf8').trim();
+      const expectedHash = checksumText.split(' ')[0];
+
+      const actualHash = await new Promise((resolve, reject) => {
+        const hash = createHash('sha256');
+        const stream = fs.createReadStream(destPath);
+        stream.on('data', data => hash.update(data));
+        stream.on('end', () => resolve(hash.digest('hex')));
+        stream.on('error', err => reject(err));
+      });
+
+      if (actualHash !== expectedHash) {
+        throw new Error('Checksum verification failed');
+      }
+
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
+      fs.unlink(destPath, () => {});
       window?.webContents.send('update:error', { message: err.message });
+    } finally {
+      fs.unlink(checksumPath, () => {});
     }
   });
 

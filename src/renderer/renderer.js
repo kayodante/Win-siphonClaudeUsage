@@ -113,6 +113,7 @@ let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
 let downloadedFilePath = null;
 let updateVersion = null;
 let updateDownloadUrl = null;
+let updateChecksumUrl = null;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -418,17 +419,18 @@ elements.updateBannerDownload.addEventListener('click', () => {
   if (downloadState === 'idle') {
     if (!updateDownloadUrl) { if (updateUrl) window.siphon.openExternal(updateUrl); return; }
     setDownloadUI('downloading', 0);
-    window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, version: updateVersion });
+    window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, checksumUrl: updateChecksumUrl, version: updateVersion });
   } else if (downloadState === 'ready') {
     window.siphon.installUpdate(downloadedFilePath);
   }
 });
 
-window.siphon.onUpdateAvailable(({ version, url, downloadUrl }) => {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl }) => {
   if (downloadState !== 'downloading') {
     updateUrl = url;
     updateVersion = version;
     updateDownloadUrl = downloadUrl ?? null;
+    updateChecksumUrl = checksumUrl ?? null;
   }
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
