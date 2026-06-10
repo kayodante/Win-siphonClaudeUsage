@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
 
 console.log('[siphon] main.js: module start');
 
@@ -415,14 +417,22 @@ function registerIpc() {
     } catch { /* invalid URL */ }
   });
 
-  ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
+  ipcMain.handle('update:download', async (_event, { downloadUrl, version, sha256Url }) => {
     if (!/^\d+\.\d+\.\d+$/.test(version)) {
       window?.webContents.send('update:error', { message: 'invalid version' });
       return;
     }
-    let parsedUrl;
+    if (!sha256Url) {
+      window?.webContents.send('update:error', { message: 'missing sha256 url for verification' });
+      return;
+    }
+    let parsedUrl, parsedShaUrl;
     try { parsedUrl = new URL(downloadUrl); } catch {
       window?.webContents.send('update:error', { message: 'invalid download URL' });
+      return;
+    }
+    try { parsedShaUrl = new URL(sha256Url); } catch {
+      window?.webContents.send('update:error', { message: 'invalid sha256 URL' });
       return;
     }
     const TRUSTED_HOSTS = ['github.com', 'objects.githubusercontent.com', 'github-releases.githubusercontent.com'];
@@ -430,14 +440,49 @@ function registerIpc() {
       window?.webContents.send('update:error', { message: 'untrusted download URL' });
       return;
     }
+    if (parsedShaUrl.protocol !== 'https:' || !TRUSTED_HOSTS.includes(parsedShaUrl.hostname)) {
+      window?.webContents.send('update:error', { message: 'untrusted sha256 URL' });
+      return;
+    }
     const destPath = path.join(app.getPath('temp'), `Siphon-Setup-${version}.exe`);
+    const sha256DestPath = destPath + '.sha256';
     try {
+      await downloadFile(sha256Url, sha256DestPath, null);
+      // Validate that the file is not unreasonably large before reading
+      const sha256Stats = fs.statSync(sha256DestPath);
+      if (sha256Stats.size > 1024) { // SHA256 hashes are 64 chars + a few chars for filename, 1KB is more than enough
+        throw new Error('sha256 file too large');
+      }
+      const sha256Content = fs.readFileSync(sha256DestPath, 'utf8');
+      const expectedHash = sha256Content.split(' ')[0].trim();
+      fs.unlinkSync(sha256DestPath);
+
       await downloadFile(downloadUrl, destPath, percent => {
         window?.webContents.send('update:progress', { percent });
       });
+
+      const actualHash = await new Promise((resolve, reject) => {
+        const hashSum = createHash('sha256');
+        const readStream = fs.createReadStream(destPath);
+        readStream.on('error', reject);
+        hashSum.on('error', reject);
+        readStream.pipe(hashSum).on('finish', () => resolve(hashSum.read().toString('hex')));
+      });
+
+      if (actualHash !== expectedHash) {
+        fs.unlinkSync(destPath);
+        throw new Error('checksum verification failed');
+      }
+
       pendingInstallPath = destPath;
       window?.webContents.send('update:downloaded', { filePath: destPath });
     } catch (err) {
+      if (fs.existsSync(destPath)) {
+        try { fs.unlinkSync(destPath); } catch (e) { /* ignore */ }
+      }
+      if (fs.existsSync(sha256DestPath)) {
+        try { fs.unlinkSync(sha256DestPath); } catch (e) { /* ignore */ }
+      }
       window?.webContents.send('update:error', { message: err.message });
     }
   });

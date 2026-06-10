@@ -165,24 +165,27 @@ function makeDownloadHttps(responses) {
 
 // ── checkForUpdate — downloadUrl ──────────────────────────────────────────────
 
-test('checkForUpdate includes downloadUrl for installer asset', async () => {
+test('checkForUpdate includes downloadUrl and sha256Url for installer asset', async () => {
   const release = {
     tag_name: 'v1.1.0',
     draft: false,
     prerelease: false,
     assets: [
       { name: 'Siphon Setup 1.1.0.exe', browser_download_url: 'https://cdn.example.com/Siphon+Setup+1.1.0.exe' },
+      { name: 'Siphon Setup 1.1.0.exe.sha256', browser_download_url: 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256' },
       { name: 'Siphon-Portable-1.1.0.exe', browser_download_url: 'https://cdn.example.com/Siphon-Portable-1.1.0.exe' }
     ]
   };
   const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
   assert.equal(result?.downloadUrl, 'https://cdn.example.com/Siphon+Setup+1.1.0.exe');
+  assert.equal(result?.sha256Url, 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256');
 });
 
-test('checkForUpdate sets downloadUrl to null when no installer asset', async () => {
+test('checkForUpdate sets downloadUrl and sha256Url to null when no installer asset', async () => {
   const release = { tag_name: 'v1.1.0', draft: false, prerelease: false, assets: [] };
   const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
   assert.equal(result?.downloadUrl, null);
+  assert.equal(result?.sha256Url, null);
 });
 
 // ── downloadFile ──────────────────────────────────────────────────────────────

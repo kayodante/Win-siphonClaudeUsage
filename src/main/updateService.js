@@ -51,10 +51,14 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
       const asset = release.assets?.find(
         a => a.name.endsWith('.exe') && !a.name.includes('Portable')
       );
+      const sha256Asset = release.assets?.find(
+        a => a.name === `${asset?.name}.sha256`
+      );
       return {
         version: release.tag_name.replace(/^v/, ''),
         url: RELEASES_URL,
-        downloadUrl: asset?.browser_download_url ?? null
+        downloadUrl: asset?.browser_download_url ?? null,
+        sha256Url: sha256Asset?.browser_download_url ?? null
       };
     }
   } catch {
