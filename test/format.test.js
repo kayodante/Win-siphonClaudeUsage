@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  clampPercent,
   formatClockTime,
   formatDaysRemaining,
   formatRelativeUpdated,
-  formatResetDistance,
   formatTimeRemaining,
   formatWeekdayClock,
   hydrateSlot,
@@ -33,25 +33,11 @@ test('formatRelativeUpdated localizes Portuguese output', () => {
   );
 });
 
-test('formatResetDistance keeps English as the default language', () => {
-  assert.equal(
-    formatResetDistance(
-      new Date('2026-05-04T14:35:00Z'),
-      new Date('2026-05-04T12:00:00Z')
-    ),
-    '2 hr 35 min'
-  );
-});
-
-test('formatResetDistance localizes Portuguese output', () => {
-  assert.equal(
-    formatResetDistance(
-      new Date('2026-05-04T14:35:00Z'),
-      new Date('2026-05-04T12:00:00Z'),
-      'pt-BR'
-    ),
-    '2 h 35 min'
-  );
+test('clampPercent rounds and clamps to the 0-100 range', () => {
+  assert.equal(clampPercent(54.4), 54);
+  assert.equal(clampPercent(54.5), 55);
+  assert.equal(clampPercent(-3), 0);
+  assert.equal(clampPercent(120), 100);
 });
 
 test('levelForPercent maps 0-39 to ok', () => {

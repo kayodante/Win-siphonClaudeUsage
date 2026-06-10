@@ -1,5 +1,5 @@
 import { logSafeError } from '../shared/diagnostics.js';
-import { formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
+import { clampPercent, formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 40;
@@ -132,8 +132,4 @@ function renderMeter(percent) {
     seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
     meter.appendChild(seg);
   }
-}
-
-function clampPercent(value) {
-  return Math.max(0, Math.min(100, Math.round(value)));
 }
