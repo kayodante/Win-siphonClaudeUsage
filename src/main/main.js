@@ -39,6 +39,7 @@ import { createTrayIcon } from './trayIcon.js';
 import { checkForUpdate, downloadFile } from './updateService.js';
 import { UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
+import { isSafeExternalUrl } from './security.js';
 import { levelForPercent } from '../shared/format.js';
 import { t } from '../shared/i18n.js';
 import { buildTrayStatus } from '../shared/trayStatus.js';
@@ -408,11 +409,9 @@ function registerIpc() {
   });
   ipcMain.handle('app:quit', () => quit());
   ipcMain.handle('shell:open-external', (_event, url) => {
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== 'https:') return;
+    if (isSafeExternalUrl(url)) {
       shell.openExternal(url);
-    } catch { /* invalid URL */ }
+    }
   });
 
   ipcMain.handle('update:download', async (_event, { downloadUrl, version }) => {
