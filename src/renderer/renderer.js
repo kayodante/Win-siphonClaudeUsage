@@ -767,12 +767,14 @@ function renderMeter(meter, percent) {
   meter.dataset.filled = String(filled);
   if (meter.children.length !== total) {
     meter.replaceChildren();
+    const fragment = document.createDocumentFragment();
     for (let i = 0; i < total; i++) {
       const seg = document.createElement('div');
       seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
       seg.style.setProperty('--i', i);
-      meter.appendChild(seg);
+      fragment.appendChild(seg);
     }
+    meter.appendChild(fragment);
     return;
   }
   for (let i = 0; i < total; i++) {
