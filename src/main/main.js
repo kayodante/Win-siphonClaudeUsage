@@ -39,7 +39,7 @@ import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
 import { checkForUpdate, downloadFile } from './updateService.js';
-import { UsageController } from './usageController.js';
+import { ALLOWED_REFRESH_INTERVALS, UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
 import { isSafeExternalUrl } from './security.js';
 import { levelForPercent } from '../shared/format.js';
@@ -360,8 +360,7 @@ function registerPrefsIpc() {
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     if (preferencePath === 'refresh.intervalSeconds') {
-      const allowedIntervals = new Set([30, 60, 300, 900]);
-      if (!allowedIntervals.has(Number(value))) return;
+      if (!ALLOWED_REFRESH_INTERVALS.has(Number(value))) return;
     }
     if (preferencePath === 'integration.launchWithClaudeCode') {
       if (!app.isPackaged) return;

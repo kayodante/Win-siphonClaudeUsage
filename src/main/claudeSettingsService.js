@@ -41,10 +41,6 @@ export class ClaudeSettingsService {
     return (settings?.hooks?.SessionStart ?? []).some(e => e._siphon === true);
   }
 
-  async hasSiphonHook() {
-    return this._hasSiphonInSettings(await this._readSettings());
-  }
-
   async enable() {
     const settings = await this._readSettings() ?? {};
     if (this._hasSiphonInSettings(settings)) return;

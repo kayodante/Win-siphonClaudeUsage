@@ -46,7 +46,6 @@ const STRINGS = Object.freeze({
     'weekly.reset.full': 'Limit reached',
     'reset.connector.at': 'Resets at {time}',
     'reset.connector.day': 'Resets {weekday}',
-    'reset.connector.dayShort': '{weekday}',
 
     'floating.title': 'Current Session',
     'floating.refresh': 'Refresh',
@@ -180,7 +179,6 @@ const STRINGS = Object.freeze({
     'weekly.reset.full': 'Limite atingido',
     'reset.connector.at': 'Reseta às {time}',
     'reset.connector.day': 'Reseta {weekday}',
-    'reset.connector.dayShort': '{weekday}',
 
     'floating.title': 'Sessão Atual',
     'floating.refresh': 'Atualizar',

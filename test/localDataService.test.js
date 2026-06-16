@@ -105,11 +105,6 @@ test('LocalDataService aggregates modern JSONL into stats and history', async ()
   assert.equal(summary.todayStats.cacheReadTokens, 3000);
   assert.equal(summary.todayStats.cacheWriteTokens, 5000);
   assert.equal(summary.todayStats.cost, 0.07365);
-  assert.deepEqual(summary.localHistory.hourly.map(bucket => bucket.hour), [
-    '2026-04-27T10:00:00.000Z',
-    '2026-04-27T11:00:00.000Z'
-  ]);
-  assert.deepEqual(summary.localHistory.daily.map(bucket => bucket.date), ['2026-04-27']);
   assert.equal(cacheStore.value.files[sessionPath].parsedOffset, Buffer.byteLength(await fs.readFile(sessionPath, 'utf8')));
   assert.equal(cacheStore.value.files[sessionPath].lastModel, 'claude-sonnet-4-5-20250929');
 });

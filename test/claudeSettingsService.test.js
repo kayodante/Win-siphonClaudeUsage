@@ -187,39 +187,3 @@ test('disable is idempotent when file is missing', async () => {
   await fs.rm(dir, { recursive: true });
 });
 
-// ── hasSiphonHook ─────────────────────────────────────────────────────────────
-
-test('hasSiphonHook returns true after enable', async () => {
-  const dir = await tempDir();
-  const sp = path.join(dir, 'settings.json');
-  const svc = makeService(sp);
-  await svc.enable();
-  assert.equal(await svc.hasSiphonHook(), true);
-  await fs.rm(dir, { recursive: true });
-});
-
-test('hasSiphonHook returns false when hook absent', async () => {
-  const dir = await tempDir();
-  const sp = path.join(dir, 'settings.json');
-  await fs.writeFile(sp, JSON.stringify({ model: 'sonnet' }));
-  assert.equal(await makeService(sp).hasSiphonHook(), false);
-  await fs.rm(dir, { recursive: true });
-});
-
-test('hasSiphonHook returns false when file missing', async () => {
-  const dir = await tempDir();
-  const sp = path.join(dir, 'missing.json');
-  assert.equal(await makeService(sp).hasSiphonHook(), false);
-  await fs.rm(dir, { recursive: true });
-});
-
-test('hasSiphonHook returns false after disable', async () => {
-  const dir = await tempDir();
-  const sp = path.join(dir, 'settings.json');
-  const svc = makeService(sp);
-  await svc.enable();
-  await svc.disable();
-  assert.equal(await svc.hasSiphonHook(), false);
-  await fs.rm(dir, { recursive: true });
-});
-

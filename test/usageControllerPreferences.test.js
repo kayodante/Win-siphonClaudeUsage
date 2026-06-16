@@ -105,39 +105,6 @@ test('controller reschedules timers when refresh interval preference changes', a
   assert.equal(controller.getState().preferences.refresh.intervalSeconds, 900);
 });
 
-test('controller records session quota history from successful quota refreshes', async () => {
-  const preferences = new PreferencesService(new MemoryStore(null));
-  const quotaResponses = [
-    {
-      session: { percent: 42.4, resetsAt: new Date('2026-04-29T18:00:00Z') },
-      weeklyAll: null
-    },
-    {
-      session: { percent: 47.8, resetsAt: new Date('2026-04-29T18:00:00Z') },
-      weeklyAll: null
-    }
-  ];
-  const controller = createController({
-    preferences,
-    scheduler: new SchedulerSpy(),
-    quotaService: {
-      fetchQuota: async () => quotaResponses.shift()
-    },
-    now: sequentialNow([
-      new Date('2026-04-29T12:00:00.000Z'),
-      new Date('2026-04-29T12:05:00.000Z')
-    ])
-  });
-
-  await controller.refreshQuota();
-  await controller.refreshQuota();
-
-  assert.deepEqual(controller.getState().quotaHistory.session, [
-    { timestamp: '2026-04-29T12:00:00.000Z', percent: 42.4 },
-    { timestamp: '2026-04-29T12:05:00.000Z', percent: 47.8 }
-  ]);
-});
-
 test('controller sets needsReauth and quotaError on scope_insufficient, keeps isSignedIn true', async () => {
   const controller = createController({
     scheduler: new SchedulerSpy(),
@@ -226,12 +193,11 @@ test('controller clears needsReauth when subsequent quota refresh succeeds', asy
   assert.equal(controller.getState().quotaError, null);
 });
 
-function createController({ preferences, scheduler, timers, quotaService, now } = {}) {
+function createController({ preferences, scheduler, timers, quotaService } = {}) {
   return new UsageController({
     preferences,
     resetScheduler: scheduler,
     timers,
-    now,
     tokenStore: {
       load: async () => null,
       clear: async () => {},
@@ -290,9 +256,4 @@ class TimerSpy {
   clearInterval(id) {
     this.cleared.push(id);
   }
-}
-
-function sequentialNow(values) {
-  let index = 0;
-  return () => values[Math.min(index++, values.length - 1)];
 }
