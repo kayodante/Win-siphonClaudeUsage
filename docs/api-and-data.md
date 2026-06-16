@@ -418,6 +418,3 @@ Quick reference for renaming or debugging.
 | Cache-write tokens  | `cacheWrite` / `cache_write` | `cacheWrite` / `cache_write` | `todayStats.cacheWriteTokens`        |
 | Session %           | —                     | —                     | `quota.session.percent`              |
 | Session reset time  | —                     | —                     | `quota.session.resetsAt` (ISO string)|
-| Hourly local history| JSONL assistant usage | pricing by model      | `localHistory.hourly[]`              |
-| Daily local history | JSONL assistant usage / legacy day cache | pricing by model | `localHistory.daily[]` |
-| Session trend       | OAuth usage endpoint  | —                     | `quotaHistory.session[]`             |

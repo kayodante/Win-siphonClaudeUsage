@@ -26,7 +26,6 @@ const BUNDLED_PRICING = {
 
 const CACHE_VERSION = 1;
 const LOOKBACK_MS = 35 * 24 * 60 * 60 * 1000;
-const MAX_HOURLY_BUCKETS = 72;
 
 export class LocalDataService {
   constructor(claudeDir = path.join(os.homedir(), '.claude'), options = {}) {
@@ -86,9 +85,8 @@ export function summarizeUsage(cache, pricing, now = new Date()) {
   }
 
   return {
-    todayStats: aggregateToday(todayModels),
-    monthStats: aggregateMonth(monthModels),
-    localHistory: buildLocalHistory({ days, pricing, now }),
+    todayStats: aggregatePeriod(todayModels),
+    monthStats: aggregatePeriod(monthModels),
     lastUpdated: now
   };
 }
@@ -128,17 +126,7 @@ function tokenCost(tokens, price) {
   );
 }
 
-function aggregateToday(map) {
-  const totals = emptyAccumulator();
-  const byModel = {};
-  for (const [model, entry] of map.entries()) {
-    addTokens(totals, entry, entry.cost);
-    byModel[model] = toPerModelStats(model, entry, entry.cost);
-  }
-  return toPeriodStats(totals, byModel);
-}
-
-function aggregateMonth(map) {
+function aggregatePeriod(map) {
   const totals = emptyAccumulator();
   const byModel = {};
   for (const [model, entry] of map.entries()) {
@@ -277,12 +265,7 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
   await cacheStore.save(nextCache);
 
   const days = mergeFileMaps(nextFiles, 'days');
-  const hourly = mergeFileMaps(nextFiles, 'hourly');
-  const summary = summarizeUsage({ days }, pricing, now);
-  return {
-    ...summary,
-    localHistory: buildLocalHistory({ days, hourly, pricing, now })
-  };
+  return summarizeUsage({ days }, pricing, now);
 }
 
 async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
@@ -360,47 +343,6 @@ function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
   }
 
   return { aggregate, remainder };
-}
-
-function buildLocalHistory({ days = {}, hourly = {}, pricing, now }) {
-  const cutoff = new Date(now.getTime() - LOOKBACK_MS);
-  return {
-    hourly: aggregateHistory(hourly, pricing, cutoff, MAX_HOURLY_BUCKETS, 'hour'),
-    daily: aggregateHistory(days, pricing, cutoff, 35, 'date')
-  };
-}
-
-function aggregateHistory(bucketMap, pricing, cutoff, limit, labelKey) {
-  return Object.entries(bucketMap)
-    .filter(([key]) => {
-      const date = new Date(labelKey === 'hour' ? key : `${key}T23:59:59.999`);
-      return !Number.isNaN(date.getTime()) && date >= cutoff;
-    })
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-limit)
-    .map(([key, modelMap]) => {
-      const totals = emptyAccumulator();
-      for (const [model, rawTokens] of Object.entries(modelMap ?? {})) {
-        const tokens = normalizeTokens(rawTokens);
-        const price = findPrice(pricing, model);
-        addTokens(totals, tokens, price ? tokenCost(tokens, price) : 0);
-      }
-      return {
-        [labelKey]: key,
-        ...toHistoryStats(totals)
-      };
-    });
-}
-
-function toHistoryStats(totals) {
-  return {
-    inputTokens: totals.inputTokens,
-    outputTokens: totals.outputTokens,
-    cacheReadTokens: totals.cacheReadTokens,
-    cacheWriteTokens: totals.cacheWriteTokens,
-    totalTokens: totals.inputTokens + totals.outputTokens,
-    cost: totals.cost
-  };
 }
 
 function addToNestedTokenMap(map, key, model, tokens) {

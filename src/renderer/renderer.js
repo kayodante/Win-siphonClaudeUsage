@@ -502,31 +502,19 @@ function cancelCountUp(element) {
   if (id != null) { cancelAnimationFrame(id); animatingElements.delete(element); }
 }
 
-function countUpPercent(element, target, { duration = 650, delay = 0 } = {}) {
-  if (reducedMotion()) { element.textContent = target != null ? formatPercent(target) : '--'; return; }
-  cancelCountUp(element);
-  element.textContent = formatPercent(0);
-  const t0 = performance.now() + delay;
-  function tick(now) {
-    if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
-    const p = Math.min((now - t0) / duration, 1);
-    element.textContent = formatPercent(cubicEaseOut(p) * target);
-    if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
-    else animatingElements.delete(element);
-  }
-  animatingElements.set(element, requestAnimationFrame(tick));
+function setPercentValue(element, value) {
+  element.textContent = formatPercent(value);
 }
 
-function countUpCost(element, target, { duration = 600, delay = 0 } = {}) {
-  if (target == null || Number.isNaN(target)) { setCostValue(element, target); return; }
-  if (reducedMotion()) { setCostValue(element, target); return; }
+function animateCountUp(element, target, setValue, { duration = 650, delay = 0 } = {}) {
+  if (target == null || Number.isNaN(target) || reducedMotion()) { setValue(element, target); return; }
   cancelCountUp(element);
-  setCostValue(element, 0);
+  setValue(element, 0);
   const t0 = performance.now() + delay;
   function tick(now) {
     if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
     const p = Math.min((now - t0) / duration, 1);
-    setCostValue(element, cubicEaseOut(p) * target);
+    setValue(element, cubicEaseOut(p) * target);
     if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
     else animatingElements.delete(element);
   }
@@ -586,8 +574,7 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
   const sessionPace = buildUsagePace({
     slot: session,
     now,
-    windowMs: SESSION_WINDOW_MS,
-    localHistory: state.localHistory
+    windowMs: SESSION_WINDOW_MS
   });
 
   setQuotaColorDrift(elements.sessionPercent, sessionPercent);
@@ -609,10 +596,10 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
   isEntering = false;
 
   if (entering) {
-    countUpPercent(elements.sessionPercent, sessionPercent, { delay: 310 });
-    countUpPercent(elements.weeklyPercent, weeklyPercent, { delay: 380 });
-    countUpCost(elements.todayCost, state.todayStats?.cost, { delay: 440 });
-    countUpCost(elements.monthCost, state.monthStats?.cost, { delay: 470 });
+    animateCountUp(elements.sessionPercent, sessionPercent, setPercentValue, { duration: 650, delay: 310 });
+    animateCountUp(elements.weeklyPercent, weeklyPercent, setPercentValue, { duration: 650, delay: 380 });
+    animateCountUp(elements.todayCost, state.todayStats?.cost, setCostValue, { duration: 600, delay: 440 });
+    animateCountUp(elements.monthCost, state.monthStats?.cost, setCostValue, { duration: 600, delay: 470 });
     prevRenderedSessionPct = sessionPercent;
     prevRenderedWeeklyPct = weeklyPercent;
   } else {

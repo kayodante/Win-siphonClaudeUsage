@@ -9,8 +9,7 @@ import { logSafeError, safeErrorMessage } from '../shared/diagnostics.js';
 
 const DEFAULT_LOCAL_INTERVAL_MS = 30_000;
 const MIN_QUOTA_INTERVAL_MS = 120_000;
-const ALLOWED_REFRESH_INTERVALS = new Set([30, 60, 300, 900]);
-const MAX_QUOTA_HISTORY_POINTS = 96;
+export const ALLOWED_REFRESH_INTERVALS = new Set([30, 60, 300, 900]);
 
 export class UsageController extends EventEmitter {
   constructor({
@@ -22,8 +21,7 @@ export class UsageController extends EventEmitter {
     tokenStore,
     resetScheduler,
     openExternal,
-    timers = globalThis,
-    now = () => new Date()
+    timers = globalThis
   }) {
     super();
     this.localService = localService;
@@ -35,7 +33,6 @@ export class UsageController extends EventEmitter {
     this.resetScheduler = resetScheduler;
     this.openExternal = openExternal;
     this.timers = timers;
-    this.now = now;
     this.authFlow = null;
     this.localTimer = null;
     this.quotaTimer = null;
@@ -47,9 +44,7 @@ export class UsageController extends EventEmitter {
     this.state = {
       todayStats: emptyStats(),
       monthStats: emptyStats(),
-      localHistory: emptyLocalHistory(),
       quota: null,
-      quotaHistory: emptyQuotaHistory(),
       localError: null,
       quotaError: null,
       authError: null,
@@ -105,7 +100,6 @@ export class UsageController extends EventEmitter {
       const summary = await this.localService.load();
       this.state.todayStats = summary.todayStats;
       this.state.monthStats = summary.monthStats;
-      this.state.localHistory = summary.localHistory ?? emptyLocalHistory();
       this.state.lastUpdated = summary.lastUpdated.toISOString();
       this.state.localError = null;
     } catch (error) {
@@ -131,7 +125,6 @@ export class UsageController extends EventEmitter {
     try {
       const quota = await this.quotaService.fetchQuota();
       this.state.quota = serializeQuota(quota);
-      this.#recordQuotaHistory(this.state.quota.session);
       this.state.quotaError = null;
       this.state.needsReauth = false;
       this.state.isSignedIn = true;
@@ -206,7 +199,6 @@ export class UsageController extends EventEmitter {
     this.state.awaitingCode = false;
     this.state.isSignedIn = false;
     this.state.quota = null;
-    this.state.quotaHistory = emptyQuotaHistory();
     this.state.profile = null;
     this.state.authError = null;
     this.state.quotaError = null;
@@ -268,15 +260,6 @@ export class UsageController extends EventEmitter {
     }
   }
 
-  #recordQuotaHistory(session) {
-    if (!session || session.percent == null) return;
-    this.state.quotaHistory.session.push({
-      timestamp: this.now().toISOString(),
-      percent: session.percent
-    });
-    this.state.quotaHistory.session = this.state.quotaHistory.session.slice(-MAX_QUOTA_HISTORY_POINTS);
-  }
-
   #emit() {
     if (!this._dirty) return;
     this._dirty = false;
@@ -325,15 +308,3 @@ function emptyStats() {
   };
 }
 
-function emptyLocalHistory() {
-  return {
-    hourly: [],
-    daily: []
-  };
-}
-
-function emptyQuotaHistory() {
-  return {
-    session: []
-  };
-}

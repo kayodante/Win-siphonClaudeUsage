@@ -82,24 +82,3 @@ test('buildUsagePace uses the 7-day weekly reset window', () => {
   assert.equal(pace.elapsedPercent, 25);
   assert.equal(pace.status, 'on_track');
 });
-
-test('buildUsagePace summarizes local history inside the inferred window', () => {
-  const pace = buildUsagePace({
-    slot: {
-      percent: 25,
-      resetsAt: new Date('2026-05-04T17:00:00.000Z')
-    },
-    now: new Date('2026-05-04T14:00:00.000Z'),
-    windowMs: SESSION_WINDOW_MS,
-    localHistory: {
-      hourly: [
-        { hour: '2026-05-04T11:00:00.000Z', totalTokens: 300 },
-        { hour: '2026-05-04T12:00:00.000Z', totalTokens: 500 },
-        { hour: '2026-05-04T13:00:00.000Z', totalTokens: 700 }
-      ]
-    }
-  });
-
-  assert.equal(pace.localActivity.totalTokens, 1200);
-  assert.equal(pace.localActivity.bucketCount, 2);
-});

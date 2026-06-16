@@ -7,8 +7,7 @@ const EARLY_DEPLETION_MARGIN_MS = 30 * 60 * 1000;
 export function buildUsagePace({
   slot,
   now = new Date(),
-  windowMs = SESSION_WINDOW_MS,
-  localHistory = null
+  windowMs = SESSION_WINDOW_MS
 } = {}) {
   const percent = Number(slot?.percent);
   const resetsAt = normalizeDate(slot?.resetsAt);
@@ -27,7 +26,6 @@ export function buildUsagePace({
   const remainingMs = resetsAt.getTime() - currentTime.getTime();
   const elapsedPercent = roundPercent((elapsedMs / windowMs) * 100);
   const projectedDepletionAt = projectDepletion({ percent, elapsedMs, windowStart });
-  const localActivity = summarizeLocalActivity(localHistory, windowStart, currentTime);
 
   let status = 'on_track';
   if (percent >= 100) {
@@ -49,8 +47,7 @@ export function buildUsagePace({
     remainingMs,
     resetsAt,
     windowStart,
-    projectedDepletionAt,
-    localActivity
+    projectedDepletionAt
   };
 }
 
@@ -63,7 +60,6 @@ function emptyPace(overrides = {}) {
     resetsAt: null,
     windowStart: null,
     projectedDepletionAt: null,
-    localActivity: { totalTokens: 0, cost: 0, bucketCount: 0 },
     ...overrides
   };
 }
@@ -72,34 +68,6 @@ function projectDepletion({ percent, elapsedMs, windowStart }) {
   if (percent <= 0 || elapsedMs <= 0) return null;
   const projectedMs = (elapsedMs / percent) * 100;
   return new Date(windowStart.getTime() + projectedMs);
-}
-
-function summarizeLocalActivity(localHistory, windowStart, now) {
-  const buckets = [
-    ...(localHistory?.hourly ?? []).map(bucket => ({
-      date: normalizeDate(bucket.hour),
-      totalTokens: Number(bucket.totalTokens ?? 0),
-      cost: Number(bucket.cost ?? 0)
-    })),
-    ...(localHistory?.daily ?? []).map(bucket => ({
-      date: normalizeDate(`${bucket.date}T23:59:59.999`),
-      totalTokens: Number(bucket.totalTokens ?? 0),
-      cost: Number(bucket.cost ?? 0)
-    }))
-  ].filter(bucket =>
-    bucket.date &&
-    bucket.date >= windowStart &&
-    bucket.date <= now
-  );
-
-  return buckets.reduce(
-    (summary, bucket) => ({
-      totalTokens: summary.totalTokens + (Number.isFinite(bucket.totalTokens) ? bucket.totalTokens : 0),
-      cost: summary.cost + (Number.isFinite(bucket.cost) ? bucket.cost : 0),
-      bucketCount: summary.bucketCount + 1
-    }),
-    { totalTokens: 0, cost: 0, bucketCount: 0 }
-  );
 }
 
 function normalizeDate(value) {
