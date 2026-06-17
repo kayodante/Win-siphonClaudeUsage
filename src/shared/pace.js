@@ -29,7 +29,7 @@ export function buildUsagePace({
 
   let status = 'on_track';
   if (percent >= 100) {
-    status = 'likely_out';
+    status = 'depleted';
   } else if (
     percent >= 80 &&
     projectedDepletionAt &&
