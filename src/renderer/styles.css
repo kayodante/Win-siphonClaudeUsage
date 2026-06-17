@@ -816,7 +816,8 @@ body[data-view="onboard"] .app-footer {
   color: var(--level-warn);
 }
 
-.quota-pace[data-status="likely_out"] {
+.quota-pace[data-status="likely_out"],
+.quota-pace[data-status="depleted"] {
   color: var(--level-critical);
 }
 

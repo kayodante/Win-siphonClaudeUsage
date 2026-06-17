@@ -49,21 +49,17 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 Download the latest `Siphon Setup <version>.exe` from [Releases](../../releases) and run it. The installer is per-user — no admin elevation required. A Start Menu entry is created under **Siphon**, and an optional desktop shortcut is offered on the final page.
 
-### From source
+### Portable
+
+Download `Siphon-Portable-<version>.exe` from [Releases](../../releases) — no install, just run.
+
+### Via winget
 
 ```powershell
-git clone https://github.com/kayodante/Win-siphonClaudeUsage.git
-cd Win-siphonClaudeUsage
-npm install
-npm start
+winget install win-siphon
 ```
 
-To build the installer yourself:
-
-```powershell
-npm run build:win
-# Output: dist/Siphon Setup <version>.exe
-```
+New releases go through [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) approval, so the winget version can lag a few days behind GitHub Releases.
 
 ## How it works
 
