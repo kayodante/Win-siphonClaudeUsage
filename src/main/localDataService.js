@@ -365,10 +365,29 @@ function normalizeJsonlUsage(usage) {
 
 function mergeFileMaps(files, key) {
   const merged = {};
-  for (const fileCache of Object.values(files)) {
-    for (const [bucket, modelMap] of Object.entries(fileCache?.[key] ?? {})) {
-      for (const [model, tokens] of Object.entries(modelMap ?? {})) {
-        addToNestedTokenMap(merged, bucket, model, normalizeTokens(tokens));
+  for (const fileKey in files) {
+    const fileCache = files[fileKey];
+    const targetMap = fileCache && fileCache[key];
+    if (!targetMap) continue;
+
+    for (const bucket in targetMap) {
+      const modelMap = targetMap[bucket];
+      if (!modelMap) continue;
+
+      for (const model in modelMap) {
+        const tokens = modelMap[model];
+        if (!tokens) continue;
+
+        let targetBucket = merged[bucket];
+        if (!targetBucket) merged[bucket] = targetBucket = {};
+
+        let targetModel = targetBucket[model];
+        if (!targetModel) targetBucket[model] = targetModel = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+
+        targetModel.input += Number(tokens.input ?? tokens.inputTokens ?? 0);
+        targetModel.output += Number(tokens.output ?? tokens.outputTokens ?? 0);
+        targetModel.cacheRead += Number(tokens.cacheRead ?? tokens.cache_read ?? 0);
+        targetModel.cacheWrite += Number(tokens.cacheWrite ?? tokens.cache_write ?? 0);
       }
     }
   }
