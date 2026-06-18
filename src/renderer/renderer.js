@@ -582,15 +582,7 @@ function handleThresholdSounds(state, sessionPercent) {
   prevSessionPercent = sessionPercent;
 }
 
-function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
-  const now = new Date();
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
-  const sessionPace = buildUsagePace({
-    slot: session,
-    now,
-    windowMs: SESSION_WINDOW_MS
-  });
-
+function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang }) {
   setQuotaColorDrift(elements.sessionPercent, sessionPercent);
   setQuotaColorDrift(elements.weeklyPercent, weeklyPercent);
 
@@ -600,15 +592,16 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
+}
 
+function updateStatsAndPills({ state, notificationsEnabled, lang }) {
   renderNotificationPill(notificationsEnabled, lang);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
   elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens) ?? '';
   updateLastUpdatedLine();
+}
 
-  const entering = isEntering;
-  isEntering = false;
-
+function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering }) {
   if (entering) {
     animateCountUp(elements.sessionPercent, sessionPercent, setPercentValue, { duration: 650, delay: 310 });
     animateCountUp(elements.weeklyPercent, weeklyPercent, setPercentValue, { duration: 650, delay: 380 });
@@ -638,6 +631,24 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
     if (!animatingElements.has(elements.monthCost))
       setCostValue(elements.monthCost, state.monthStats?.cost);
   }
+}
+
+function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
+  const now = new Date();
+  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
+  const sessionPace = buildUsagePace({
+    slot: session,
+    now,
+    windowMs: SESSION_WINDOW_MS
+  });
+
+  updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
+  updateStatsAndPills({ state, notificationsEnabled, lang });
+
+  const entering = isEntering;
+  isEntering = false;
+
+  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering });
 }
 
 function renderSettingsControls(state, lang) {
