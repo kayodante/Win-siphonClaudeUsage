@@ -305,11 +305,14 @@ async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
 // parse boundary would be counted twice. In practice duplicate records are
 // written in the same flush, so the window of exposure is negligible.
 function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
-  const lines = chunk.split('\n');
-  const endsWithNewline = chunk.endsWith('\n');
-  const remainder = endsWithNewline ? '' : lines.pop() ?? '';
+  let startIndex = 0;
+  let endIndex = chunk.indexOf('\n');
 
-  for (const line of lines) {
+  while (endIndex !== -1) {
+    const line = chunk.substring(startIndex, endIndex);
+    startIndex = endIndex + 1;
+    endIndex = chunk.indexOf('\n', startIndex);
+
     if (!line.trim()) continue;
     let record;
     try {
@@ -342,6 +345,7 @@ function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
     aggregate.lastTokenTotals = tokens;
   }
 
+  const remainder = chunk.substring(startIndex);
   return { aggregate, remainder };
 }
 
