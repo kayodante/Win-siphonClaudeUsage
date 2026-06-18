@@ -39,6 +39,7 @@ import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
+import { UsageAlertService } from "./usageAlerts.js";
 import { checkForUpdate, downloadFile } from './updateService.js';
 import { ALLOWED_REFRESH_INTERVALS, UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
@@ -60,8 +61,9 @@ let controller = null;
 let claudeSettingsService = null;
 let preferences = null;
 let trayIconKey = 'ok-ok';
-let lastKnownSessionPercent = null;
+
 let pendingInstallPath = null;
+let usageAlertService = null;
 
 app.setAppUserModelId('com.kayodantes.siphon');
 
@@ -125,6 +127,7 @@ async function onReady() {
     openExternal: url => shell.openExternal(url)
   });
 
+  usageAlertService = new UsageAlertService({ showNotification });
   floatingWindow = new FloatingWindowController({
     BrowserWindow,
     htmlPath: path.join(projectRoot, 'src', 'renderer', 'floating.html'),
@@ -145,7 +148,7 @@ async function onReady() {
     window?.webContents.send('state-changed', state);
     syncFloatingWindow(state);
     updateTray(state);
-    void checkUsageAlerts(state).catch(err => logSafeError('[alerts] checkUsageAlerts failed:', err));
+    void usageAlertService.checkUsageAlerts(state).catch(err => logSafeError('[alerts] checkUsageAlerts failed:', err));
   });
 
   preferences.on('change', ({ path: preferencePath, value, preferences: nextPreferences }) => {
@@ -290,30 +293,6 @@ function updateTray(state) {
   );
 }
 
-async function checkUsageAlerts(state) {
-  const percent = state.quota?.session?.percent ?? null;
-  if (percent === null) return;
-
-  const lang = state.preferences?.language ?? 'en';
-  const expireAlert = state.preferences?.notifications?.expireAlert ?? false;
-  const limitAlert = state.preferences?.notifications?.limitAlert ?? false;
-  const prev = lastKnownSessionPercent;
-  lastKnownSessionPercent = percent;
-
-  if (prev === null) return;
-
-  if (expireAlert && prev < 100 && percent >= 100) {
-    showNotification(t('notification.expireTitle', lang), t('notification.expireBody', lang));
-  }
-
-  if (limitAlert) {
-    if (prev < 90 && percent >= 90) {
-      showNotification(t('alert.critical.title', lang), t('alert.critical.body', lang));
-    } else if (prev < 70 && percent >= 70) {
-      showNotification(t('alert.highUsage.title', lang), t('alert.highUsage.body', lang));
-    }
-  }
-}
 
 function showNotification(title, body) {
   const notif = new Notification({ title, body, silent: true });
