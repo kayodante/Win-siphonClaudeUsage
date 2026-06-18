@@ -58,6 +58,8 @@ let window = null;
 let floatingWindow = null;
 let controller = null;
 let claudeSettingsService = null;
+let windowHasSavedPosition = false;
+let windowBoundsSaveTimer = null;
 let preferences = null;
 let trayIconKey = 'ok-ok';
 let lastKnownSessionPercent = null;
@@ -134,7 +136,7 @@ async function onReady() {
   });
 
   console.log('[siphon] creating window');
-  createWindow();
+  createWindow(initialPreferences.window);
   console.log('[siphon] creating tray');
   createTray();
   console.log('[siphon] registering IPC');
@@ -208,16 +210,38 @@ app.on('before-quit', () => {
   controller?.stop();
 });
 
-function createWindow() {
+function fitsOnAnyDisplay(bounds) {
+  return electronScreen.getAllDisplays().some(d => {
+    const b = d.bounds;
+    return (
+      bounds.x >= b.x &&
+      bounds.y >= b.y &&
+      bounds.x + bounds.width <= b.x + b.width &&
+      bounds.y + bounds.height <= b.y + b.height
+    );
+  });
+}
+
+function createWindow(savedBounds) {
   Menu.setApplicationMenu(null);
 
   const { workArea } = electronScreen.getPrimaryDisplay();
-  const height = Math.max(600, Math.min(711, Math.round(workArea.height * 0.85)));
+  const defaultHeight = Math.max(600, Math.min(711, Math.round(workArea.height * 0.85)));
+  const defaultWidth = 320;
+
+  windowHasSavedPosition = Boolean(
+    savedBounds &&
+    Number.isFinite(savedBounds.x) &&
+    Number.isFinite(savedBounds.y) &&
+    Number.isFinite(savedBounds.width) &&
+    Number.isFinite(savedBounds.height) &&
+    fitsOnAnyDisplay(savedBounds)
+  );
 
   window = new BrowserWindow({
-    width: 340,
-    height,
-    minWidth: 340,
+    width: defaultWidth,
+    height: defaultHeight,
+    minWidth: 310,
     minHeight: 600,
     resizable: true,
     show: false,
@@ -233,12 +257,45 @@ function createWindow() {
     }
   });
 
+  if (windowHasSavedPosition) {
+    window.once('ready-to-show', () => {
+      window.setPosition(savedBounds.x, savedBounds.y, false);
+      setImmediate(() => {
+        if (window && !window.isDestroyed()) {
+          window.setSize(savedBounds.width, savedBounds.height, false);
+        }
+      });
+    });
+  }
+
   window.on('close', event => {
     if (!app.isQuitting) {
       event.preventDefault();
       window.hide();
     }
   });
+
+  window.on('move', scheduleWindowBoundsSave);
+  window.on('resize', scheduleWindowBoundsSave);
+}
+
+function scheduleWindowBoundsSave() {
+  if (!window || window.isDestroyed()) return;
+  if (windowBoundsSaveTimer) clearTimeout(windowBoundsSaveTimer);
+  windowBoundsSaveTimer = setTimeout(() => {
+    windowBoundsSaveTimer = null;
+    void saveWindowBounds();
+  }, 500);
+}
+
+async function saveWindowBounds() {
+  if (!window || window.isDestroyed() || !controller) return;
+  const { x, y, width, height } = window.getBounds();
+  windowHasSavedPosition = true;
+  await controller.preferences.set('window.x', x);
+  await controller.preferences.set('window.y', y);
+  await controller.preferences.set('window.width', width);
+  await controller.preferences.set('window.height', height);
 }
 
 function createTray() {
@@ -538,7 +595,7 @@ function syncFloatingWindow(state) {
 
 function showWindow() {
   if (!window || window.isDestroyed()) return;
-  if (!window.isVisible()) positionWindow();
+  if (!window.isVisible() && !windowHasSavedPosition) positionWindow();
   if (window.isMinimized()) {
     window.restore();
   }
