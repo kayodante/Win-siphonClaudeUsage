@@ -450,7 +450,7 @@ function registerUpdateIpc() {
 
       await downloadFile(effectiveChecksumUrl, checksumPath, undefined, undefined, TRUSTED_HOSTS);
 
-      const checksumText = fs.readFileSync(checksumPath, 'utf8').trim();
+      const checksumText = (await fs.promises.readFile(checksumPath, 'utf8')).trim();
       const expectedHash = checksumText.split(' ')[0];
 
       const actualHash = await new Promise((resolve, reject) => {
