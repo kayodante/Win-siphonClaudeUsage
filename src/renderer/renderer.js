@@ -114,6 +114,7 @@ let downloadedFilePath = null;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
+let updateWingetManaged = false;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -157,7 +158,15 @@ function setDownloadUI(state, percent) {
   const lang = currentState?.preferences?.language ?? 'en';
   downloadState = state;
   btn.dataset.state = state;
-  if (state === 'downloading') {
+  if (state === 'winget') {
+    btn.textContent = lang === 'pt-BR' ? 'Atualizar e reiniciar' : 'Update & restart';
+    btn.disabled = false;
+    dismiss.hidden = false;
+  } else if (state === 'updating') {
+    btn.textContent = lang === 'pt-BR' ? 'Atualizando…' : 'Updating…';
+    btn.disabled = true;
+    dismiss.hidden = true;
+  } else if (state === 'downloading') {
     btn.textContent = `${percent}%`;
     btn.disabled = true;
     dismiss.hidden = true;
@@ -416,7 +425,10 @@ elements.updateBannerDismiss.addEventListener('click', () => {
   hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
-  if (downloadState === 'idle') {
+  if (downloadState === 'winget') {
+    setDownloadUI('updating', 0);
+    window.siphon.installViaWinget();
+  } else if (downloadState === 'idle') {
     if (!updateDownloadUrl) { if (updateUrl) window.siphon.openExternal(updateUrl); return; }
     setDownloadUI('downloading', 0);
     window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, checksumUrl: updateChecksumUrl, version: updateVersion });
@@ -425,16 +437,18 @@ elements.updateBannerDownload.addEventListener('click', () => {
   }
 });
 
-window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl }) => {
-  if (downloadState !== 'downloading') {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, wingetManaged }) => {
+  if (downloadState !== 'downloading' && downloadState !== 'updating') {
     updateUrl = url;
     updateVersion = version;
     updateDownloadUrl = downloadUrl ?? null;
     updateChecksumUrl = checksumUrl ?? null;
+    updateWingetManaged = Boolean(wingetManaged);
   }
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
-    lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
+    lang === 'pt-BR' ? `v${version} disponível.` : `v${version} is available.`;
+  if (updateWingetManaged) setDownloadUI('winget', 0);
   if (!updateDismissed) showBanner(elements.updateBanner);
 });
 
