@@ -217,6 +217,7 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
     return summarizeUsage(null, null, now);
   }
 
+  const jsonlTasks = [];
   await Promise.all(
     projectEntries
       .filter(e => e.isDirectory())
@@ -228,34 +229,48 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
         } catch {
           return;
         }
-        await Promise.all(
-          files
-            .filter(f => f.endsWith('.jsonl'))
-            .map(async file => {
-              const filePath = path.join(projectPath, file);
-              let stat;
-              try {
-                stat = await fsImpl.stat(filePath);
-                if (stat.mtimeMs < cutoff.getTime()) return;
-              } catch {
-                return;
-              }
-              const previous = cache.files[filePath];
-              if (isUnchanged(previous, stat)) {
-                nextFiles[filePath] = previous;
-                return;
-              }
-              nextFiles[filePath] = await parseJsonlFile({
-                filePath,
-                stat,
-                previous,
-                cutoff,
-                fsImpl
-              });
-            })
-        );
+        for (const file of files) {
+          if (file.endsWith('.jsonl')) {
+            jsonlTasks.push({ projectPath, file });
+          }
+        }
       })
   );
+
+  const concurrencyLimit = 10;
+  const iterator = jsonlTasks.values();
+  const workers = [];
+
+  const worker = async () => {
+    for (const { projectPath, file } of iterator) {
+      const filePath = path.join(projectPath, file);
+      let stat;
+      try {
+        stat = await fsImpl.stat(filePath);
+        if (stat.mtimeMs < cutoff.getTime()) continue;
+      } catch {
+        continue;
+      }
+      const previous = cache.files[filePath];
+      if (isUnchanged(previous, stat)) {
+        nextFiles[filePath] = previous;
+        continue;
+      }
+      nextFiles[filePath] = await parseJsonlFile({
+        filePath,
+        stat,
+        previous,
+        cutoff,
+        fsImpl
+      });
+    }
+  };
+
+  for (let i = 0; i < concurrencyLimit; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
 
   const nextCache = {
     version: CACHE_VERSION,
@@ -305,11 +320,14 @@ async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
 // parse boundary would be counted twice. In practice duplicate records are
 // written in the same flush, so the window of exposure is negligible.
 function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
-  const lines = chunk.split('\n');
-  const endsWithNewline = chunk.endsWith('\n');
-  const remainder = endsWithNewline ? '' : lines.pop() ?? '';
+  let startIndex = 0;
+  let endIndex = chunk.indexOf('\n');
 
-  for (const line of lines) {
+  while (endIndex !== -1) {
+    const line = chunk.substring(startIndex, endIndex);
+    startIndex = endIndex + 1;
+    endIndex = chunk.indexOf('\n', startIndex);
+
     if (!line.trim()) continue;
     let record;
     try {
@@ -342,6 +360,7 @@ function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
     aggregate.lastTokenTotals = tokens;
   }
 
+  const remainder = chunk.substring(startIndex);
   return { aggregate, remainder };
 }
 
@@ -365,10 +384,29 @@ function normalizeJsonlUsage(usage) {
 
 function mergeFileMaps(files, key) {
   const merged = {};
-  for (const fileCache of Object.values(files)) {
-    for (const [bucket, modelMap] of Object.entries(fileCache?.[key] ?? {})) {
-      for (const [model, tokens] of Object.entries(modelMap ?? {})) {
-        addToNestedTokenMap(merged, bucket, model, normalizeTokens(tokens));
+  for (const fileKey in files) {
+    const fileCache = files[fileKey];
+    const targetMap = fileCache && fileCache[key];
+    if (!targetMap) continue;
+
+    for (const bucket in targetMap) {
+      const modelMap = targetMap[bucket];
+      if (!modelMap) continue;
+
+      for (const model in modelMap) {
+        const tokens = modelMap[model];
+        if (!tokens) continue;
+
+        let targetBucket = merged[bucket];
+        if (!targetBucket) merged[bucket] = targetBucket = {};
+
+        let targetModel = targetBucket[model];
+        if (!targetModel) targetBucket[model] = targetModel = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+
+        targetModel.input += Number(tokens.input ?? tokens.inputTokens ?? 0);
+        targetModel.output += Number(tokens.output ?? tokens.outputTokens ?? 0);
+        targetModel.cacheRead += Number(tokens.cacheRead ?? tokens.cache_read ?? 0);
+        targetModel.cacheWrite += Number(tokens.cacheWrite ?? tokens.cache_write ?? 0);
       }
     }
   }

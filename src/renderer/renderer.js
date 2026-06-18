@@ -114,6 +114,7 @@ let downloadedFilePath = null;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
+let updateWingetManaged = false;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -157,7 +158,15 @@ function setDownloadUI(state, percent) {
   const lang = currentState?.preferences?.language ?? 'en';
   downloadState = state;
   btn.dataset.state = state;
-  if (state === 'downloading') {
+  if (state === 'winget') {
+    btn.textContent = lang === 'pt-BR' ? 'Atualizar e reiniciar' : 'Update & restart';
+    btn.disabled = false;
+    dismiss.hidden = false;
+  } else if (state === 'updating') {
+    btn.textContent = lang === 'pt-BR' ? 'Atualizando…' : 'Updating…';
+    btn.disabled = true;
+    dismiss.hidden = true;
+  } else if (state === 'downloading') {
     btn.textContent = `${percent}%`;
     btn.disabled = true;
     dismiss.hidden = true;
@@ -172,6 +181,16 @@ function setDownloadUI(state, percent) {
   }
 }
 
+
+function handleToggleError(logMsg, error, event, errorKey) {
+  logSafeError(logMsg, error);
+  if (event && event.target) {
+    event.target.checked = !event.target.checked;
+  }
+  if (errorKey && elements.errorText) {
+    elements.errorText.textContent = t(errorKey, currentLanguage());
+  }
+}
 function triggerResetFlash() {
   if (reducedMotion()) return;
   const el = elements.sessionPercent;
@@ -247,17 +266,14 @@ elements.settingsNotificationsToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.sessionReset', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save notification preference:', error);
-    event.target.checked = !event.target.checked;
-    elements.errorText.textContent = t('error.saveNotification', currentLanguage());
+    handleToggleError('Failed to save notification preference:', error, event, 'error.saveNotification');
   }
 });
 elements.settingsSoundToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.sound', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save sound preference:', error);
-    event.target.checked = !event.target.checked;
+    handleToggleError('Failed to save sound preference:', error, event);
   }
 });
 elements.testSoundButton.addEventListener('click', () => playResetSound());
@@ -273,8 +289,7 @@ elements.settingsExpireSoundToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.expireSound', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save expire sound preference:', error);
-    event.target.checked = !event.target.checked;
+    handleToggleError('Failed to save expire sound preference:', error, event);
   }
 });
 elements.testExpireSoundButton.addEventListener('click', () => playFullSound());
@@ -290,8 +305,7 @@ elements.settingsLimitSoundToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.limitSound', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save limit sound preference:', error);
-    event.target.checked = !event.target.checked;
+    handleToggleError('Failed to save limit sound preference:', error, event);
   }
 });
 elements.testLimitSoundButton.addEventListener('click', () => playLimitSound());
@@ -307,14 +321,14 @@ elements.settingsExpireAlertToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.expireAlert', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save expire alert preference:', error);
+    handleToggleError('Failed to save expire alert preference:', error, event);
   }
 });
 elements.settingsLimitAlertToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('notifications.limitAlert', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save limit alert preference:', error);
+    handleToggleError('Failed to save limit alert preference:', error, event);
   }
 });
 elements.highUsageBannerDismiss.addEventListener('click', () => {
@@ -339,9 +353,7 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('floating.enabled', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save floating widget preference:', error);
-    event.target.checked = !event.target.checked;
-    elements.errorText.textContent = t('error.saveFloating', currentLanguage());
+    handleToggleError('Failed to save floating widget preference:', error, event, 'error.saveFloating');
   }
 });
 elements.settingsStyleClassic.addEventListener('click', async () => {
@@ -362,27 +374,21 @@ elements.settingsStartupToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('startup.openAtLogin', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save startup preference:', error);
-    event.target.checked = !event.target.checked;
-    elements.errorText.textContent = t('error.saveStartup', currentLanguage());
+    handleToggleError('Failed to save startup preference:', error, event, 'error.saveStartup');
   }
 });
 elements.settingsStartupShowWindowToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('startup.showWindowOnLogin', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save startup window preference:', error);
-    event.target.checked = !event.target.checked;
-    elements.errorText.textContent = t('error.saveStartup', currentLanguage());
+    handleToggleError('Failed to save startup window preference:', error, event, 'error.saveStartup');
   }
 });
 elements.settingsLaunchWithClaudeCodeToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('integration.launchWithClaudeCode', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save launchWithClaudeCode preference:', error);
-    event.target.checked = !event.target.checked;
-    elements.errorText.textContent = t('error.saveLaunchWithClaudeCode', currentLanguage());
+    handleToggleError('Failed to save launchWithClaudeCode preference:', error, event, 'error.saveLaunchWithClaudeCode');
   }
 });
 elements.settingsLanguage.addEventListener('change', async event => {
@@ -416,7 +422,10 @@ elements.updateBannerDismiss.addEventListener('click', () => {
   hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
-  if (downloadState === 'idle') {
+  if (downloadState === 'winget') {
+    setDownloadUI('updating', 0);
+    window.siphon.installViaWinget();
+  } else if (downloadState === 'idle') {
     if (!updateDownloadUrl) { if (updateUrl) window.siphon.openExternal(updateUrl); return; }
     setDownloadUI('downloading', 0);
     window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, checksumUrl: updateChecksumUrl, version: updateVersion });
@@ -425,16 +434,18 @@ elements.updateBannerDownload.addEventListener('click', () => {
   }
 });
 
-window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl }) => {
-  if (downloadState !== 'downloading') {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, wingetManaged }) => {
+  if (downloadState !== 'downloading' && downloadState !== 'updating') {
     updateUrl = url;
     updateVersion = version;
     updateDownloadUrl = downloadUrl ?? null;
     updateChecksumUrl = checksumUrl ?? null;
+    updateWingetManaged = Boolean(wingetManaged);
   }
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent =
-    lang === 'pt-BR' ? `v${version} disponível para download.` : `v${version} is ready to download.`;
+    lang === 'pt-BR' ? `v${version} disponível.` : `v${version} is available.`;
+  if (updateWingetManaged) setDownloadUI('winget', 0);
   if (!updateDismissed) showBanner(elements.updateBanner);
 });
 
@@ -464,8 +475,7 @@ elements.notificationState.addEventListener('click', async () => {
       }, { once: true });
     }
   } catch (error) {
-    logSafeError('Failed to toggle notifications:', error);
-    elements.errorText.textContent = t('error.saveNotification', currentLanguage());
+    handleToggleError('Failed to toggle notifications:', error, null, 'error.saveNotification');
   }
 });
 
@@ -568,15 +578,7 @@ function handleThresholdSounds(state, sessionPercent) {
   prevSessionPercent = sessionPercent;
 }
 
-function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
-  const now = new Date();
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
-  const sessionPace = buildUsagePace({
-    slot: session,
-    now,
-    windowMs: SESSION_WINDOW_MS
-  });
-
+function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang }) {
   setQuotaColorDrift(elements.sessionPercent, sessionPercent);
   setQuotaColorDrift(elements.weeklyPercent, weeklyPercent);
 
@@ -586,15 +588,16 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
+}
 
+function updateStatsAndPills({ state, notificationsEnabled, lang }) {
   renderNotificationPill(notificationsEnabled, lang);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
   elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens) ?? '';
   updateLastUpdatedLine();
+}
 
-  const entering = isEntering;
-  isEntering = false;
-
+function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering }) {
   if (entering) {
     animateCountUp(elements.sessionPercent, sessionPercent, setPercentValue, { duration: 650, delay: 310 });
     animateCountUp(elements.weeklyPercent, weeklyPercent, setPercentValue, { duration: 650, delay: 380 });
@@ -624,6 +627,24 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
     if (!animatingElements.has(elements.monthCost))
       setCostValue(elements.monthCost, state.monthStats?.cost);
   }
+}
+
+function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
+  const now = new Date();
+  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
+  const sessionPace = buildUsagePace({
+    slot: session,
+    now,
+    windowMs: SESSION_WINDOW_MS
+  });
+
+  updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
+  updateStatsAndPills({ state, notificationsEnabled, lang });
+
+  const entering = isEntering;
+  isEntering = false;
+
+  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering });
 }
 
 function renderSettingsControls(state, lang) {

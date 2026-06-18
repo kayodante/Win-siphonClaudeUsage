@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,15 +17,7 @@ export function createTrayIcon(sessionLevel = 'ok', weeklyLevel = 'ok') {
     return iconCache.get(base);
   }
 
-  const image = nativeImage.createEmpty();
-  image.addRepresentation({
-    scaleFactor: 1.0,
-    buffer: fs.readFileSync(path.join(iconRoot, `${base}.png`))
-  });
-  image.addRepresentation({
-    scaleFactor: 2.0,
-    buffer: fs.readFileSync(path.join(iconRoot, `${base}@2x.png`))
-  });
+  const image = nativeImage.createFromPath(path.join(iconRoot, `${base}.png`));
 
   iconCache.set(base, image);
   return image;
