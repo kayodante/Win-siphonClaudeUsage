@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 
 console.log('[siphon] main.js: module start');
 
@@ -478,7 +479,23 @@ function registerUpdateIpc() {
     if (!pendingInstallPath) return;
     const pathToOpen = pendingInstallPath;
     pendingInstallPath = null;
-    await shell.openPath(pathToOpen);
+
+    const tempDir = app.getPath('temp');
+    const expectedPrefix = tempDir.endsWith(path.sep) ? tempDir : tempDir + path.sep;
+    const isExpectedInstaller = pathToOpen.startsWith(expectedPrefix)
+      && /^Siphon-Setup-\d+\.\d+\.\d+\.exe$/.test(path.basename(pathToOpen));
+    if (!isExpectedInstaller) {
+      window?.webContents.send('update:error', { message: 'invalid installer path' });
+      return;
+    }
+    try {
+      await fs.promises.access(pathToOpen, fs.constants.X_OK);
+    } catch {
+      window?.webContents.send('update:error', { message: 'installer not found' });
+      return;
+    }
+
+    spawn(pathToOpen, [], { detached: true, stdio: 'ignore' }).unref();
   });
 }
 
