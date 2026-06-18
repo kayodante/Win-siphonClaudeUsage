@@ -166,9 +166,11 @@ async function onReady() {
       }
     }
     if (preferencePath === 'claudePath') {
-      const effectiveDir = value || path.join(os.homedir(), '.claude');
-      controller.updateClaudePath(effectiveDir);
-      void controller.refreshLocal().catch(err => logSafeError('[prefs] claudePath refresh failed:', err));
+      void (async () => {
+        const effectiveDir = value || await controller.preferences.getClaudePath();
+        controller.updateClaudePath(effectiveDir);
+        void controller.refreshLocal().catch(err => logSafeError('[prefs] claudePath refresh failed:', err));
+      })();
     }
     if (preferencePath.startsWith('startup.')) {
       if (app.isPackaged) applyStartupSettings(app, nextPreferences.startup);
@@ -337,7 +339,7 @@ function registerStateIpc() {
   ipcMain.handle('auth:sign-out', () => controller.signOut());
   ipcMain.handle('app:info', async () => ({
     configDir: configDir(),
-    claudeDir: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude'),
+    claudeDir: await preferences.getClaudePath(),
     notificationsSupported: Notification.isSupported(),
     version: app.getVersion(),
     isPackaged: app.isPackaged
@@ -383,7 +385,7 @@ function registerPrefsIpc() {
   ipcMain.handle('dialog:pick-folder', async () => {
     const result = await dialog.showOpenDialog(window, {
       properties: ['openDirectory'],
-      defaultPath: (await preferences.get('claudePath')) || path.join(os.homedir(), '.claude')
+      defaultPath: await preferences.getClaudePath()
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
