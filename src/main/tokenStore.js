@@ -60,7 +60,8 @@ export class TokenStore {
         }
         try {
           await this.save(creds);
-        } catch {
+        } catch (error) {
+          console.warn('[tokenStore] migration save failed:', error);
           // migration save failed; return credentials anyway
         }
         return creds;
