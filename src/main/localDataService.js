@@ -217,6 +217,7 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
     return summarizeUsage(null, null, now);
   }
 
+  const jsonlTasks = [];
   await Promise.all(
     projectEntries
       .filter(e => e.isDirectory())
@@ -228,34 +229,48 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
         } catch {
           return;
         }
-        await Promise.all(
-          files
-            .filter(f => f.endsWith('.jsonl'))
-            .map(async file => {
-              const filePath = path.join(projectPath, file);
-              let stat;
-              try {
-                stat = await fsImpl.stat(filePath);
-                if (stat.mtimeMs < cutoff.getTime()) return;
-              } catch {
-                return;
-              }
-              const previous = cache.files[filePath];
-              if (isUnchanged(previous, stat)) {
-                nextFiles[filePath] = previous;
-                return;
-              }
-              nextFiles[filePath] = await parseJsonlFile({
-                filePath,
-                stat,
-                previous,
-                cutoff,
-                fsImpl
-              });
-            })
-        );
+        for (const file of files) {
+          if (file.endsWith('.jsonl')) {
+            jsonlTasks.push({ projectPath, file });
+          }
+        }
       })
   );
+
+  const concurrencyLimit = 10;
+  const iterator = jsonlTasks.values();
+  const workers = [];
+
+  const worker = async () => {
+    for (const { projectPath, file } of iterator) {
+      const filePath = path.join(projectPath, file);
+      let stat;
+      try {
+        stat = await fsImpl.stat(filePath);
+        if (stat.mtimeMs < cutoff.getTime()) continue;
+      } catch {
+        continue;
+      }
+      const previous = cache.files[filePath];
+      if (isUnchanged(previous, stat)) {
+        nextFiles[filePath] = previous;
+        continue;
+      }
+      nextFiles[filePath] = await parseJsonlFile({
+        filePath,
+        stat,
+        previous,
+        cutoff,
+        fsImpl
+      });
+    }
+  };
+
+  for (let i = 0; i < concurrencyLimit; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
 
   const nextCache = {
     version: CACHE_VERSION,
