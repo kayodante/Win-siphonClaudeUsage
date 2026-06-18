@@ -1,4 +1,6 @@
 import EventEmitter from 'node:events';
+import os from 'node:os';
+import path from 'node:path';
 
 import { logSafeError } from '../shared/diagnostics.js';
 
@@ -55,6 +57,11 @@ export class PreferencesService extends EventEmitter {
       this._cache = mergePreferences(await this.store.load());
     }
     return getPath(this._cache, path);
+  }
+
+  async getClaudePath() {
+    const configuredPath = await this.get('claudePath');
+    return configuredPath || path.join(os.homedir(), '.claude');
   }
 
   async set(path, value) {
