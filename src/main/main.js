@@ -39,7 +39,7 @@ import { configDir, TokenStore } from './tokenStore.js';
 import { ResetNotificationScheduler } from './resetNotificationScheduler.js';
 import { applyStartupSettings, shouldStartHidden } from './startupService.js';
 import { createTrayIcon } from './trayIcon.js';
-import { checkForUpdate, downloadFile } from './updateService.js';
+import { checkForUpdate, downloadFile, wingetUpgrade } from './updateService.js';
 import { ALLOWED_REFRESH_INTERVALS, UsageController } from './usageController.js';
 import { ClaudeSettingsService } from './claudeSettingsService.js';
 import { isSafeExternalUrl } from './security.js';
@@ -554,6 +554,11 @@ function registerUpdateIpc() {
     }
 
     spawn(pathToOpen, [], { detached: true, stdio: 'ignore' }).unref();
+  });
+
+  ipcMain.handle('update:installViaWinget', async () => {
+    wingetUpgrade();
+    app.quit();
   });
 }
 

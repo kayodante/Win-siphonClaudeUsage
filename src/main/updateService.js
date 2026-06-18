@@ -1,8 +1,25 @@
 import fs from 'node:fs';
 import https from 'node:https';
+import { spawn, execFile } from 'node:child_process';
 
 const REPO = 'kayodante/Win-siphonClaudeUsage';
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
+const WINGET_ID = 'kayodante.Siphon';
+
+export function isManagedByWinget() {
+  return new Promise(resolve => {
+    execFile('winget', ['list', '--id', WINGET_ID, '-e', '--accept-source-agreements'], { timeout: 10000 }, (err, stdout) => {
+      resolve(!err && stdout.includes(WINGET_ID));
+    });
+  });
+}
+
+export function wingetUpgrade() {
+  spawn('winget', [
+    'upgrade', '--id', WINGET_ID, '-e',
+    '--silent', '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity'
+  ], { detached: true, stdio: 'ignore' }).unref();
+}
 
 function semver(v) {
   return v.replace(/^v/, '').split('.').map(Number);
@@ -55,7 +72,8 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
         version: release.tag_name.replace(/^v/, ''),
         url: RELEASES_URL,
         downloadUrl: asset?.browser_download_url ?? null,
-        checksumUrl: asset ? (release.assets?.find(a => a.name === `${asset.name}.sha256`)?.browser_download_url ?? null) : null
+        checksumUrl: asset ? (release.assets?.find(a => a.name === `${asset.name}.sha256`)?.browser_download_url ?? null) : null,
+        wingetManaged: await isManagedByWinget()
       };
     }
   } catch {
