@@ -34,6 +34,8 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Configurable refresh** | Local refresh defaults to 30 seconds, with 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login
 * **Pace indicator** | Session card shows whether your usage pace is on track or likely to exhaust the quota before it resets
+* **Peak-hours badge** | Session card flags Anthropic's peak window (weekdays, 5–11 AM Pacific), when quota tends to run out faster — auto-adjusts for daylight saving
+* **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json`, so Siphon opens/refreshes when you start a Claude Code session
 * **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Icon encodes both session and weekly quota levels simultaneously — two independent color channels in one icon
 * **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings
 
@@ -91,7 +93,7 @@ for known Claude models. No data leaves your machine for usage calculations.
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
 | `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
-| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position, autostart and refresh settings |
+| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position, autostart, refresh, and Claude Code launch integration settings |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
 
 ### Sign-in
