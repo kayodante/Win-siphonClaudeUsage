@@ -795,7 +795,7 @@ body[data-view="onboard"] .app-footer {
   display: inline-flex;
   align-items: center;
   padding: var(--space-none) var(--space-2);
-  min-height: 20px;
+  min-height: var(--space-8);
   border-radius: var(--radius-xs);
   font-family: var(--font-sans);
   font-size: var(--text-xs);
@@ -808,17 +808,57 @@ body[data-view="onboard"] .app-footer {
   flex-shrink: 0;
 }
 
+/* CORES DO TEXTO DO PACE BADGE*/
+
 .quota-pace[data-status="on_track"] {
-  color: var(--level-ok);
+  color: var(--success);
 }
 
 .quota-pace[data-status="high_pace"] {
-  color: var(--level-warn);
+  color: var(--warning);
 }
 
-.quota-pace[data-status="likely_out"],
+.quota-pace[data-status="likely_out"] {
+    color: var(--destructive);
+}
+
 .quota-pace[data-status="depleted"] {
   color: var(--level-critical);
+}
+
+.quota-pace-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.peak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-none) var(--space-1) var(--space-none) var(--space-2);
+  min-height: var(--space-8);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-none);
+  color: var(--warning);
+  background: var(--card-elevated);
+  width: fit-content;
+}
+
+.peak-badge .cost-info-btn {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.peak-badge .cost-info-btn svg {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: var(--accent-light);
 }
 
 /* ─── Cost grid ─── */
