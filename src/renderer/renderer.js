@@ -10,6 +10,7 @@ import {
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { t, tFormat } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
+import { isPeakHour } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
@@ -30,6 +31,7 @@ const elements = {
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   sessionPace: document.querySelector('#sessionPace'),
+  peakHoursBadge: document.querySelector('#peakHoursBadge'),
   weeklyPercent: document.querySelector('#weeklyPercent'),
   weeklyMeter: document.querySelector('#weeklyMeter'),
   weeklyReset: document.querySelector('#weeklyReset'),
@@ -585,6 +587,7 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
   renderPace(elements.sessionPace, sessionPace, lang);
+  elements.peakHoursBadge.hidden = !isPeakHour(now);
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
