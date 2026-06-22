@@ -11,7 +11,8 @@ Siphon app uses against the OAuth endpoint.
 
 Both files live under the user's `~/.claude/` directory and are written by
 Claude Code itself. Siphon only reads them. On Windows that resolves to
-`%USERPROFILE%\.claude\`.
+`%USERPROFILE%\.claude\`. (Siphon does write one other file in that
+directory — a `SessionStart` hook in `~/.claude/settings.json`; see §4.)
 
 ### `~/.claude/readout-cost-cache.json`
 
@@ -105,7 +106,7 @@ Authorization: Bearer <accessToken>
 Accept: application/json
 Content-Type: application/json
 anthropic-beta: oauth-2025-04-20
-User-Agent: claude-code/2.1.0
+User-Agent: claude-code/2.1.121
 ```
 
 The `User-Agent` and `anthropic-beta` headers are not optional in
@@ -165,7 +166,7 @@ Authorization: Bearer <accessToken>
 Accept: application/json
 Content-Type: application/json
 anthropic-beta: oauth-2025-04-20
-User-Agent: claude-code/2.1.0
+User-Agent: claude-code/2.1.121
 ```
 
 Observed response shapes vary, so Siphon accepts common aliases:
@@ -328,6 +329,9 @@ with defaults on load so old files remain valid.
   "refresh": {
     "intervalSeconds": 30
   },
+  "integration": {
+    "launchWithClaudeCode": false
+  },
   "claudePath": null
 }
 ```
@@ -405,6 +409,34 @@ as a stable identifier for de-duping arms within the same window. The file
 is written when `session.percent` first crosses 100 with a future reset,
 and cleared when the timer fires, when a new session starts
 (`percent < 15`), or when the user signs out.
+
+### `~/.claude/settings.json` (the one exception outside `%APPDATA%`)
+
+Written by `ClaudeSettingsService` (not `JsonStore`) when the
+`integration.launchWithClaudeCode` preference is on and the build is
+packaged. It adds a `SessionStart` hook that runs the Siphon exe so Claude
+Code launches/refreshes Siphon when a session starts. Siphon edits only its
+own entry — tagged `_siphon: true` — and leaves any other hooks untouched.
+
+```jsonc
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "_siphon": true,
+        "hooks": [
+          { "type": "command", "command": "C:\\…\\Siphon.exe", "async": true }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`enable()` appends this entry idempotently; `disable()` filters Siphon
+entries back out and prunes the now-empty `SessionStart` / `hooks` keys.
+Writes go through a `.tmp` file + `rename` so a partial write can't corrupt
+the user's Claude Code settings.
 
 ## Field cheat sheet
 

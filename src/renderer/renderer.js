@@ -10,7 +10,7 @@ import {
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { t, tFormat } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
-import { isPeakHour } from '../shared/peakHours.js';
+import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
@@ -32,6 +32,7 @@ const elements = {
   sessionReset: document.querySelector('#sessionReset'),
   sessionPace: document.querySelector('#sessionPace'),
   peakHoursBadge: document.querySelector('#peakHoursBadge'),
+  peakHoursInfo: document.querySelector('#peakHoursInfo'),
   weeklyPercent: document.querySelector('#weeklyPercent'),
   weeklyMeter: document.querySelector('#weeklyMeter'),
   weeklyReset: document.querySelector('#weeklyReset'),
@@ -587,7 +588,12 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
   renderPace(elements.sessionPace, sessionPace, lang);
-  elements.peakHoursBadge.hidden = !isPeakHour(now);
+  const inPeakHours = isPeakHour(now);
+  elements.peakHoursBadge.hidden = !inPeakHours;
+  if (inPeakHours) {
+    const { start, end } = peakHoursLocalRange(now);
+    elements.peakHoursInfo.title = tFormat('home.peakHoursTooltip', lang, { start, end });
+  }
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
