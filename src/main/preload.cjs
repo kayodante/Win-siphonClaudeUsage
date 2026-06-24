@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- loaded via webPreferences.preload string path (main.js), not a JS import
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('siphon', {

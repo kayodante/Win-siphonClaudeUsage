@@ -16,14 +16,15 @@ pnpm-debug.log*
 # Tooling / local
 .impeccable/
 .claude/
-.agents
-.codex
-.jules
+.agents/
+.codex/
+.fallow/
+.jules/
 .graphifyignore
 graphify-out/
 coverage/
 .nyc_output/
-/docs/superpowers
+/docs/superpowers/
 .superpowers/
 
 # Docs (local only)

@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- loaded via <script src> in floating.html, not a JS import
 import { logSafeError } from '../shared/diagnostics.js';
 import { clampPercent, formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';

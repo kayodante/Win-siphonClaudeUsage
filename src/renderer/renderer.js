@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- loaded via <script src> in index.html, not a JS import
 import {
   clampPercent,
   formatCurrency,
