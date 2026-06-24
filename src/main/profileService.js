@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { logSafeError } from '../shared/diagnostics.js';
+import { isExpired, refreshIfExpired } from './tokenLifecycle.js';
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -67,11 +68,7 @@ export class ProfileService {
     let credentials = await this.tokenStore.load();
     if (!credentials) return null;
 
-    if (isExpired(credentials) && credentials.refreshToken) {
-      const { OAuthService } = await import('./oauthService.js');
-      credentials = await new OAuthService().refresh(credentials.refreshToken);
-      await this.tokenStore.save(credentials);
-    }
+    credentials = await refreshIfExpired(this.tokenStore, credentials);
 
     if (isExpired(credentials)) {
       await this.tokenStore.clear();
@@ -99,11 +96,6 @@ function extractProfile(payload) {
 
 function valueOrNull(value) {
   return value == null ? null : value;
-}
-
-function isExpired(credentials) {
-  if (!credentials.expiresAt) return false;
-  return new Date(credentials.expiresAt).getTime() <= Date.now() + 30_000;
 }
 
 async function readLocalProfile() {
