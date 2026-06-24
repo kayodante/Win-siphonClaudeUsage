@@ -1,3 +1,5 @@
+import { isExpired, refreshIfExpired } from './tokenLifecycle.js';
+
 export class QuotaError extends Error {
   constructor(code, message, options = {}) {
     super(message);
@@ -85,11 +87,7 @@ export class QuotaService {
       throw new QuotaError('not_signed_in', 'Not signed in');
     }
 
-    if (isExpired(credentials) && credentials.refreshToken) {
-      const { OAuthService } = await import('./oauthService.js');
-      credentials = await new OAuthService().refresh(credentials.refreshToken);
-      await this.tokenStore.save(credentials);
-    }
+    credentials = await refreshIfExpired(this.tokenStore, credentials);
 
     if (isExpired(credentials)) {
       await this.tokenStore.clear();
@@ -114,7 +112,3 @@ function parseDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function isExpired(credentials) {
-  if (!credentials.expiresAt) return false;
-  return new Date(credentials.expiresAt).getTime() <= Date.now() + 30_000;
-}
