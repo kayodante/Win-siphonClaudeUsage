@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- spawned as child process by appIcon.test.js, not a JS import
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

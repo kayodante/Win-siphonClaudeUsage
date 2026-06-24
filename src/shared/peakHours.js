@@ -1,8 +1,8 @@
 // Official Anthropic peak hours for Claude usage: weekdays, 5–11 AM Pacific Time
 // (8 AM–2 PM Eastern). Source: https://www.anthropic.com/news/higher-limits-spacex
 // The window is anchored to America/Los_Angeles so it stays correct across DST.
-export const PEAK_TIME_ZONE = 'America/Los_Angeles';
-export const PEAK_HOURS_PT = { startHour: 5, endHour: 11 };
+const PEAK_TIME_ZONE = 'America/Los_Angeles';
+const PEAK_HOURS_PT = { startHour: 5, endHour: 11 };
 
 // Weekday + hour as observed in the peak time zone (DST handled by Intl).
 function zonedWeekdayAndHour(date, timeZone) {

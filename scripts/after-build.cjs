@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- electron-builder afterAllArtifactBuild hook (electron-builder.yml), not a JS import
 const { createHash } = require('node:crypto');
 const { readFileSync, writeFileSync } = require('node:fs');
 const path = require('node:path');
