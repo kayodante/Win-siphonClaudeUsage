@@ -11,6 +11,7 @@ export class ClaudeSettingsService {
   _buildHookEntry() {
     return {
       _siphon: true,
+      matcher: 'startup',
       hooks: [{
         type: 'command',
         command: this.exePath,
@@ -43,17 +44,25 @@ export class ClaudeSettingsService {
 
   async enable() {
     const settings = await this._readSettings() ?? {};
-    if (this._hasSiphonInSettings(settings)) return;
     if (!settings.hooks) settings.hooks = {};
-    if (!Array.isArray(settings.hooks.SessionStart)) settings.hooks.SessionStart = [];
-    settings.hooks.SessionStart.push(this._buildHookEntry());
+    const existing = Array.isArray(settings.hooks.SessionStart) ? settings.hooks.SessionStart : [];
+    // Drop any prior siphon entries (marked or orphaned from older versions) pointing at our exe,
+    // then add one fresh entry — keeps re-runs idempotent and self-healing after upgrades.
+    const kept = existing.filter(e => e?.hooks?.[0]?.command !== this.exePath);
+    const rebuilt = [...kept, this._buildHookEntry()];
+    if (JSON.stringify(rebuilt) === JSON.stringify(existing)) return;
+    settings.hooks.SessionStart = rebuilt;
     await this._writeSettings(settings);
   }
 
   async disable() {
     const settings = await this._readSettings();
-    if (!this._hasSiphonInSettings(settings)) return;
-    settings.hooks.SessionStart = settings.hooks.SessionStart.filter(e => e._siphon !== true);
+    if (!settings?.hooks?.SessionStart) return;
+    const filtered = settings.hooks.SessionStart.filter(
+      e => e._siphon !== true && e?.hooks?.[0]?.command !== this.exePath
+    );
+    if (filtered.length === settings.hooks.SessionStart.length) return;
+    settings.hooks.SessionStart = filtered;
     if (settings.hooks.SessionStart.length === 0) delete settings.hooks.SessionStart;
     if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
     await this._writeSettings(settings);
