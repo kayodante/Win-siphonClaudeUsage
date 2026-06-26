@@ -9,12 +9,19 @@ async function tempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'siphon-css-test-'));
 }
 
+const FAKE_EXE = 'C:\\fake\\Siphon.exe';
+
 function makeService(settingsPath) {
-  return new ClaudeSettingsService({ exePath: 'C:\\fake\\Siphon.exe', settingsPath });
+  return new ClaudeSettingsService({ exePath: FAKE_EXE, settingsPath });
 }
 
 async function readJson(p) {
   return JSON.parse(await fs.readFile(p, 'utf8'));
+}
+
+function isSiphonEntry(e) {
+  const cmd = e?.hooks?.[0]?.command ?? '';
+  return cmd === FAKE_EXE || cmd.includes(FAKE_EXE);
 }
 
 // ── enable ────────────────────────────────────────────────────────────────────
@@ -24,7 +31,7 @@ test('enable creates settings.json when file is missing', async () => {
   const sp = path.join(dir, 'settings.json');
   await makeService(sp).enable();
   const result = await readJson(sp);
-  assert.equal(result.hooks.SessionStart.filter(e => e._siphon === true).length, 1);
+  assert.equal(result.hooks.SessionStart.filter(isSiphonEntry).length, 1);
   await fs.rm(dir, { recursive: true });
 });
 
@@ -36,7 +43,7 @@ test('enable preserves existing top-level keys', async () => {
   const result = await readJson(sp);
   assert.equal(result.model, 'sonnet');
   assert.equal(result.autoUpdatesChannel, 'latest');
-  assert.equal(result.hooks.SessionStart.filter(e => e._siphon === true).length, 1);
+  assert.equal(result.hooks.SessionStart.filter(isSiphonEntry).length, 1);
   await fs.rm(dir, { recursive: true });
 });
 
@@ -50,8 +57,8 @@ test('enable preserves other SessionStart hooks', async () => {
   const result = await readJson(sp);
   const entries = result.hooks.SessionStart;
   assert.equal(entries.length, 2);
-  assert.equal(entries.filter(e => e._siphon === true).length, 1);
-  assert.equal(entries.filter(e => !e._siphon).length, 1);
+  assert.equal(entries.filter(isSiphonEntry).length, 1);
+  assert.equal(entries.filter(e => !isSiphonEntry(e)).length, 1);
   await fs.rm(dir, { recursive: true });
 });
 
@@ -75,7 +82,7 @@ test('enable is idempotent — no duplicate hook on second call', async () => {
   await svc.enable();
   await svc.enable();
   const result = await readJson(sp);
-  assert.equal(result.hooks.SessionStart.filter(e => e._siphon === true).length, 1);
+  assert.equal(result.hooks.SessionStart.filter(isSiphonEntry).length, 1);
   await fs.rm(dir, { recursive: true });
 });
 
@@ -84,19 +91,30 @@ test('enable hook command contains exePath', async () => {
   const sp = path.join(dir, 'settings.json');
   await makeService(sp).enable();
   const result = await readJson(sp);
-  const entry = result.hooks.SessionStart.find(e => e._siphon === true);
-  assert.equal(entry.hooks[0].command, 'C:\\fake\\Siphon.exe');
+  const entry = result.hooks.SessionStart.find(isSiphonEntry);
+  assert.ok(entry.hooks[0].command.includes(FAKE_EXE));
   await fs.rm(dir, { recursive: true });
 });
 
-test('enable hook has async: true', async () => {
+test('enable hook has async: true, shell: powershell, no _siphon marker', async () => {
   const dir = await tempDir();
   const sp = path.join(dir, 'settings.json');
   await makeService(sp).enable();
   const result = await readJson(sp);
-  const hook = result.hooks.SessionStart.find(e => e._siphon === true).hooks[0];
-  assert.equal(hook.shell, undefined);
-  assert.equal(hook.async, true);
+  const entry = result.hooks.SessionStart.find(isSiphonEntry);
+  assert.equal(entry._siphon, undefined);
+  assert.equal(entry.hooks[0].shell, 'powershell');
+  assert.equal(entry.hooks[0].async, true);
+  await fs.rm(dir, { recursive: true });
+});
+
+test('enable hook has matcher startup|resume', async () => {
+  const dir = await tempDir();
+  const sp = path.join(dir, 'settings.json');
+  await makeService(sp).enable();
+  const result = await readJson(sp);
+  const entry = result.hooks.SessionStart.find(isSiphonEntry);
+  assert.equal(entry.matcher, 'startup|resume');
   await fs.rm(dir, { recursive: true });
 });
 
@@ -122,7 +140,7 @@ test('disable removes siphon hook', async () => {
   await fs.rm(dir, { recursive: true });
 });
 
-test('disable leaves other SessionStart hooks intact', async () => {
+test('disable removes legacy _siphon-marked entries', async () => {
   const dir = await tempDir();
   const sp = path.join(dir, 'settings.json');
   await fs.writeFile(sp, JSON.stringify({
@@ -137,6 +155,24 @@ test('disable leaves other SessionStart hooks intact', async () => {
   const result = await readJson(sp);
   assert.equal(result.hooks.SessionStart.length, 1);
   assert.equal(result.hooks.SessionStart[0]._siphon, undefined);
+  await fs.rm(dir, { recursive: true });
+});
+
+test('disable leaves other SessionStart hooks intact', async () => {
+  const dir = await tempDir();
+  const sp = path.join(dir, 'settings.json');
+  await fs.writeFile(sp, JSON.stringify({
+    hooks: {
+      SessionStart: [
+        { hooks: [{ type: 'command', command: FAKE_EXE }] },
+        { hooks: [{ type: 'command', command: 'echo other' }] }
+      ]
+    }
+  }));
+  await makeService(sp).disable();
+  const result = await readJson(sp);
+  assert.equal(result.hooks.SessionStart.length, 1);
+  assert.equal(result.hooks.SessionStart[0].hooks[0].command, 'echo other');
   await fs.rm(dir, { recursive: true });
 });
 
@@ -186,4 +222,3 @@ test('disable is idempotent when file is missing', async () => {
   await assert.doesNotReject(() => makeService(sp).disable());
   await fs.rm(dir, { recursive: true });
 });
-

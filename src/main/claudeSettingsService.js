@@ -10,14 +10,19 @@ export class ClaudeSettingsService {
 
   _buildHookEntry() {
     return {
-      _siphon: true,
-      matcher: 'startup',
+      matcher: 'startup|resume',
       hooks: [{
         type: 'command',
-        command: this.exePath,
+        command: `powershell -NoProfile -Command "Start-Process '${this.exePath}'"`,
+        shell: 'powershell',
         async: true
       }]
     };
+  }
+
+  _isSiphonEntry(e) {
+    const cmd = e?.hooks?.[0]?.command ?? '';
+    return cmd === this.exePath || cmd.includes(this.exePath);
   }
 
   async _readSettings() {
@@ -38,17 +43,11 @@ export class ClaudeSettingsService {
     await fs.rename(tmp, this.settingsPath);
   }
 
-  _hasSiphonInSettings(settings) {
-    return (settings?.hooks?.SessionStart ?? []).some(e => e._siphon === true);
-  }
-
   async enable() {
     const settings = await this._readSettings() ?? {};
     if (!settings.hooks) settings.hooks = {};
     const existing = Array.isArray(settings.hooks.SessionStart) ? settings.hooks.SessionStart : [];
-    // Drop any prior siphon entries (marked or orphaned from older versions) pointing at our exe,
-    // then add one fresh entry — keeps re-runs idempotent and self-healing after upgrades.
-    const kept = existing.filter(e => e?.hooks?.[0]?.command !== this.exePath);
+    const kept = existing.filter(e => !this._isSiphonEntry(e));
     const rebuilt = [...kept, this._buildHookEntry()];
     if (JSON.stringify(rebuilt) === JSON.stringify(existing)) return;
     settings.hooks.SessionStart = rebuilt;
@@ -59,7 +58,7 @@ export class ClaudeSettingsService {
     const settings = await this._readSettings();
     if (!settings?.hooks?.SessionStart) return;
     const filtered = settings.hooks.SessionStart.filter(
-      e => e._siphon !== true && e?.hooks?.[0]?.command !== this.exePath
+      e => e._siphon !== true && !this._isSiphonEntry(e)
     );
     if (filtered.length === settings.hooks.SessionStart.length) return;
     settings.hooks.SessionStart = filtered;
