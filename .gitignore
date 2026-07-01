@@ -26,6 +26,7 @@ coverage/
 .nyc_output/
 /docs/superpowers/
 .superpowers/
+.lore/
 
 # Docs (local only)
 AGENTS.md
@@ -34,6 +35,7 @@ CLAUDE.md
 DESIGN.md
 PRODUCT.md
 ROADMAP.md
+lore.md
 skills-lock.json
 .mcp.json
 

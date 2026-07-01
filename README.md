@@ -24,20 +24,20 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Features
 
-* **Session quota** | Live progress bar showing your current 5-hour session usage with a reset countdown
-* **Weekly limits** | Tracks the all-model weekly cap returned by the OAuth usage endpoint
-* **Usage tracking** | Today's and this month's usage in USD, computed locally from Claude Code's usage and pricing files
-* **Quota alerts** | In-app warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100% thresholds — each independently configurable
-* **Reset notification** | Windows toast when your session becomes available again — fires on next launch if the app was closed during the reset window
-* **Sound alerts** | Three independent audio cues: session reset, session exhausted (100%), and quota warnings (70%/90%) — each with its own toggle, test button, and volume slider
-* **Floating widget** | Always-on-top widget (PiP-style) you can drag anywhere on screen — two layouts: classic (session progress + expandable stats panel) and pill (compact icon + percentage bar)
-* **Configurable refresh** | Local refresh defaults to 30 seconds, with 1, 5, and 15 minute options in Settings
-* **Start with Windows** | Optional autostart, with a separate setting for whether the window appears after login
-* **Pace indicator** | Session card shows whether your usage pace is on track or likely to exhaust the quota before it resets
-* **Peak-hours badge** | Session card flags Anthropic's peak window (weekdays, 5–11 AM Pacific), when quota tends to run out faster — auto-adjusts for daylight saving
-* **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json`, so Siphon opens/refreshes when you start a Claude Code session
-* **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Icon encodes both session and weekly quota levels simultaneously — two independent color channels in one icon
-* **Localization** | UI available in English and Brazilian Portuguese, switchable from Settings
+* **Session quota** | Progress bar for your current 5-hour session with a reset countdown
+* **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint
+* **Usage tracking** | Today's and this month's usage in USD, calculated locally from Claude Code's usage and pricing files
+* **Quota alerts** | Warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100%, each configurable on its own
+* **Reset notification** | Windows toast when your session resets. If the app was closed during the reset window, it fires on next launch
+* **Sound alerts** | Three audio cues (session reset, exhausted, and quota warnings at 70%/90%), each with its own toggle, test button, and volume slider
+* **Floating widget** | Always-on-top widget you can drag anywhere. Two layouts: classic (session progress + expandable stats panel) or pill (compact icon + percentage bar)
+* **Configurable refresh** | Defaults to 30 seconds; 1, 5, and 15 minute options in Settings
+* **Start with Windows** | Optional autostart, with a separate setting for whether the window opens on login
+* **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json` so Siphon opens when you start a session
+* **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
+* **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
+* **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
+* **Localization** | English and Brazilian Portuguese, switchable from Settings
 
 ## Requirements
 
