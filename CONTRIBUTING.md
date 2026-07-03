@@ -46,6 +46,9 @@ without noticing.
   or `ROADMAP.md`, update those files in the same PR.
 - User-facing strings go through `src/shared/i18n.js` (English + Brazilian
   Portuguese). Internal logs and errors stay in English.
+- Add an entry under `[Unreleased]` in `CHANGELOG.md` for user-facing
+  changes. On each tagged release, `[Unreleased]` gets renamed to the new
+  version/date and a fresh empty section goes above it.
 
 ## Reporting bugs / requesting features
 
