@@ -4,6 +4,7 @@
   <br/>
   <p>A Windows tray app that tracks your Claude Code usage in real time.</p>
 
+  [![CI](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml/badge.svg)](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
   [![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
   [![Node](https://img.shields.io/badge/Node-22%2B-5FA04E?logo=node.js&logoColor=white)](https://nodejs.org/)
