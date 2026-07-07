@@ -92,7 +92,7 @@
             <span class="usage-alert-title" data-i18n="alert.highUsage.title">High usage</span>
             <span class="usage-alert-body" data-i18n="alert.highUsage.body">Session has reached 70%.</span>
           </div>
-          <button class="usage-alert-dismiss" id="highUsageBannerDismiss" aria-label="Dismiss">
+          <button class="usage-alert-dismiss" id="highUsageBannerDismiss" aria-label="Dismiss" data-i18n-aria-label="common.dismiss">
             <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
           </button>
         </div>
@@ -104,9 +104,9 @@
             <div class="update-banner-text">
               <span class="update-banner-title" data-i18n="update.title">Update available</span>
               <span class="update-banner-body" id="updateBannerVersion"></span>
-              <button class="update-banner-download" id="updateBannerDownload">Download</button>
+              <button class="update-banner-download" id="updateBannerDownload" data-i18n="update.download">Download</button>
             </div>
-            <button class="update-banner-dismiss" id="updateBannerDismiss" aria-label="Dismiss">
+            <button class="update-banner-dismiss" id="updateBannerDismiss" aria-label="Dismiss" data-i18n-aria-label="common.dismiss">
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
             </button>
           </div>
@@ -119,7 +119,7 @@
             <span class="usage-alert-title" data-i18n="alert.critical.title">Critical usage</span>
             <span class="usage-alert-body" data-i18n="alert.critical.body">Session has reached 90%.</span>
           </div>
-          <button class="usage-alert-dismiss" id="criticalBannerDismiss" aria-label="Dismiss">
+          <button class="usage-alert-dismiss" id="criticalBannerDismiss" aria-label="Dismiss" data-i18n-aria-label="common.dismiss">
             <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
           </button>
         </div>
@@ -131,7 +131,7 @@
             <span class="offline-banner-title" data-i18n="error.offline.title">No connection</span>
             <span class="offline-banner-body" data-i18n="error.offline.body">Quota data unavailable. Check your internet connection.</span>
           </div>
-          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss">
+          <button class="offline-banner-dismiss" id="offlineBannerDismiss" aria-label="Dismiss" data-i18n-aria-label="common.dismiss">
             <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
           </button>
         </div>
@@ -244,13 +244,13 @@
 
         <!-- Tab bar -->
         <div class="settings-tabs" role="tablist">
-          <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" data-i18n="settings.tabs.system">System</button>
-          <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" data-i18n="settings.tabs.notification">Notification</button>
-          <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" data-i18n="settings.tabs.widget">Widget</button>
+          <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" aria-controls="settingsTabSystemPanel" data-i18n="settings.tabs.system">System</button>
+          <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" aria-controls="settingsTabNotificationPanel" data-i18n="settings.tabs.notification">Notification</button>
+          <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" aria-controls="settingsTabWidgetPanel" data-i18n="settings.tabs.widget">Widget</button>
         </div>
 
         <!-- System panel -->
-        <div id="settingsTabSystemPanel" class="settings-tab-panel">
+        <div id="settingsTabSystemPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabSystem">
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.language">Language</span>
             <select id="settingsLanguage" class="settings-select">
@@ -303,7 +303,7 @@
         </div>
 
         <!-- Notification panel -->
-        <div id="settingsTabNotificationPanel" class="settings-tab-panel" hidden>
+        <div id="settingsTabNotificationPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabNotification" hidden>
           <p class="settings-section-eyebrow" data-i18n="settings.section.reset">Notify on session reset</p>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.notifReset">Notify</span>
@@ -390,7 +390,7 @@
         </div>
 
         <!-- Widget panel -->
-        <div id="settingsTabWidgetPanel" class="settings-tab-panel" hidden>
+        <div id="settingsTabWidgetPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabWidget" hidden>
           <div class="settings-row">
             <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
             <label class="switch" for="settingsFloatingToggle">

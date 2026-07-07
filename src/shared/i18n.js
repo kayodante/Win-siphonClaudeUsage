@@ -128,6 +128,8 @@ const STRINGS = Object.freeze({
     'update.updating': 'Updating…',
     'update.updateRestart': 'Update & restart',
 
+    'common.dismiss': 'Dismiss',
+
     'error.scope_insufficient': 'Re-authentication required. Click to sign in again.',
 
     'alert.highUsage.title': 'High usage',
@@ -261,6 +263,8 @@ const STRINGS = Object.freeze({
     'update.install': 'Instalar',
     'update.updating': 'Atualizando…',
     'update.updateRestart': 'Atualizar e reiniciar',
+
+    'common.dismiss': 'Dispensar',
 
     'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.',
 

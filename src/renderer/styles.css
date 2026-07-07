@@ -70,7 +70,7 @@
   --success:          oklch(0.8915 0.1381 164.18);
   --success-soft:     oklch(0.6959 0.1491 162.48 / 0.18);
   --warning:          oklch(0.8591 0.1147 79.19);
-  --warning-soft:     ooklch(0.7686 0.1647 70.08 / 0.18%);
+  --warning-soft:     oklch(76.86% 0.1647 70.08 / 0.18);
 
   /* ── Colors: Level scale ── */
   --level-ok:           oklch(84.59% 0.2026 156.3);
@@ -309,7 +309,7 @@ body[data-view="onboard"] .window-control-btn {
   width: var(--space-9);
   height: var(--space-9);
   border-radius: var(--radius-xs);
-  color: oklch(34% 0 0);
+  color: oklch(52% 0 0);
 }
 
 body[data-view="onboard"] .window-control-btn svg {
@@ -423,7 +423,7 @@ body[data-view="onboard"] .app-footer {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-8);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: 0.12em;
@@ -941,14 +941,14 @@ body[data-refreshing="true"] .card {
   gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
 }
 
 .cost-tokens {
   display: block;
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   line-height: var(--leading-none);
   min-height: 0;
 }
@@ -1041,7 +1041,7 @@ body[data-refreshing="true"] .card {
 
 .notif-badge[data-tone="muted"],
 .notif-badge[data-tone="muted"] svg {
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
 }
 
 .notif-badge svg {
@@ -1296,7 +1296,7 @@ body[data-refreshing="true"] .card {
 .settings-title {
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   padding: var(--space-none) var(--space-5) var(--space-none) var(--space-none);
 }
 
@@ -1374,7 +1374,7 @@ body[data-refreshing="true"] .card {
 
 .account-email {
   font-size: var(--text-sm);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   text-align: center;
 }
 
@@ -1432,7 +1432,7 @@ body[data-refreshing="true"] .card {
   max-width: 140px;
   background: transparent;
   border: none;
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   font-family: var(--font-sans);
   font-size: var(--text-md);
   cursor: pointer;
@@ -1482,7 +1482,7 @@ body[data-refreshing="true"] .card {
 
 .settings-path-eyebrow {
   margin-bottom: 0;
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   letter-spacing: 0.04em;
@@ -1516,7 +1516,7 @@ body[data-refreshing="true"] .card {
 .settings-version-text {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   white-space: nowrap;
 }
 
@@ -2469,7 +2469,7 @@ body[data-refreshing="true"] #refreshButton svg {
   font-weight: var(--weight-medium);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
 }
 
 .settings-style-picker {
