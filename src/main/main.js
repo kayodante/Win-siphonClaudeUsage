@@ -1,11 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import os from 'node:os';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-
-console.log('[siphon] main.js: module start');
 
 process.on('uncaughtException', err => {
   logSafeError('[siphon] uncaughtException:', err);
@@ -26,8 +23,6 @@ import {
   shell,
   Tray
 } from 'electron';
-
-console.log('[siphon] electron imported');
 
 import { createAppIcon } from './appIcon.js';
 import { buildTrayMenuTemplate, startApplication } from './appLifecycle.js';
@@ -69,13 +64,10 @@ let usageAlertService = null;
 
 app.setAppUserModelId('com.kayodantes.siphon');
 
-console.log('[siphon] requesting single instance lock');
 if (!app.requestSingleInstanceLock()) {
-  console.log('[siphon] lock failed — quitting');
   app.quit();
   process.exit(0);
 }
-console.log('[siphon] lock acquired');
 
 app.on('second-instance', () => {
   if (window) showMainWindow();
@@ -86,14 +78,11 @@ app.on('browser-window-focus', () => {
   floatingWindow?.reAssertAlwaysOnTop();
 });
 
-console.log('[siphon] registering whenReady handler');
 app.whenReady().then(onReady).catch(error => {
   logSafeError('[siphon] whenReady failed:', error);
 });
 
 async function onReady() {
-  console.log('[siphon] app ready');
-
   const tokenStore = new TokenStore();
   const profileService = new ProfileService({ tokenStore });
   const resetStore = new JsonStore(path.join(configDir(), 'reset-notification.json'));
@@ -138,13 +127,9 @@ async function onReady() {
     screen: electronScreen
   });
 
-  console.log('[siphon] creating window');
   createWindow(initialPreferences.window);
-  console.log('[siphon] creating tray');
   createTray();
-  console.log('[siphon] registering IPC');
   registerIpc();
-  console.log('[siphon] setup done');
 
   controller.on('state', state => {
     window?.webContents.send('state-changed', state);
@@ -204,10 +189,6 @@ async function onReady() {
     }
   });
 }
-
-app.on('activate', () => {
-  showWindow();
-});
 
 app.on('before-quit', () => {
   app.isQuitting = true;
@@ -297,10 +278,12 @@ async function saveWindowBounds() {
   if (!window || window.isDestroyed() || !controller) return;
   const { x, y, width, height } = window.getBounds();
   windowHasSavedPosition = true;
-  await controller.preferences.set('window.x', x);
-  await controller.preferences.set('window.y', y);
-  await controller.preferences.set('window.width', width);
-  await controller.preferences.set('window.height', height);
+  await controller.preferences.setMany([
+    ['window.x', x],
+    ['window.y', y],
+    ['window.width', width],
+    ['window.height', height]
+  ]);
 }
 
 function createTray() {

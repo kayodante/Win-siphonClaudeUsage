@@ -7,7 +7,6 @@ import { ProfileService } from './profileService.js';
 import { QuotaError, QuotaService } from './quotaService.js';
 import { logSafeError, safeErrorMessage } from '../shared/diagnostics.js';
 
-const DEFAULT_LOCAL_INTERVAL_MS = 30_000;
 const MIN_QUOTA_INTERVAL_MS = 120_000;
 export const ALLOWED_REFRESH_INTERVALS = new Set([30, 60, 300, 900]);
 

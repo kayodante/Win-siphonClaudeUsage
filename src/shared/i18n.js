@@ -7,9 +7,6 @@ const STRINGS = Object.freeze({
     'topbar.minimize': 'Minimize',
     'topbar.close': 'Close',
 
-    'onboarding.welcome': 'Welcome to Siphon',
-    'onboarding.lead':
-      'Track your Claude AI usage and Claude Code token usage from your Windows tray. Get notified when your session resets.',
     'onboarding.copy.sessionStrong': 'Live session quota',
     'onboarding.copy.sessionMuted': 'from your Claude AI plan.',
     'onboarding.copy.costStrong': 'Token usage',
@@ -62,9 +59,6 @@ const STRINGS = Object.freeze({
     'floating.today': 'Today',
     'floating.month': 'Month',
 
-    'settings.account': 'Account',
-    'settings.fullName': 'Full name',
-    'settings.email': 'Email',
     'settings.plan': 'Plan',
     'settings.planLabel': '{plan} Plan',
     'settings.signOut': 'Sign out',
@@ -128,7 +122,11 @@ const STRINGS = Object.freeze({
     'error.offline.body': 'Check your internet connection.',
 
     'update.title': 'New version available.',
+    'update.available': 'v{version} is available.',
     'update.download': 'Download',
+    'update.install': 'Install',
+    'update.updating': 'Updating…',
+    'update.updateRestart': 'Update & restart',
 
     'error.scope_insufficient': 'Re-authentication required. Click to sign in again.',
 
@@ -143,9 +141,6 @@ const STRINGS = Object.freeze({
     'topbar.minimize': 'Minimizar',
     'topbar.close': 'Fechar',
 
-    'onboarding.welcome': 'Boas-vindas ao Siphon',
-    'onboarding.lead':
-      'Acompanhe seu uso do Claude AI e o uso de tokens do Claude Code pela bandeja do Windows. Receba um aviso quando sua sessão reiniciar.',
     'onboarding.copy.sessionStrong': 'Cota de sessão ao vivo',
     'onboarding.copy.sessionMuted': 'do seu plano Claude AI.',
     'onboarding.copy.costStrong': 'Uso de tokens',
@@ -198,9 +193,6 @@ const STRINGS = Object.freeze({
     'floating.today': 'Hoje',
     'floating.month': 'Mês',
 
-    'settings.account': 'Conta',
-    'settings.fullName': 'Nome completo',
-    'settings.email': 'E-mail',
     'settings.plan': 'Plano',
     'settings.planLabel': 'Plano {plan}',
     'settings.signOut': 'Sair da conta',
@@ -264,7 +256,11 @@ const STRINGS = Object.freeze({
     'error.offline.body': 'Verifique sua conexão com a internet.',
 
     'update.title': 'Nova versão disponível.',
+    'update.available': 'v{version} disponível.',
     'update.download': 'Baixar',
+    'update.install': 'Instalar',
+    'update.updating': 'Atualizando…',
+    'update.updateRestart': 'Atualizar e reiniciar',
 
     'error.scope_insufficient': 'Re-autenticação necessária. Clique para entrar novamente.',
 

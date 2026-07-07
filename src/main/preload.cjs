@@ -42,7 +42,7 @@ contextBridge.exposeInMainWorld('siphon', {
     return () => ipcRenderer.removeListener('update-available', listener);
   },
   downloadUpdate: payload => ipcRenderer.invoke('update:download', payload),
-  installUpdate: filePath => ipcRenderer.invoke('update:install', filePath),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
   installViaWinget: () => ipcRenderer.invoke('update:installViaWinget'),
   onUpdateProgress: callback => {
     const listener = (_event, data) => callback(data);

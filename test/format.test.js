@@ -4,9 +4,12 @@ import test from 'node:test';
 import {
   clampPercent,
   formatClockTime,
+  formatCurrency,
   formatDaysRemaining,
+  formatPercent,
   formatRelativeUpdated,
   formatTimeRemaining,
+  formatTokens,
   formatWeekdayClock,
   hydrateSlot,
   levelForPercent
@@ -62,6 +65,42 @@ test('levelForPercent maps 85-100 to critical', () => {
   assert.equal(levelForPercent(85), 'critical');
   assert.equal(levelForPercent(95), 'critical');
   assert.equal(levelForPercent(100), 'critical');
+});
+
+test('formatCurrency renders USD with two fraction digits', () => {
+  assert.equal(formatCurrency(0), '$0.00');
+  assert.equal(formatCurrency(1.5), '$1.50');
+  assert.equal(formatCurrency(1234.5), '$1,234.50');
+});
+
+test('formatCurrency returns -- for null and NaN', () => {
+  assert.equal(formatCurrency(null), '--');
+  assert.equal(formatCurrency(undefined), '--');
+  assert.equal(formatCurrency(NaN), '--');
+});
+
+test('formatPercent rounds to a whole percent', () => {
+  assert.equal(formatPercent(0), '0%');
+  assert.equal(formatPercent(54.4), '54%');
+  assert.equal(formatPercent(54.6), '55%');
+});
+
+test('formatPercent returns -- for null and NaN', () => {
+  assert.equal(formatPercent(null), '--');
+  assert.equal(formatPercent(NaN), '--');
+});
+
+test('formatTokens returns null for zero and nullish input', () => {
+  assert.equal(formatTokens(0), null);
+  assert.equal(formatTokens(null), null);
+  assert.equal(formatTokens(undefined), null);
+  assert.equal(formatTokens(NaN), null);
+});
+
+test('formatTokens scales into K and M with a unit suffix', () => {
+  assert.equal(formatTokens(999), '999 tokens');
+  assert.equal(formatTokens(1500), '1.5K tokens');
+  assert.equal(formatTokens(2_000_000), '2.0M tokens');
 });
 
 test('formatClockTime pads to HH:MM', () => {

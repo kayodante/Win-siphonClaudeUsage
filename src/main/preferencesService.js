@@ -77,6 +77,25 @@ export class PreferencesService extends EventEmitter {
     });
   }
 
+  // Set multiple paths in a single write, then emit one 'change' event per path.
+  // `entries` is an array of [path, value] pairs.
+  async setMany(entries) {
+    return this.enqueueWrite(async () => {
+      if (!this._cache) {
+        this._cache = mergePreferences(await this.store.load());
+      }
+      for (const [path, value] of entries) {
+        setPath(this._cache, path, value);
+      }
+      const preferences = structuredClone(this._cache);
+      await this.store.save(preferences);
+      for (const [path, value] of entries) {
+        this.emit('change', { path, value, preferences });
+      }
+      return preferences;
+    });
+  }
+
   enqueueWrite(operation) {
     const run = this.writeQueue.then(operation, operation);
     this.writeQueue = run.catch(err => logSafeError('[prefs] write failed:', err));

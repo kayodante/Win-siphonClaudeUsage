@@ -7,18 +7,22 @@ import { configDir } from './tokenStore.js';
 
 // Fallback pricing (USD per million tokens) for when readout-pricing.json is absent.
 // Keys must match what pricingKey() produces (no "claude-" prefix, no date suffix).
-// Prices verified against platform.claude.com/docs (verified 2026-05-17).
+// Prices verified against platform.claude.com/docs (verified 2026-07-06).
 // cacheRead = input × 0.10, cacheWrite = input × 1.25 (standard Anthropic formula).
+// sonnet-5 uses the sticker $3/$15 (not the introductory intro rate).
 const BUNDLED_PRICING = {
   models: {
-    'sonnet-4-6': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
-    'sonnet-4-5': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
-    'sonnet-4':   { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'fable-5':    { input: 10,   output: 50,   cacheRead: 1.00,  cacheWrite: 12.50 },
+    'opus-4-8':   { input: 5,    output: 25,   cacheRead: 0.50,  cacheWrite: 6.25  },
     'opus-4-7':   { input: 5,    output: 25,   cacheRead: 0.50,  cacheWrite: 6.25  },
     'opus-4-6':   { input: 5,    output: 25,   cacheRead: 0.50,  cacheWrite: 6.25  },
     'opus-4-5':   { input: 5,    output: 25,   cacheRead: 0.50,  cacheWrite: 6.25  },
     'opus-4-1':   { input: 15,   output: 75,   cacheRead: 1.50,  cacheWrite: 18.75 },
     'opus-4':     { input: 15,   output: 75,   cacheRead: 1.50,  cacheWrite: 18.75 },
+    'sonnet-5':   { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'sonnet-4-6': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'sonnet-4-5': { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
+    'sonnet-4':   { input: 3,    output: 15,   cacheRead: 0.30,  cacheWrite: 3.75  },
     'haiku-4-5':  { input: 1,    output: 5,    cacheRead: 0.10,  cacheWrite: 1.25  },
     'haiku-4':    { input: 0.25, output: 1.25, cacheRead: 0.03,  cacheWrite: 0.30  },
   }

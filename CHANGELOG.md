@@ -16,10 +16,30 @@ is added above it.
 - `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`.
 - GitHub issue templates (bug report, feature request) and PR template.
 - `CODEOWNERS`.
+- Bundled fallback pricing for Claude 5 models (`fable-5`, `sonnet-5`) and
+  `opus-4-8`, so local usage cost no longer falls back to `$0` when
+  `readout-pricing.json` is absent and those models are in the cache.
+- ESLint (flat config, correctness-only: `no-unused-vars` / `no-undef`) as the
+  second half of `npm run lint`, alongside the existing parse check.
 
 ### Changed
 
-- Added `headroom-ai` dependency; de-AI-ified README wording.
+- De-AI-ified README wording.
+- Update banner now renders through the i18n layer instead of hardcoded
+  `en`/`pt-BR` strings.
+- Window bounds are persisted in a single write (`PreferencesService.setMany`)
+  instead of four sequential writes per move/resize.
+
+### Removed
+
+- Dead code: unused `headroom-ai` dependency, orphaned i18n keys, an unused
+  interval constant, orphaned `.last-updated` CSS, a macOS-only `activate`
+  handler, a phantom `installUpdate` argument, and startup `console.log`
+  breadcrumbs.
+
+### Fixed
+
+- `initDotMatrix` extracted to its own module (`src/renderer/dotMatrix.js`).
 
 ## [1.4.5] - 2026-06-26
 

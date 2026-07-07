@@ -1,6 +1,6 @@
 {
   "name": "siphon-windows",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
   "main": "src/main/main.js",
   "type": "module",
@@ -15,7 +15,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.js",
-    "lint": "node scripts/check-syntax.js",
+    "lint": "node scripts/check-syntax.js && eslint .",
     "build:win": "electron-builder --win",
     "fallow": "fallow"
   },
@@ -31,9 +31,8 @@
   "devDependencies": {
     "electron": "^41.3.0",
     "electron-builder": "^26.0.12",
-    "fallow": "^2.102.0"
-  },
-  "dependencies": {
-    "headroom-ai": "^0.22.4"
+    "eslint": "^9.0.0",
+    "fallow": "^2.102.0",
+    "globals": "^16.0.0"
   }
 }

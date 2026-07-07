@@ -274,6 +274,27 @@ test('LocalDataService ignores synthetic model entries', async () => {
   assert.equal(summary.todayStats.outputTokens, 50);
 });
 
+test('LocalDataService falls back to bundled pricing for Claude 5 models when readout-pricing.json is absent', async () => {
+  const tempDir = await makeClaudeDir();
+  // Intentionally do NOT write readout-pricing.json — forces BUNDLED_PRICING.
+  await writeSession(tempDir, 'project-a', 'session.jsonl', [
+    assistantRecord('2026-04-27T10:15:00.000Z', 'claude-fable-5', {
+      input_tokens: 1000,
+      output_tokens: 500
+    })
+  ]);
+  const cacheStore = new MemoryStore(null);
+  const service = new LocalDataService(tempDir, { cacheStore });
+
+  const summary = await service.load(new Date('2026-04-27T12:00:00.000Z'));
+
+  assert.equal(summary.todayStats.inputTokens, 1000);
+  assert.equal(summary.todayStats.outputTokens, 500);
+  // fable-5: input $10/1M, output $50/1M → 1000/1e6*10 + 500/1e6*50 = 0.035
+  assert.ok(summary.todayStats.cost > 0, 'bundled pricing should give a non-zero cost');
+  assert.equal(summary.todayStats.cost, 0.035);
+});
+
 async function makeClaudeDir() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'siphon-local-data-'));
   await fs.mkdir(path.join(tempDir, 'projects'), { recursive: true });

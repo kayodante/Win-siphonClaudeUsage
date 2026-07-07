@@ -121,6 +121,42 @@ test('set emits one change event after persisting', async () => {
   });
 });
 
+test('setMany persists every path in a single write and emits one event per path', async () => {
+  const store = new CountingMemoryStore(null);
+  const preferences = new PreferencesService(store);
+  const events = [];
+  preferences.on('change', event => events.push(event));
+
+  const snapshot = await preferences.setMany([
+    ['window.x', 10],
+    ['window.y', 20],
+    ['window.width', 320],
+    ['window.height', 700]
+  ]);
+
+  assert.equal(store.saveCount, 1);
+  assert.deepEqual(snapshot.window, { x: 10, y: 20, width: 320, height: 700 });
+  assert.equal(store.value.window.width, 320);
+  assert.deepEqual(events.map(e => e.path), [
+    'window.x', 'window.y', 'window.width', 'window.height'
+  ]);
+  assert.deepEqual(events.map(e => e.value), [10, 20, 320, 700]);
+  // Every event carries the final merged snapshot.
+  assert.equal(events.at(-1).preferences.window.height, 700);
+});
+
+class CountingMemoryStore extends MemoryStore {
+  constructor(value) {
+    super(value);
+    this.saveCount = 0;
+  }
+
+  async save(value) {
+    this.saveCount += 1;
+    await super.save(value);
+  }
+}
+
 test('concurrent set calls are serialized without dropping sibling changes', async () => {
   const store = new SlowMemoryStore(null);
   const preferences = new PreferencesService(store);

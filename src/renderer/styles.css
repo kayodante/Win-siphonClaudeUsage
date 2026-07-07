@@ -980,24 +980,6 @@ body[data-refreshing="true"] .card {
 
 /* ─── Last updated / DMX ─── */
 
-.last-updated-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1) var(--space-5) var(--space-0);
-}
-
-.last-updated {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--subtle-foreground);
-  font-variant-numeric: tabular-nums;
-  text-transform: lowercase;
-}
-
 .dmx-wrap {
   display: grid;
   grid-template-columns: repeat(4, var(--space-0));
