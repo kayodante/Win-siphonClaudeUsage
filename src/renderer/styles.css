@@ -755,7 +755,7 @@ body[data-view="onboard"] .app-footer {
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-5);
-  margin-top: var(--space-7);
+  margin-top: var(--space-6);
 }
 
 .quota-percent {
@@ -820,7 +820,7 @@ body[data-view="onboard"] .app-footer {
 }
 
 .quota-pace[data-status="likely_out"] {
-    color: var(--destructive);
+  color: var(--destructive);
 }
 
 .quota-pace[data-status="depleted"] {
@@ -846,7 +846,7 @@ body[data-view="onboard"] .app-footer {
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
-  color: var(--warning);
+  color: var(--subtle-foreground);
   background: var(--card-elevated);
   width: fit-content;
 }
@@ -857,8 +857,8 @@ body[data-view="onboard"] .app-footer {
 }
 
 .peak-badge .cost-info-btn svg {
-  width: var(--space-4);
-  height: var(--space-4);
+  width: var(--space-5);
+  height: var(--space-5);
   fill: var(--accent-light);
 }
 
