@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-10
+
 ### Added
 
 - `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`.
