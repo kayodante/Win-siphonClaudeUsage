@@ -328,6 +328,13 @@ function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
   let endIndex = chunk.indexOf('\n');
 
   while (endIndex !== -1) {
+    const astIdx = chunk.indexOf('"assistant"', startIndex);
+    if (astIdx === -1 || astIdx > endIndex) {
+      startIndex = endIndex + 1;
+      endIndex = chunk.indexOf('\n', startIndex);
+      continue;
+    }
+
     const line = chunk.substring(startIndex, endIndex);
     startIndex = endIndex + 1;
     endIndex = chunk.indexOf('\n', startIndex);
