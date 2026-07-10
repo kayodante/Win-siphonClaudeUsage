@@ -13,6 +13,17 @@ export function formatPercent(value) {
   return `${Math.round(value)}%`;
 }
 
+export function quotaDisplayValue(usedPercent, mode) {
+  const used = clampPercent(usedPercent);
+  return mode === 'remaining' ? 100 - used : used;
+}
+
+export function formatQuotaPercent(usedPercent, mode, suffix = '') {
+  if (usedPercent == null || Number.isNaN(Number(usedPercent))) return '--';
+  const base = formatPercent(quotaDisplayValue(usedPercent, mode));
+  return suffix ? `${base} ${suffix}` : base;
+}
+
 export function levelForPercent(value) {
   if (value >= 85) return 'critical';
   if (value >= 70) return 'high';

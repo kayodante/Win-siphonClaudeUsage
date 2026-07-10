@@ -7,12 +7,14 @@ import {
   formatCurrency,
   formatDaysRemaining,
   formatPercent,
+  formatQuotaPercent,
   formatRelativeUpdated,
   formatTimeRemaining,
   formatTokens,
   formatWeekdayClock,
   hydrateSlot,
-  levelForPercent
+  levelForPercent,
+  quotaDisplayValue
 } from '../src/shared/format.js';
 
 test('formatRelativeUpdated keeps English as the default language', () => {
@@ -190,4 +192,27 @@ test('hydrateSlot handles missing resetsAt', () => {
   const hydrated = hydrateSlot(slot);
   assert.equal(hydrated.percent, 10);
   assert.equal(hydrated.resetsAt, null);
+});
+
+test('quotaDisplayValue returns used percent unchanged in used mode', () => {
+  assert.equal(quotaDisplayValue(75, 'used'), 75);
+});
+
+test('quotaDisplayValue inverts in remaining mode', () => {
+  assert.equal(quotaDisplayValue(75, 'remaining'), 25);
+  assert.equal(quotaDisplayValue(0, 'remaining'), 100);
+  assert.equal(quotaDisplayValue(100, 'remaining'), 0);
+});
+
+test('formatQuotaPercent appends a suffix when given one', () => {
+  assert.equal(formatQuotaPercent(75, 'used', 'used'), '75% used');
+  assert.equal(formatQuotaPercent(75, 'remaining', 'left'), '25% left');
+});
+
+test('formatQuotaPercent omits the space when suffix is empty', () => {
+  assert.equal(formatQuotaPercent(75, 'used'), '75%');
+});
+
+test('formatQuotaPercent returns -- for null', () => {
+  assert.equal(formatQuotaPercent(null, 'used', 'used'), '--');
 });
