@@ -11,6 +11,19 @@ is added above it.
 
 ## [Unreleased]
 
+### Fixed
+
+- Update banner no longer stalls right after a release. The updater now checks
+  whether the winget catalog *already has* the new version instead of only
+  whether Siphon was installed via winget; since the winget manifest lags
+  GitHub Releases by hours, the banner falls back to the direct `.exe`
+  download in that window and only routes through winget once it catches up.
+- The winget update path now waits for Siphon to exit before upgrading (so the
+  installer can replace the locked executable) and relaunches the app
+  afterward, matching the "Update & restart" button. Previously it quit while
+  the upgrade was still running and never relaunched, so the app just closed
+  and nothing happened.
+
 ## [1.5.0] - 2026-07-10
 
 ### Added

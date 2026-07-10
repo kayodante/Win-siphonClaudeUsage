@@ -526,7 +526,9 @@ function registerUpdateIpc() {
   });
 
   ipcMain.handle('update:installViaWinget', async () => {
-    wingetUpgrade();
+    // Helper waits for this process to exit, upgrades, then relaunches Siphon.
+    wingetUpgrade({ pid: process.pid, execPath: process.execPath });
+    app.isQuitting = true;
     app.quit();
   });
 }

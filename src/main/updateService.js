@@ -6,18 +6,32 @@ const REPO = 'kayodante/Win-siphonClaudeUsage';
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 const WINGET_ID = 'kayodante.Siphon';
 
-export function isManagedByWinget() {
+// True only when the winget catalog already carries a newer version of Siphon.
+// The winget manifest lags the GitHub release by hours, so right after a release
+// this returns false and the updater falls back to the direct .exe download.
+export function wingetUpgradeAvailable() {
   return new Promise(resolve => {
-    execFile('winget', ['list', '--id', WINGET_ID, '-e', '--accept-source-agreements'], { timeout: 10000 }, (err, stdout) => {
-      resolve(!err && stdout.includes(WINGET_ID));
+    execFile('winget', ['upgrade', '--accept-source-agreements', '--disable-interactivity'], { timeout: 15000 }, (err, stdout) => {
+      resolve(!err && typeof stdout === 'string' && stdout.includes(WINGET_ID));
     });
   });
 }
 
-export function wingetUpgrade() {
-  spawn('winget', [
-    'upgrade', '--id', WINGET_ID, '-e',
-    '--silent', '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity'
+// PowerShell that waits for the running Siphon.exe to exit (so the NSIS installer
+// can replace the locked binary), runs the winget upgrade, then relaunches Siphon.
+export function buildWingetUpgradeCommand({ pid, execPath } = {}) {
+  const parts = [];
+  const numericPid = Number(pid);
+  if (Number.isInteger(numericPid)) parts.push(`try { Wait-Process -Id ${numericPid} -Timeout 30 } catch {}`);
+  parts.push(`winget upgrade --id ${WINGET_ID} -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity`);
+  if (execPath) parts.push(`Start-Process -FilePath '${String(execPath).replace(/'/g, "''")}'`);
+  return parts.join('; ');
+}
+
+export function wingetUpgrade(opts = {}) {
+  spawn('powershell', [
+    '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden',
+    '-Command', buildWingetUpgradeCommand(opts)
   ], { detached: true, stdio: 'ignore' }).unref();
 }
 
@@ -54,7 +68,7 @@ function fetchLatest(httpImpl = https) {
   });
 }
 
-export async function checkForUpdate({ isPackaged, version, httpImpl = https } = {}) {
+export async function checkForUpdate({ isPackaged, version, httpImpl = https, wingetCheck = wingetUpgradeAvailable } = {}) {
   if (isPackaged === undefined || version === undefined) {
     const { app } = await import('electron');
     isPackaged ??= app.isPackaged;
@@ -73,7 +87,7 @@ export async function checkForUpdate({ isPackaged, version, httpImpl = https } =
         url: RELEASES_URL,
         downloadUrl: asset?.browser_download_url ?? null,
         checksumUrl: asset ? (release.assets?.find(a => a.name === `${asset.name}.sha256`)?.browser_download_url ?? null) : null,
-        wingetManaged: await isManagedByWinget()
+        wingetUpgradeAvailable: await wingetCheck()
       };
     }
   } catch {

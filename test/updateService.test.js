@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { isNewer, checkForUpdate, downloadFile } from '../src/main/updateService.js';
+import { isNewer, checkForUpdate, downloadFile, buildWingetUpgradeCommand } from '../src/main/updateService.js';
+
+const noWinget = async () => false;
 
 // ── isNewer ───────────────────────────────────────────────────────────────────
 
@@ -108,7 +110,7 @@ test('checkForUpdate returns null for prerelease', async () => {
 
 test('checkForUpdate returns update info when newer version is available', async () => {
   const httpImpl = makeFakeHttps(200, { tag_name: 'v1.1.0', draft: false, prerelease: false });
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl, wingetCheck: noWinget });
   assert.equal(result?.version, '1.1.0');
   assert.ok(result?.url.includes('github.com'));
 });
@@ -132,6 +134,40 @@ test('checkForUpdate returns null when response body exceeds 512 KB', async () =
     httpImpl: makeFakeHttpsLargeBody()
   });
   assert.equal(result, null);
+});
+
+// ── checkForUpdate — wingetUpgradeAvailable ───────────────────────────────────
+
+test('checkForUpdate reports wingetUpgradeAvailable true when winget catalog has the upgrade', async () => {
+  const httpImpl = makeFakeHttps(200, { tag_name: 'v1.1.0', draft: false, prerelease: false });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl, wingetCheck: async () => true });
+  assert.equal(result?.wingetUpgradeAvailable, true);
+});
+
+test('checkForUpdate reports wingetUpgradeAvailable false when winget catalog lags', async () => {
+  const httpImpl = makeFakeHttps(200, { tag_name: 'v1.1.0', draft: false, prerelease: false });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl, wingetCheck: async () => false });
+  assert.equal(result?.wingetUpgradeAvailable, false);
+});
+
+// ── buildWingetUpgradeCommand ─────────────────────────────────────────────────
+
+test('buildWingetUpgradeCommand waits for the pid, upgrades, then relaunches', () => {
+  const cmd = buildWingetUpgradeCommand({ pid: 4242, execPath: 'C:\\Program Files\\Siphon\\Siphon.exe' });
+  assert.match(cmd, /Wait-Process -Id 4242 -Timeout 30/);
+  assert.match(cmd, /winget upgrade --id kayodante\.Siphon -e --silent/);
+  assert.match(cmd, /Start-Process -FilePath 'C:\\Program Files\\Siphon\\Siphon\.exe'/);
+});
+
+test('buildWingetUpgradeCommand escapes single quotes in execPath', () => {
+  const cmd = buildWingetUpgradeCommand({ pid: 1, execPath: "C:\\a'b\\Siphon.exe" });
+  assert.match(cmd, /Start-Process -FilePath 'C:\\a''b\\Siphon\.exe'/);
+});
+
+test('buildWingetUpgradeCommand omits Wait-Process for a non-integer pid', () => {
+  const cmd = buildWingetUpgradeCommand({ pid: '5; rm', execPath: 'x' });
+  assert.doesNotMatch(cmd, /Wait-Process/);
+  assert.match(cmd, /winget upgrade --id kayodante\.Siphon/);
 });
 
 // ── downloadFile helpers ──────────────────────────────────────────────────────
@@ -175,13 +211,13 @@ test('checkForUpdate includes downloadUrl for installer asset', async () => {
       { name: 'Siphon-Portable-1.1.0.exe', browser_download_url: 'https://cdn.example.com/Siphon-Portable-1.1.0.exe' }
     ]
   };
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release), wingetCheck: noWinget });
   assert.equal(result?.downloadUrl, 'https://cdn.example.com/Siphon+Setup+1.1.0.exe');
 });
 
 test('checkForUpdate sets downloadUrl to null when no installer asset', async () => {
   const release = { tag_name: 'v1.1.0', draft: false, prerelease: false, assets: [] };
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release), wingetCheck: noWinget });
   assert.equal(result?.downloadUrl, null);
 });
 
@@ -197,7 +233,7 @@ test('checkForUpdate includes checksumUrl when matching .sha256 asset exists', a
       { name: 'Siphon Setup 1.1.0.exe.sha256', browser_download_url: 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256' }
     ]
   };
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release), wingetCheck: noWinget });
   assert.equal(result?.checksumUrl, 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256');
 });
 
@@ -211,7 +247,7 @@ test('checkForUpdate sets checksumUrl to null when no matching .sha256 asset exi
       { name: 'Siphon-Portable-1.1.0.exe.sha256', browser_download_url: 'https://cdn.example.com/Siphon-Portable-1.1.0.exe.sha256' } // Mismatched name
     ]
   };
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release), wingetCheck: noWinget });
   assert.equal(result?.checksumUrl, null);
 });
 
@@ -224,7 +260,7 @@ test('checkForUpdate sets checksumUrl to null when no installer asset', async ()
       { name: 'Siphon Setup 1.1.0.exe.sha256', browser_download_url: 'https://cdn.example.com/Siphon+Setup+1.1.0.exe.sha256' }
     ]
   };
-  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release) });
+  const result = await checkForUpdate({ isPackaged: true, version: '1.0.0', httpImpl: makeFakeHttps(200, release), wingetCheck: noWinget });
   assert.equal(result?.checksumUrl, null);
 });
 

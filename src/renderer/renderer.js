@@ -124,7 +124,7 @@ let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
-let updateWingetManaged = false;
+let updateWingetUpgradeAvailable = false;
 let isEntering = false;
 let lastEnterTime = 0;
 const animatingElements = new Map();
@@ -459,17 +459,17 @@ elements.updateBannerDownload.addEventListener('click', () => {
   }
 });
 
-window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, wingetManaged }) => {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, wingetUpgradeAvailable }) => {
   if (downloadState !== 'downloading' && downloadState !== 'updating') {
     updateUrl = url;
     updateVersion = version;
     updateDownloadUrl = downloadUrl ?? null;
     updateChecksumUrl = checksumUrl ?? null;
-    updateWingetManaged = Boolean(wingetManaged);
+    updateWingetUpgradeAvailable = Boolean(wingetUpgradeAvailable);
   }
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version });
-  if (updateWingetManaged) setDownloadUI('winget', 0);
+  if (updateWingetUpgradeAvailable) setDownloadUI('winget', 0);
   if (!updateDismissed) showBanner(elements.updateBanner);
 });
 
