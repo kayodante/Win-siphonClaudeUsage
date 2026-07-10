@@ -6,7 +6,8 @@ import {
   formatRelativeUpdated,
   formatTokens,
   hydrateSlot,
-  levelForPercent
+  levelForPercent,
+  quotaDisplayValue
 } from '../shared/format.js';
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { t, tFormat } from '../shared/i18n.js';
@@ -30,12 +31,14 @@ const elements = {
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
+  sessionQuotaSuffix: document.querySelector('#sessionQuotaSuffix'),
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   sessionPace: document.querySelector('#sessionPace'),
   peakHoursBadge: document.querySelector('#peakHoursBadge'),
   peakHoursInfo: document.querySelector('#peakHoursInfo'),
   weeklyPercent: document.querySelector('#weeklyPercent'),
+  weeklyQuotaSuffix: document.querySelector('#weeklyQuotaSuffix'),
   weeklyMeter: document.querySelector('#weeklyMeter'),
   weeklyReset: document.querySelector('#weeklyReset'),
   notificationState: document.querySelector('#notificationState'),
@@ -68,6 +71,7 @@ const elements = {
   settingsLimitSoundVolume: document.querySelector('#settingsLimitSoundVolume'),
   settingsLimitAlertToggle: document.querySelector('#settingsLimitAlertToggle'),
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
+  settingsQuotaMode: document.querySelector('#settingsQuotaMode'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
@@ -405,6 +409,13 @@ elements.settingsLanguage.addEventListener('change', async event => {
     elements.errorText.textContent = t('error.saveLanguage', previousLanguage);
   }
 });
+elements.settingsQuotaMode.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('display.quotaMode', event.target.value);
+  } catch (error) {
+    logSafeError('Failed to save quota display mode:', error);
+  }
+});
 elements.onboardCodeForm.addEventListener('submit', event => {
   event.preventDefault();
   const code = elements.onboardCodeInput.value.trim();
@@ -605,17 +616,19 @@ function updateStatsAndPills({ state, notificationsEnabled, lang }) {
   updateLastUpdatedLine();
 }
 
-function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering }) {
+function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode = 'used' }) {
+  const displaySession = quotaDisplayValue(sessionPercent, mode);
+  const displayWeekly = quotaDisplayValue(weeklyPercent, mode);
   if (entering) {
-    animateCountUp(elements.sessionPercent, sessionPercent, setPercentValue, { duration: 650, delay: 310 });
-    animateCountUp(elements.weeklyPercent, weeklyPercent, setPercentValue, { duration: 650, delay: 380 });
+    animateCountUp(elements.sessionPercent, displaySession, setPercentValue, { duration: 650, delay: 310 });
+    animateCountUp(elements.weeklyPercent, displayWeekly, setPercentValue, { duration: 650, delay: 380 });
     animateCountUp(elements.todayCost, state.todayStats?.cost, setCostValue, { duration: 600, delay: 440 });
     animateCountUp(elements.monthCost, state.monthStats?.cost, setCostValue, { duration: 600, delay: 470 });
     prevRenderedSessionPct = sessionPercent;
     prevRenderedWeeklyPct = weeklyPercent;
   } else {
     cancelCountUp(elements.sessionPercent);
-    elements.sessionPercent.textContent = session ? formatPercent(session.percent) : '--';
+    elements.sessionPercent.textContent = session ? formatPercent(displaySession) : '--';
     if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
       triggerResetFlash();
     } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
@@ -624,7 +637,7 @@ function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyP
     prevRenderedSessionPct = sessionPercent;
 
     cancelCountUp(elements.weeklyPercent);
-    elements.weeklyPercent.textContent = weekly ? formatPercent(weekly.percent) : '--';
+    elements.weeklyPercent.textContent = weekly ? formatPercent(displayWeekly) : '--';
     if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
       flashUpdate(elements.weeklyPercent);
     }
@@ -646,13 +659,18 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
     windowMs: SESSION_WINDOW_MS
   });
 
+  const mode = state.preferences?.display?.quotaMode ?? 'used';
+  const suffixText = t(`quota.suffix.${mode}`, lang);
+  elements.sessionQuotaSuffix.textContent = session ? suffixText : '';
+  elements.weeklyQuotaSuffix.textContent = weekly ? suffixText : '';
+
   updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
   updateStatsAndPills({ state, notificationsEnabled, lang });
 
   const entering = isEntering;
   isEntering = false;
 
-  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering });
+  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode });
 }
 
 function renderSettingsControls(state, lang) {
@@ -683,6 +701,7 @@ function renderSettingsControls(state, lang) {
   elements.settingsExpireAlertToggle.checked = state.preferences?.notifications?.expireAlert ?? false;
   elements.settingsLimitAlertToggle.checked = state.preferences?.notifications?.limitAlert ?? false;
   elements.settingsRefreshInterval.value = String(state.preferences?.refresh?.intervalSeconds ?? 30);
+  elements.settingsQuotaMode.value = state.preferences?.display?.quotaMode ?? 'used';
   elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
   elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
   elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');

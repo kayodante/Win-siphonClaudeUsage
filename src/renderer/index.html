@@ -156,6 +156,7 @@
           </div>
           <div class="quota-headline">
             <span class="quota-percent" id="sessionPercent">--</span>
+            <span class="quota-suffix" id="sessionQuotaSuffix" aria-hidden="true"></span>
             <div class="quota-pace-stack">
               <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
               <span id="peakHoursBadge" class="peak-badge" hidden>
@@ -181,6 +182,7 @@
           </div>
           <div class="quota-headline">
             <span class="quota-percent" id="weeklyPercent">--</span>
+            <span class="quota-suffix" id="weeklyQuotaSuffix" aria-hidden="true"></span>
           </div>
           <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
           <div class="quota-meta">
@@ -256,6 +258,14 @@
             <select id="settingsLanguage" class="settings-select">
               <option value="en" data-i18n="settings.languageEN">English</option>
               <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
+            </select>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <span class="settings-row-label" data-i18n="settings.quotaMode">Percentage display</span>
+            <select id="settingsQuotaMode" class="settings-select">
+              <option value="used" data-i18n="settings.quotaModeUsed">Used</option>
+              <option value="remaining" data-i18n="settings.quotaModeRemaining">Remaining</option>
             </select>
           </div>
           <div class="settings-divider"></div>
