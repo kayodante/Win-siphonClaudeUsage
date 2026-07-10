@@ -108,8 +108,10 @@ function mergePreferences(stored) {
 }
 
 function deepMerge(target, source) {
-  for (const [key, value] of Object.entries(source)) {
+  for (const key in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    const value = source[key];
     if (isPlainObject(value) && isPlainObject(target[key])) {
       deepMerge(target[key], value);
     } else {
