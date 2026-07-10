@@ -13,15 +13,15 @@ test('buildTrayStatus formats a rich English tooltip and menu items', () => {
     status.tooltip,
     [
       'Siphon',
-      'Session: 42%',
-      'Weekly: 64%',
+      'Session: 42% used',
+      'Weekly: 64% used',
       'Session reset: 17:42',
       'Updated: updated 2min ago'
     ].join('\n')
   );
   assert.deepEqual(status.menuItems, [
-    { label: 'Session: 42%', enabled: false },
-    { label: 'Weekly: 64%', enabled: false },
+    { label: 'Session: 42% used', enabled: false },
+    { label: 'Weekly: 64% used', enabled: false },
     { label: 'Session reset: 17:42', enabled: false },
     { label: 'Updated: updated 2min ago', enabled: false }
   ]);
@@ -55,6 +55,22 @@ test('buildTrayStatus handles missing quota and update data', () => {
       'Updated: never updated'
     ].join('\n')
   );
+});
+
+test('buildTrayStatus shows remaining percent with suffix when quotaMode is remaining', () => {
+  const state = {
+    quota: { session: { percent: 75 }, weeklyAll: { percent: 40 } },
+    preferences: { display: { quotaMode: 'remaining' } }
+  };
+  const { tooltip } = buildTrayStatus(state, { lang: 'en' });
+  assert.match(tooltip, /Session: 25% left/);
+  assert.match(tooltip, /Weekly: 60% left/);
+});
+
+test('buildTrayStatus defaults to used percent with no suffix change', () => {
+  const state = { quota: { session: { percent: 75 }, weeklyAll: { percent: 40 } } };
+  const { tooltip } = buildTrayStatus(state, { lang: 'en' });
+  assert.match(tooltip, /Session: 75% used/);
 });
 
 function sampleState() {

@@ -1,6 +1,6 @@
 import {
   formatClockTime,
-  formatPercent,
+  formatQuotaPercent,
   formatRelativeUpdated,
   hydrateSlot
 } from './format.js';
@@ -10,10 +10,12 @@ export function buildTrayStatus(state = {}, { lang = 'en', now = new Date() } = 
   const session = hydrateSlot(state.quota?.session);
   const weekly = hydrateSlot(state.quota?.weeklyAll);
   const updatedAt = state.lastUpdated ? new Date(state.lastUpdated) : null;
+  const mode = state.preferences?.display?.quotaMode ?? 'used';
+  const suffix = t(`quota.suffix.${mode}`, lang);
 
   const rows = [
-    [t('tray.session', lang), session ? formatPercent(session.percent) : '--'],
-    [t('tray.weekly', lang), weekly ? formatPercent(weekly.percent) : '--'],
+    [t('tray.session', lang), session ? formatQuotaPercent(session.percent, mode, suffix) : '--'],
+    [t('tray.weekly', lang), weekly ? formatQuotaPercent(weekly.percent, mode, suffix) : '--'],
     [t('tray.sessionReset', lang), formatClockTime(session?.resetsAt)],
     [t('tray.updated', lang), formatRelativeUpdated(updatedAt, now, lang)]
   ];
