@@ -62,3 +62,5 @@ credentials.json
 .DS_Store
 Thumbs.db
 desktop.ini
+test_projects/
+test_files_real/

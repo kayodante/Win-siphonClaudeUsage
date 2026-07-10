@@ -245,28 +245,48 @@ async function summarizeFromJSONL({ projectsDir, pricing, now, cacheStore, fsImp
   const iterator = jsonlTasks.values();
   const workers = [];
 
+  const BATCH_SIZE = 50;
+
   const worker = async () => {
-    for (const { projectPath, file } of iterator) {
-      const filePath = path.join(projectPath, file);
-      let stat;
-      try {
-        stat = await fsImpl.stat(filePath);
+    while (true) {
+      const batch = [];
+      for (let i = 0; i < BATCH_SIZE; i++) {
+        const next = iterator.next();
+        if (next.done) break;
+        batch.push(next.value);
+      }
+      if (batch.length === 0) break;
+
+      const stats = await Promise.all(
+        batch.map(async ({ projectPath, file }) => {
+          const filePath = path.join(projectPath, file);
+          try {
+            const stat = await fsImpl.stat(filePath);
+            return { filePath, stat };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      for (const item of stats) {
+        if (!item) continue;
+        const { filePath, stat } = item;
         if (stat.mtimeMs < cutoff.getTime()) continue;
-      } catch {
-        continue;
+
+        const previous = cache.files[filePath];
+        if (isUnchanged(previous, stat)) {
+          nextFiles[filePath] = previous;
+          continue;
+        }
+        nextFiles[filePath] = await parseJsonlFile({
+          filePath,
+          stat,
+          previous,
+          cutoff,
+          fsImpl
+        });
       }
-      const previous = cache.files[filePath];
-      if (isUnchanged(previous, stat)) {
-        nextFiles[filePath] = previous;
-        continue;
-      }
-      nextFiles[filePath] = await parseJsonlFile({
-        filePath,
-        stat,
-        previous,
-        cutoff,
-        fsImpl
-      });
     }
   };
 
