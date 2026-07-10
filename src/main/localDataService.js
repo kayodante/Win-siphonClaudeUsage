@@ -69,11 +69,18 @@ export function summarizeUsage(cache, pricing, now = new Date()) {
   const days = cache?.days ?? {};
   const todayModels = new Map();
   const monthModels = new Map();
+  const priceCache = new Map();
 
   for (const [date, modelMap] of Object.entries(days)) {
     for (const [model, rawTokens] of Object.entries(modelMap ?? {})) {
       const tokens = normalizeTokens(rawTokens);
-      const price = findPrice(pricing, model);
+      let price;
+      if (priceCache.has(model)) {
+        price = priceCache.get(model);
+      } else {
+        price = findPrice(pricing, model);
+        priceCache.set(model, price);
+      }
       const cost = price ? tokenCost(tokens, price) : 0;
 
       if (date === today) {
