@@ -52,6 +52,8 @@ test('controller state includes preferences snapshot', async () => {
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     integration: { launchWithClaudeCode: false },
+    privacy: { maskEmail: false },
+    display: { quotaMode: 'used' },
     claudePath: null
   });
 });
