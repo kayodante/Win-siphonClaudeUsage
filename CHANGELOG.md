@@ -21,6 +21,13 @@ is added above it.
   `readout-pricing.json` is absent and those models are in the cache.
 - ESLint (flat config, correctness-only: `no-unused-vars` / `no-undef`) as the
   second half of `npm run lint`, alongside the existing parse check.
+- Settings toggle (System tab) to display quota percentages as *used* (default)
+  or *remaining*, applied consistently across the Session/Weekly cards, the
+  floating widget, and the tray tooltip/menu, with a localized suffix
+  (`75% used` / `25% restante`). Persisted as `display.quotaMode`.
+- Privacy mode: an eye toggle in the Settings account card masks the account
+  email (`john.doe@gmail.com` → `********@*****.com`) for screenshots and screen
+  shares. Persisted as `privacy.maskEmail`.
 
 ### Changed
 
