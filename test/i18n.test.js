@@ -78,3 +78,14 @@ test('threshold notification strings exist in both languages', () => {
     assert.notEqual(t('settings.limitAlert', lang), 'settings.limitAlert');
   }
 });
+
+test('quota mode and privacy strings exist in both languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('quota.suffix.used', lang), 'quota.suffix.used');
+    assert.notEqual(t('quota.suffix.remaining', lang), 'quota.suffix.remaining');
+    assert.notEqual(t('settings.quotaMode', lang), 'settings.quotaMode');
+    assert.notEqual(t('settings.quotaModeUsed', lang), 'settings.quotaModeUsed');
+    assert.notEqual(t('settings.quotaModeRemaining', lang), 'settings.quotaModeRemaining');
+    assert.notEqual(t('settings.privacyMaskEmail', lang), 'settings.privacyMaskEmail');
+  }
+});
