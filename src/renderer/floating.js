@@ -23,6 +23,7 @@ const elements = {
   refreshButton: document.querySelector('#floatingRefreshButton'),
   titleLabel: document.querySelector('#floatingTitleLabel'),
   percent: document.querySelector('#floatingPercent'),
+  percentSuffix: document.querySelector('#floatingPercentSuffix'),
   resetLabel: document.querySelector('#floatingResetLabel'),
   resetTime: document.querySelector('#floatingResetTime'),
   weeklyLabel: document.querySelector('#floatingWeeklyLabel'),
@@ -81,9 +82,13 @@ function render(state) {
 
   document.body.dataset.expanded = String(currentExpanded);
   elements.expandedPanel.hidden = !currentExpanded;
-  const percentText = session ? formatQuotaPercent(session.percent, mode, suffix) : '--';
-  elements.percent.textContent = percentText;
-  elements.percent.dataset.value = percentText;
+  // Classic widget splits the number and suffix into separate spans so the
+  // suffix can be styled independently (--text-md); the mini pill shows the
+  // bare number only.
+  const numberText = session ? formatQuotaPercent(session.percent, mode) : '--';
+  elements.percent.textContent = numberText;
+  elements.percent.dataset.value = numberText;
+  if (elements.percentSuffix) elements.percentSuffix.textContent = session ? suffix : '';
 
   elements.resetLabel.textContent = buildFloatingReset(session, currentLang);
   elements.resetTime.textContent = '';
@@ -95,7 +100,7 @@ function render(state) {
   renderMeter(percent);
   elements.logo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
   if (elements.miniLogo) elements.miniLogo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
-  if (elements.miniPercent) elements.miniPercent.textContent = percentText;
+  if (elements.miniPercent) elements.miniPercent.textContent = numberText;
 }
 
 function buildFloatingReset(session, lang) {

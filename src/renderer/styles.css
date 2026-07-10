@@ -779,10 +779,10 @@ body[data-view="onboard"] .app-footer {
 }
 
 .quota-suffix {
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
-  color: var(--muted-foreground);
+  color: var(--foreground);
   text-transform: lowercase;
 }
 
@@ -1689,6 +1689,9 @@ body[data-refreshing="true"] .card {
 .floating-percent-button {
   height: auto;
   padding: 0;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
   background: transparent;
   color: var(--foreground);
   cursor: pointer;
@@ -1698,6 +1701,11 @@ body[data-refreshing="true"] .card {
 .floating-percent-button:hover {
   background: transparent;
   filter: none;
+}
+
+/* Tight line box so the suffix glyph bottom-aligns with the big percent */
+.floating-percent-button .quota-suffix {
+  line-height: var(--leading-none);
 }
 
 .floating-percent {
