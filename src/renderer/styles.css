@@ -771,6 +771,25 @@ body[data-view="onboard"] .app-footer {
     --quota-h 1100ms var(--ease-out-quart);
 }
 
+.quota-value-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.quota-suffix {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  color: var(--muted-foreground);
+  text-transform: lowercase;
+}
+
+.quota-suffix:empty {
+  display: none;
+}
+
 .quota-meta {
   display: flex;
   align-items: center;
