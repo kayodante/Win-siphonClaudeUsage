@@ -141,11 +141,16 @@ They match Claude Code's own client.
 | Response key         | Internal name    | UI label        |
 | -------------------- | ---------------- | --------------- |
 | `five_hour`          | `session`        | Session         |
-| `seven_day`          | `weeklyAll`      | Weekly all      |
-| `seven_day_sonnet`   | `weeklySonnet`   | Weekly Sonnet   |
-| `seven_day_opus`     | `weeklyOpus`     | (not yet shown) |
+| `seven_day`          | `weeklyAll`      | Weekly Limit    |
 
 Each becomes `{ percent: Number, resetsAt: Date | null }`.
+
+`seven_day_sonnet` and `seven_day_opus` are per-model weekly buckets that
+only come populated on Max plans (on Pro they arrive empty or absent). They
+were displayed early in the port, intentionally removed, and are ignored by
+the parser today. The endpoint may also return an `extra_usage` object
+(`is_enabled`, `monthly_limit`, `used_credits`, `utilization`) — also
+ignored for now; see `ROADMAP.md` → *Later* for the display proposal.
 
 ### Other status codes
 
