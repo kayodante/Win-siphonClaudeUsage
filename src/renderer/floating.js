@@ -1,6 +1,6 @@
 // fallow-ignore-file unused-file -- loaded via <script src> in floating.html, not a JS import
 import { logSafeError } from '../shared/diagnostics.js';
-import { clampPercent, formatClockTime, formatCurrency, formatPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
+import { clampPercent, formatClockTime, formatCurrency, formatQuotaPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
 import { t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 40;
@@ -76,17 +76,19 @@ function render(state) {
   const session = hydrateSlot(state.quota?.session);
   const weekly = hydrateSlot(state.quota?.weeklyAll);
   const percent = clampPercent(session?.percent ?? 0);
+  const mode = state?.preferences?.display?.quotaMode ?? 'used';
+  const suffix = t(`quota.suffix.${mode}`, currentLang);
 
   document.body.dataset.expanded = String(currentExpanded);
   elements.expandedPanel.hidden = !currentExpanded;
-  const percentText = session ? formatPercent(session.percent) : '--';
+  const percentText = session ? formatQuotaPercent(session.percent, mode, suffix) : '--';
   elements.percent.textContent = percentText;
   elements.percent.dataset.value = percentText;
 
   elements.resetLabel.textContent = buildFloatingReset(session, currentLang);
   elements.resetTime.textContent = '';
 
-  elements.weeklyValue.textContent = weekly ? formatPercent(weekly.percent) : '--';
+  elements.weeklyValue.textContent = weekly ? formatQuotaPercent(weekly.percent, mode, suffix) : '--';
   elements.todayValue.textContent = formatCurrency(state.todayStats?.cost);
   elements.monthValue.textContent = formatCurrency(state.monthStats?.cost);
 
