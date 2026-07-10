@@ -7,6 +7,7 @@ import {
   formatTokens,
   hydrateSlot,
   levelForPercent,
+  maskEmail,
   quotaDisplayValue
 } from '../shared/format.js';
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
@@ -55,6 +56,7 @@ const elements = {
   editClaudePathButton: document.querySelector('#editClaudePathButton'),
   settingsName: document.querySelector('#settingsName'),
   settingsEmail: document.querySelector('#settingsEmail'),
+  settingsEmailToggle: document.querySelector('#settingsEmailToggle'),
   settingsPlanRow: document.querySelector('#settingsPlanRow'),
   settingsPlan: document.querySelector('#settingsPlan'),
   settingsLanguage: document.querySelector('#settingsLanguage'),
@@ -414,6 +416,14 @@ elements.settingsQuotaMode.addEventListener('change', async event => {
     await window.siphon.setPreference('display.quotaMode', event.target.value);
   } catch (error) {
     logSafeError('Failed to save quota display mode:', error);
+  }
+});
+elements.settingsEmailToggle.addEventListener('click', async () => {
+  const next = !(currentState?.preferences?.privacy?.maskEmail ?? false);
+  try {
+    await window.siphon.setPreference('privacy.maskEmail', next);
+  } catch (error) {
+    logSafeError('Failed to save email mask preference:', error);
   }
 });
 elements.onboardCodeForm.addEventListener('submit', event => {
@@ -862,8 +872,13 @@ function renderSettings(state, lang = currentLanguage()) {
   elements.settingsName.textContent = profile.name ?? t('settings.signedInFallback', lang);
 
   const hasEmail = Boolean(profile.email);
+  const maskEmailPref = state.preferences?.privacy?.maskEmail ?? false;
   elements.settingsEmail.hidden = !hasEmail;
-  elements.settingsEmail.textContent = hasEmail ? profile.email : '';
+  elements.settingsEmail.textContent = hasEmail
+    ? (maskEmailPref ? maskEmail(profile.email) : profile.email)
+    : '';
+  elements.settingsEmailToggle.hidden = !hasEmail;
+  elements.settingsEmailToggle.dataset.masked = String(maskEmailPref);
 
   const hasPlan = Boolean(profile.plan);
   elements.settingsPlanRow.hidden = !hasPlan;

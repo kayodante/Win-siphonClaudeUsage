@@ -1397,6 +1397,24 @@ body[data-refreshing="true"] .card {
   text-align: center;
 }
 
+.account-email-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.account-email-toggle .icon-view-off {
+  display: none;
+}
+
+.account-email-toggle[data-masked="true"] .icon-view {
+  display: none;
+}
+
+.account-email-toggle[data-masked="true"] .icon-view-off {
+  display: inline-flex;
+}
+
 .account-badge-row {
   display: flex;
   justify-content: center;
