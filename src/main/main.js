@@ -378,7 +378,9 @@ function registerPrefsIpc() {
       'startup.openAtLogin', 'startup.showWindowOnLogin',
       'refresh.intervalSeconds',
       'claudePath',
-      'integration.launchWithClaudeCode'
+      'integration.launchWithClaudeCode',
+      'privacy.maskEmail',
+      'display.quotaMode'
     ]);
     if (!ALLOWED.has(preferencePath)) return;
     if (preferencePath === 'refresh.intervalSeconds') {
@@ -394,6 +396,9 @@ function registerPrefsIpc() {
     }
     if (preferencePath === 'floating.style') {
       if (value !== 'classic' && value !== 'mini') return;
+    }
+    if (preferencePath === 'display.quotaMode') {
+      if (value !== 'used' && value !== 'remaining') return;
     }
     try {
       await controller.preferences.set(preferencePath, value);

@@ -24,6 +24,8 @@ test('load merges partial stored preferences with defaults', async () => {
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     integration: { launchWithClaudeCode: false },
+    privacy: { maskEmail: false },
+    display: { quotaMode: 'used' },
     claudePath: null
   });
 });
@@ -63,6 +65,8 @@ test('set persists a nested change and returns the full snapshot', async () => {
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     integration: { launchWithClaudeCode: false },
+    privacy: { maskEmail: false },
+    display: { quotaMode: 'used' },
     claudePath: null
   });
   assert.deepEqual(store.value, snapshot);
@@ -81,6 +85,8 @@ test('set creates deep paths without dropping sibling defaults', async () => {
     startup: { openAtLogin: false, showWindowOnLogin: false },
     refresh: { intervalSeconds: 30 },
     integration: { launchWithClaudeCode: false },
+    privacy: { maskEmail: false },
+    display: { quotaMode: 'used' },
     claudePath: null
   });
 });
@@ -116,6 +122,8 @@ test('set emits one change event after persisting', async () => {
       startup: { openAtLogin: false, showWindowOnLogin: false },
       refresh: { intervalSeconds: 30 },
       integration: { launchWithClaudeCode: false },
+      privacy: { maskEmail: false },
+      display: { quotaMode: 'used' },
       claudePath: null
     }
   });
@@ -195,4 +203,12 @@ test('limitAlert and expireAlert default to false', async () => {
   const loaded = await preferences.load();
   assert.equal(loaded.notifications.limitAlert, false);
   assert.equal(loaded.notifications.expireAlert, false);
+});
+
+test('DEFAULT_PREFERENCES includes privacy.maskEmail false and display.quotaMode used', async () => {
+  const store = { load: async () => ({}), save: async () => {} };
+  const prefs = new PreferencesService(store);
+  const loaded = await prefs.load();
+  assert.equal(loaded.privacy.maskEmail, false);
+  assert.equal(loaded.display.quotaMode, 'used');
 });

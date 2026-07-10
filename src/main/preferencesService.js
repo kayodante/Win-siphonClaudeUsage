@@ -34,6 +34,12 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   integration: Object.freeze({
     launchWithClaudeCode: false
   }),
+  privacy: Object.freeze({
+    maskEmail: false
+  }),
+  display: Object.freeze({
+    quotaMode: 'used'
+  }),
   claudePath: null
 });
 
