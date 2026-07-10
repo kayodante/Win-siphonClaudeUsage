@@ -24,6 +24,20 @@ export function formatQuotaPercent(usedPercent, mode, suffix = '') {
   return suffix ? `${base} ${suffix}` : base;
 }
 
+export function maskEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  const at = email.indexOf('@');
+  if (at === -1) return '*'.repeat(email.length);
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const maskedLocal = '*'.repeat(local.length);
+  const dot = domain.lastIndexOf('.');
+  if (dot === -1) return `${maskedLocal}@${'*'.repeat(domain.length)}`;
+  const name = domain.slice(0, dot);
+  const tld = domain.slice(dot);
+  return `${maskedLocal}@${'*'.repeat(name.length)}${tld}`;
+}
+
 export function levelForPercent(value) {
   if (value >= 85) return 'critical';
   if (value >= 70) return 'high';

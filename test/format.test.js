@@ -14,6 +14,7 @@ import {
   formatWeekdayClock,
   hydrateSlot,
   levelForPercent,
+  maskEmail,
   quotaDisplayValue
 } from '../src/shared/format.js';
 
@@ -215,4 +216,22 @@ test('formatQuotaPercent omits the space when suffix is empty', () => {
 
 test('formatQuotaPercent returns -- for null', () => {
   assert.equal(formatQuotaPercent(null, 'used', 'used'), '--');
+});
+
+test('maskEmail masks local part and domain label, keeps TLD', () => {
+  assert.equal(maskEmail('john.doe@gmail.com'), '********@*****.com');
+});
+
+test('maskEmail handles subdomains by masking only the last label before TLD', () => {
+  assert.equal(maskEmail('a@mail.co.uk'), '*@*******.uk');
+});
+
+test('maskEmail returns empty string for falsy or non-string input', () => {
+  assert.equal(maskEmail(''), '');
+  assert.equal(maskEmail(null), '');
+  assert.equal(maskEmail(undefined), '');
+});
+
+test('maskEmail with no @ masks the whole string', () => {
+  assert.equal(maskEmail('notanemail'), '**********');
 });
