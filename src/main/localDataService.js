@@ -333,8 +333,19 @@ async function parseJsonlFile({ filePath, stat, previous, cutoff, fsImpl }) {
 function parseJsonlChunk({ chunk, aggregate, cutoff, seen = new Set() }) {
   let startIndex = 0;
   let endIndex = chunk.indexOf('\n');
+  let astIdx = chunk.indexOf('"assistant"', startIndex);
 
   while (endIndex !== -1) {
+    if (astIdx < startIndex && astIdx !== -1) {
+      astIdx = chunk.indexOf('"assistant"', startIndex);
+    }
+
+    if (astIdx === -1 || astIdx > endIndex) {
+      startIndex = endIndex + 1;
+      endIndex = chunk.indexOf('\n', startIndex);
+      continue;
+    }
+
     const line = chunk.substring(startIndex, endIndex);
     startIndex = endIndex + 1;
     endIndex = chunk.indexOf('\n', startIndex);
