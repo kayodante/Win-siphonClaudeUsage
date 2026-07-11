@@ -2,7 +2,7 @@ import path from 'node:path';
 
 export function resolveAppIconPath(projectRoot) {
   return path
-    .join(projectRoot, 'assets', 'installer', 'icon.ico')
+    .join(projectRoot, 'src', 'assets', 'installer', 'icon.ico')
     .replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
 }
 

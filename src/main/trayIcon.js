@@ -6,7 +6,7 @@ import electron from 'electron';
 const { nativeImage } = electron;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const iconRoot = path.resolve(__dirname, '..', '..', 'assets', 'tray-icon');
+const iconRoot = path.resolve(__dirname, '..', 'assets', 'tray-icon');
 
 const iconCache = new Map();
 

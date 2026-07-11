@@ -6,10 +6,10 @@ import { t, tFormat } from '../shared/i18n.js';
 const METER_SEGMENTS = 40;
 
 const LEVEL_ICONS = {
-  ok: '../../assets/f-icon/f-icon-ok.png',
-  warn: '../../assets/f-icon/f-icon-warn.png',
-  high: '../../assets/f-icon/f-icon-high.png',
-  critical: '../../assets/f-icon/f-icon-critical.png'
+  ok: '../assets/f-icon/f-icon-ok.png',
+  warn: '../assets/f-icon/f-icon-warn.png',
+  high: '../assets/f-icon/f-icon-high.png',
+  critical: '../assets/f-icon/f-icon-critical.png'
 };
 
 const elements = {

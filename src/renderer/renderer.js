@@ -982,15 +982,15 @@ function playSound(assetPath, volumeKey) {
 }
 
 function playResetSound() {
-  playSound('../../assets/notificationReset.mp3', 'soundVolume');
+  playSound('../assets/notificationReset.mp3', 'soundVolume');
 }
 
 function playLimitSound() {
-  playSound('../../assets/notificationAlert.mp3', 'limitSoundVolume');
+  playSound('../assets/notificationAlert.mp3', 'limitSoundVolume');
 }
 
 function playFullSound() {
-  playSound('../../assets/notificationFull.mp3', 'expireSoundVolume');
+  playSound('../assets/notificationFull.mp3', 'expireSoundVolume');
 }
 
 function updateSliderFill(slider) {
