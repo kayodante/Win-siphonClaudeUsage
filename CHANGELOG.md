@@ -11,6 +11,34 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-11
+
+Runtime migration: Siphon now ships as a native **Rust/Tauri 2** app instead of
+Electron. The user-facing app is unchanged — same tray UI, cards, floating
+widget, notifications, OAuth sign-in, and reset scheduler — but it runs on a
+much smaller, faster WebView2-based backend. The in-app updater ships the same
+`Siphon.Setup.<version>.exe` installer, so existing installs update in place.
+
+### Changed
+
+- Backend rewritten from the Electron main process (Node/JS) to Rust/Tauri 2.
+  Cross-platform logic (usage parsing, pricing, OAuth/PKCE, quota, preferences,
+  reset scheduler) now lives in the `siphon-core` crate with its own tests; the
+  Windows integration (tray, notifications, WebView2, DPAPI credentials) is in
+  the `src-tauri` Tauri binary.
+- The renderer is unchanged and now talks to the Rust backend through
+  `src/renderer/siphonBridge.js`, which re-creates the exact `window.siphon.*`
+  IPC surface on top of Tauri's global API.
+- Installer is now produced by Tauri's NSIS bundler (`npm run build:win` →
+  `cargo tauri build`), repackaged to `Siphon.Setup.<version>.exe` with a
+  `.sha256` sidecar by `scripts/pack-release.ps1`.
+
+### Removed
+
+- The entire Electron implementation: `src/main/` (main process + preload),
+  `electron-builder.yml`, the `electron`/`electron-builder` dependencies, and
+  the Electron-specific JS test suite. `main` is now Rust/Tauri only.
+
 ## [1.6.0] - 2026-07-10
 
 ### Added
