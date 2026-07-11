@@ -32,6 +32,10 @@ pub const ALLOWED_REFRESH_INTERVALS: [u64; 4] = [30, 60, 300, 900];
 struct ResetRuntime {
     current_key: Option<String>,
     last_fired_key: Option<String>,
+    /// Bumped on every arm/clear; a spawned timer task only fires if its
+    /// captured generation is still current. This is the Rust equivalent of
+    /// the JS `clearTimeout`.
+    generation: u64,
 }
 
 pub struct Controller {
@@ -430,7 +434,9 @@ impl Controller {
                 self.reset.lock().unwrap().current_key = Some(reset_key.clone());
                 let _ = self.reset_store.save(Some(&serde_json::json!({
                     "resetKey": reset_key,
-                    "resetsAt": reset_key,
+                    "resetsAt": resets_at
+                        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+                        .to_string(),
                 })));
                 self.arm_reset(reset_key, resets_at);
             }
@@ -438,33 +444,61 @@ impl Controller {
     }
 
     async fn clear_reset(&self) {
-        self.reset.lock().unwrap().current_key = None;
+        {
+            let mut r = self.reset.lock().unwrap();
+            r.current_key = None;
+            r.generation += 1;
+        }
         let _ = self.reset_store.save(None);
     }
 
-    /// Spawn a task that fires the reset toast at `resets_at`. Re-arming on
-    /// wake matches the JS clamp loop; here tokio handles the long sleep.
+    /// Spawn a task that fires the reset toast at `resets_at`. Sleeps in
+    /// chunks (`next_sleep_ms`) so system suspend cannot delay the toast
+    /// indefinitely, and re-checks the generation on every wake so a newer
+    /// schedule / clear / sign-out cancels this task instead of producing a
+    /// stale toast.
     fn arm_reset(&self, reset_key: String, resets_at: chrono::DateTime<Utc>) {
         let app = self.app.clone();
-        let delay = (resets_at - Utc::now()).num_milliseconds().max(0) as u64;
-        let lang = self.prefs.load().language;
-        let sound = self.prefs.get("notifications.sound") == Some(Value::Bool(true));
+        let generation = {
+            let mut r = self.reset.lock().unwrap();
+            r.generation += 1;
+            r.generation
+        };
         tauri::async_runtime::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(delay)).await;
-            let title = siphon_core::i18n::t("notification.resetTitle", &lang);
-            let body = siphon_core::i18n::t("notification.resetBody", &lang);
-            crate::notify::show(&app, &title, &body);
-            if sound {
-                let _ = app.emit("play-reset-sound", ());
-            }
-            if let Some(state) = app.try_state::<crate::AppContext>() {
-                let mut r = state.controller.reset.lock().unwrap();
-                r.last_fired_key = Some(reset_key.clone());
-                if r.current_key.as_deref() == Some(reset_key.as_str()) {
-                    r.current_key = None;
+            loop {
+                match siphon_core::reset_scheduler::next_sleep_ms(Utc::now(), resets_at) {
+                    Some(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
+                    None => break,
                 }
-                let _ = state.controller.reset_store.save(None);
+                let Some(state) = app.try_state::<crate::AppContext>() else { return };
+                if state.controller.reset.lock().unwrap().generation != generation {
+                    return; // superseded — abandon silently
+                }
             }
+            let Some(state) = app.try_state::<crate::AppContext>() else { return };
+            let controller = &state.controller;
+            {
+                let mut r = controller.reset.lock().unwrap();
+                if r.generation != generation
+                    || r.current_key.as_deref() != Some(reset_key.as_str())
+                {
+                    return; // superseded or cleared — the stale toast must not fire
+                }
+                r.last_fired_key = Some(reset_key.clone());
+                r.current_key = None;
+            }
+            // Read prefs at fire time so a toggle flipped during the wait is honored.
+            let prefs = &controller.prefs;
+            if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
+                let lang = prefs.load().language;
+                let title = siphon_core::i18n::t("notification.resetTitle", &lang);
+                let body = siphon_core::i18n::t("notification.resetBody", &lang);
+                crate::notify::show(&app, &title, &body);
+                if prefs.get("notifications.sound") == Some(Value::Bool(true)) {
+                    let _ = app.emit("play-reset-sound", ());
+                }
+            }
+            let _ = controller.reset_store.save(None);
         });
     }
 }
