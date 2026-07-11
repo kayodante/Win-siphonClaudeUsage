@@ -25,11 +25,11 @@ solo-maintained project, so response time may vary.
 Siphon reads local Claude Code usage files and calls the Anthropic OAuth
 usage endpoint. Relevant areas for security review:
 
-- OAuth token storage (`src/main/tokenStore.js`, DPAPI encryption via
-  `safeStorage`)
-- The PKCE sign-in flow (`src/main/oauthService.js`)
-- File permission handling (`src/main/jsonStore.js`)
-- Diagnostic log redaction (`src/shared/diagnostics.js`)
+- OAuth token storage (`src-tauri/src/token_store.rs`, DPAPI encryption via
+  the `windows` crate)
+- The PKCE sign-in flow (`src-tauri/crates/siphon-core/src/oauth.rs`)
+- File permission handling (`src-tauri/crates/siphon-core/src/json_store.rs`)
+- Diagnostic log redaction (`src-tauri/crates/siphon-core/src/diagnostics.rs`)
 
 See `docs/privacy-policy.md` for what data Siphon touches and where it's
 stored.

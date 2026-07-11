@@ -7,6 +7,14 @@ All schemas below are *observed*, not officially documented by Anthropic.
 They mirror what Claude Code itself writes to disk and what the macOS
 Siphon app uses against the OAuth endpoint.
 
+> **Note (v1.7.0):** the data shapes on this page are unchanged, but the
+> JS-style function/class names cited below (`QuotaService.fetchQuota()`,
+> `parseUsageResponse()`, `LocalDataService`, `TokenStore`, etc.) are now Rust
+> ports in `src-tauri/crates/siphon-core` (parsing/mapping) and
+> `src-tauri/src` (I/O). Names map 1:1 — e.g. `parseUsageResponse` →
+> `quota::parse_usage_response`, `pricingKey` → `pricing::pricing_key`. See
+> `ARCHITECTURE.md` for the module map.
+
 ## 1. Local Claude Code files
 
 Both files live under the user's `~/.claude/` directory and are written by

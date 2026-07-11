@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/Logo.png" alt="Siphon" height="40" />
+  <img src="src/assets/Logo.png" alt="Siphon" height="40" />
   <br/>
   <br/>
   <p>A Windows tray app that tracks your Claude Code usage in real time.</p>
@@ -13,7 +13,7 @@
 
   <br/>
   <br/>
-  <img src="assets/Hero.png" alt="Hero" />
+  <img src="src/assets/Hero.png" alt="Hero" />
 </div>
 
 ---
@@ -38,7 +38,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json` so Siphon opens when you start a session
 * **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
 * **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
-* **Color-coded tray icon** | <img src="assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
+* **Color-coded tray icon** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
 * **Localization** | English and Brazilian Portuguese, switchable from Settings
 
 ## Requirements
