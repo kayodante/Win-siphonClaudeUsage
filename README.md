@@ -6,7 +6,8 @@
 
   [![CI](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml/badge.svg)](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+  [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app/)
+  [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
   [![Node](https://img.shields.io/badge/Node-22%2B-5FA04E?logo=node.js&logoColor=white)](https://nodejs.org/)
   [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 
@@ -66,19 +67,21 @@ New releases go through [microsoft/winget-pkgs](https://github.com/microsoft/win
 
 ## How it works
 
-Siphon runs as three isolated Electron contexts:
+Siphon is a native **Rust/Tauri 2** app: a small Rust backend drives a WebView2
+renderer over Tauri IPC.
 
 ```
-Main process (Node, ESM)
-  ├── UsageController
-  │     ├── LocalDataService   — reads ~/.claude readouts or cached project JSONL on the selected cadence
-  │     ├── QuotaService       — polls api.anthropic.com/api/oauth/usage with a 120 s minimum
-  │     ├── OAuthService       — PKCE sign-in flow (same client ID as Claude Code)
-  │     └── ResetNotificationScheduler — arms Windows toasts on quota exhaustion
-  ├── FloatingWindow           — always-on-top mini widget (classic / pill layouts)
-  └── IPC bridge
-Preload (CJS)       — exposes window.siphon.* to the renderer
-Renderer (ESM)      — vanilla JS + CSS, no framework
+Tauri backend (Rust)
+  ├── siphon-core crate — pure, cross-platform logic:
+  │     ├── local usage parsing (~/.claude readouts + project JSONL) w/ incremental cache
+  │     ├── quota polling of api.anthropic.com/api/oauth/usage (120 s minimum)
+  │     ├── OAuth PKCE sign-in (same client ID as Claude Code)
+  │     └── reset scheduler — arms Windows toasts on quota exhaustion
+  ├── src-tauri binary  — tray, floating widget, notifications, DPAPI credential
+  │                        store, updater, IPC commands
+  └── IPC (Tauri invoke / event)
+Renderer (WebView2)  — vanilla JS + CSS, no framework; window.siphon.* provided
+                       by src/renderer/siphonBridge.js
 ```
 
 Usage figures are computed locally from Claude Code's usage data. Siphon first
@@ -104,46 +107,36 @@ Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a brows
 ## Development
 
 ```powershell
-npm test    # node --test (built-in Node test runner)
-npm run lint  # syntax-only check
+npm start          # cargo tauri dev — run against src/renderer
+npm run build:win  # cargo tauri build — NSIS installer
+npm test           # node --test — renderer/shared JS units (test/)
+npm run test:rust  # cargo test -p siphon-core — Rust core logic
+npm run lint       # syntax check + eslint
 ```
 
-Tests live in `test/` and mirror the `src/main/` module structure. The test for `resetNotificationScheduler.test.js` covers the tricky timer-clamp and persistence paths — run it whenever you touch the scheduler.
-
-### Rust / Tauri migration (in progress)
-
-A migration of the backend from the Electron main process to a **Rust + Tauri v2**
-core lives under [`src-tauri/`](src-tauri/). The frontend (`src/renderer/`,
-`src/shared/`) is reused as-is; the only new frontend file is
-[`src/renderer/siphonBridge.js`](src/renderer/siphonBridge.js), which re-creates the
-`window.siphon.*` API on top of Tauri's `invoke`/`event` instead of Electron's
-preload bridge.
-
-The workspace is split so the business logic is testable on any host:
+Building the Windows binary needs the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
+(WebView2 + the MSVC toolchain) plus `cargo tauri` (tauri-cli). The workspace is
+split so the business logic is testable on any host:
 
 - **`src-tauri/crates/siphon-core`** — a pure, cross-platform library (no Tauri, no
-  `windows` crate) porting the usage/pricing/JSONL parsing, OAuth PKCE, quota,
+  `windows` crate) with the usage/pricing/JSONL parsing, OAuth PKCE, quota,
   preferences, reset-scheduler and updater logic. Fully unit-tested; CI runs
   `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test` for it on Linux.
 - **`src-tauri/src`** — the Windows-targeted Tauri binary: IPC commands, the state
   controller, tray, floating widget, DPAPI credential store, notifications and the
-  updater. Build it on Windows with the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
-  (WebView2 + the MSVC toolchain) installed:
+  updater. Its full binary build is not part of the Linux CI job because it needs
+  the Windows WebView2/NSIS toolchain.
 
-  ```powershell
-  cd src-tauri
-  cargo tauri dev     # run against src/renderer
-  cargo tauri build   # produce the NSIS installer
-  ```
-
-  The full binary build is not part of the Linux CI job because it needs the
-  Windows WebView2/NSIS toolchain.
+Renderer/shared JS tests live in `test/` (covering `src/shared/` and
+`src/renderer/viewState.js`). `scripts/pack-release.ps1` repackages the Tauri
+NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
+`.sha256`).
 
 ## Privacy
 
 - **On-device only** — outbound requests go exclusively to Anthropic (`api.anthropic.com`). No telemetry, no analytics, no third-party data sharing.
 - **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, and `%APPDATA%\Siphon\`.
-- **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI via Electron's `safeStorage` before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
+- **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI (via the `windows` crate) before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
 - **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
 
 See [docs/privacy-policy.md](docs/privacy-policy.md) for full details.

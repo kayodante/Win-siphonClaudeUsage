@@ -14,24 +14,14 @@ const correctnessRules = {
 
 export default [
   {
-    ignores: ['node_modules/**', 'graphify-out/**', '.impeccable/**', 'dist/**']
+    ignores: ['node_modules/**', 'graphify-out/**', '.impeccable/**', 'dist/**', 'src-tauri/target/**']
   },
   {
-    // Main process, shared modules, build scripts, tests — Node ESM.
-    files: ['src/main/**/*.js', 'src/shared/**/*.js', 'scripts/**/*.js', 'test/**/*.js', 'test/**/*.mjs'],
+    // Shared modules, build scripts, tests — Node ESM.
+    files: ['src/shared/**/*.js', 'scripts/**/*.js', 'test/**/*.js', 'test/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
-      globals: { ...globals.node }
-    },
-    rules: correctnessRules
-  },
-  {
-    // CommonJS preload + electron-builder hook.
-    files: ['**/*.cjs'],
-    languageOptions: {
-      ecmaVersion: 2023,
-      sourceType: 'commonjs',
       globals: { ...globals.node }
     },
     rules: correctnessRules

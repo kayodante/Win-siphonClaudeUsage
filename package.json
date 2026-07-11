@@ -1,8 +1,7 @@
 {
   "name": "siphon-windows",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
-  "main": "src/main/main.js",
   "type": "module",
   "repository": {
     "type": "git",
@@ -15,9 +14,9 @@
   "scripts": {
     "start": "cd src-tauri && cargo tauri dev",
     "build:win": "cd src-tauri && cargo tauri build",
-    "start:electron": "electron .",
-    "build:win:electron": "electron-builder --win",
+    "pack:release": "pwsh -NoProfile -File scripts/pack-release.ps1",
     "test": "node --test test/*.test.js",
+    "test:rust": "cargo test -p siphon-core --manifest-path src-tauri/Cargo.toml",
     "lint": "node scripts/check-syntax.js && eslint .",
     "fallow": "fallow"
   },
@@ -31,14 +30,8 @@
   "author": "Kayo Dante",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^43.1.0",
-    "electron-builder": "^26.0.12",
     "eslint": "^9.0.0",
     "fallow": "^2.102.0",
     "globals": "^16.0.0"
-  },
-  "allowScripts": {
-    "electron@41.3.0": true,
-    "electron-winstaller@5.4.0": true
   }
 }

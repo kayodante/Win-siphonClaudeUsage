@@ -1,6 +1,6 @@
 [package]
 name = "siphon-core"
-version = "1.6.0"
+version = "1.7.0"
 description = "Pure, cross-platform business logic for Siphon (usage parsing, pricing, OAuth/PKCE, quota, preferences)."
 license = "MIT"
 edition = "2021"

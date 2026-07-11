@@ -10,27 +10,27 @@ everyone.
 - Windows 10+ (the app is Windows-only — DPAPI credential storage, the tray
   icon, and the toast notifications all depend on Win32 APIs).
 
+Siphon is a Rust/Tauri 2 app — you also need the Rust toolchain
+(`rustc`/`cargo`), `cargo tauri` (tauri-cli), and the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) (WebView2 + MSVC).
+
 ```powershell
-npm install
-npm start          # electron .
+npm install        # renderer/lint tooling
+npm start          # cargo tauri dev — run against src/renderer
 ```
 
 ## Before opening a PR
 
 ```powershell
-npm test           # node --test against test/*.test.js
-npm run lint       # syntax-only check via scripts/check-syntax.js
+npm test           # node --test — renderer/shared JS units (test/*.test.js)
+npm run test:rust  # cargo test -p siphon-core — Rust core logic
+npm run lint       # syntax check via scripts/check-syntax.js + eslint
 ```
 
-Both must pass. If you touched `src/main/resetNotificationScheduler.js`,
-also run its dedicated test:
-
-```powershell
-node --test test/resetNotificationScheduler.test.js
-```
-
-It covers the timer-clamp and persistence edge cases that are easy to break
-without noticing.
+All must pass. The reset scheduler, quota, OAuth/PKCE and usage-parsing logic
+now live in the `siphon-core` crate and are covered by `cargo test` — run it
+whenever you touch that logic (its timer-clamp and persistence edge cases are
+easy to break without noticing).
 
 ## PR expectations
 
