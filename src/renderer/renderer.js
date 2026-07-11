@@ -42,6 +42,10 @@ const elements = {
   weeklyQuotaSuffix: document.querySelector('#weeklyQuotaSuffix'),
   weeklyMeter: document.querySelector('#weeklyMeter'),
   weeklyReset: document.querySelector('#weeklyReset'),
+  extraUsageCard: document.querySelector('#extraUsageCard'),
+  extraUsedCredits: document.querySelector('#extraUsedCredits'),
+  extraMonthlyLimit: document.querySelector('#extraMonthlyLimit'),
+  extraMeter: document.querySelector('#extraMeter'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
@@ -675,6 +679,7 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
   elements.weeklyQuotaSuffix.textContent = weekly ? suffixText : '';
 
   updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
+  renderExtraUsage(state.quota?.extraUsage);
   updateStatsAndPills({ state, notificationsEnabled, lang });
 
   const entering = isEntering;
@@ -801,6 +806,20 @@ function setCostValue(element, cost) {
   amountSpan.className = 'cost-amount';
   amountSpan.textContent = amount;
   element.append(symbolSpan, amountSpan);
+}
+
+// Extra-usage card: purchased credits beyond the plan quota. The card only
+// exists when the account has the feature enabled (extra is non-null); it stays
+// hidden and the layout is unchanged otherwise.
+function renderExtraUsage(extra) {
+  if (!extra) {
+    elements.extraUsageCard.hidden = true;
+    return;
+  }
+  elements.extraUsageCard.hidden = false;
+  elements.extraUsedCredits.textContent = formatCurrency(extra.usedCredits);
+  elements.extraMonthlyLimit.textContent = formatCurrency(extra.monthlyLimit);
+  renderMeter(elements.extraMeter, clampPercent(extra.utilization));
 }
 
 function renderMeter(meter, percent) {

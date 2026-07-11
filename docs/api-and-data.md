@@ -142,15 +142,33 @@ They match Claude Code's own client.
 | -------------------- | ---------------- | --------------- |
 | `five_hour`          | `session`        | Session         |
 | `seven_day`          | `weeklyAll`      | Weekly Limit    |
+| `extra_usage`        | `extraUsage`     | Extra usage (conditional) |
 
 Each becomes `{ percent: Number, resetsAt: Date | null }`.
 
 `seven_day_sonnet` and `seven_day_opus` are per-model weekly buckets that
 only come populated on Max plans (on Pro they arrive empty or absent). They
 were displayed early in the port, intentionally removed, and are ignored by
-the parser today. The endpoint may also return an `extra_usage` object
-(`is_enabled`, `monthly_limit`, `used_credits`, `utilization`) — also
-ignored for now; see `ROADMAP.md` → *Later* for the display proposal.
+the parser today.
+
+The endpoint may also return an `extra_usage` object describing purchased
+credits beyond the plan quota:
+
+```jsonc
+{
+  "extra_usage": {
+    "is_enabled":    true,
+    "monthly_limit": 50,
+    "used_credits":  12.5,
+    "utilization":   25
+  }
+}
+```
+
+`parseExtraUsage()` maps this to `extraUsage: { monthlyLimit, usedCredits,
+utilization }`, but only when `is_enabled` is `true` — otherwise it returns
+`null` and the renderer's "Extra usage" card stays hidden, leaving the layout
+unchanged. Accounts without the feature never see the card.
 
 ### Other status codes
 

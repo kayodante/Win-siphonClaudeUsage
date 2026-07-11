@@ -11,6 +11,14 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- "Extra usage" card on the main view for accounts that purchased credits
+  beyond their plan quota. It reads the OAuth endpoint's `extra_usage` object
+  and shows used vs. monthly-limit credits (`US$ used / US$ limit`) with a thin
+  quota meter. The card only appears when the feature is enabled on the
+  account; it stays hidden otherwise and the layout is unchanged.
+
 ### Fixed
 
 - A `401` from the OAuth usage endpoint no longer signs you out on the first

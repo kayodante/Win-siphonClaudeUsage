@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { parseUsageResponse, QuotaError, QuotaService } from '../src/main/quotaService.js';
+import { parseExtraUsage, parseUsageResponse, QuotaError, QuotaService } from '../src/main/quotaService.js';
 
 test('parseUsageResponse maps API buckets to display quota slots', () => {
   const quota = parseUsageResponse({
@@ -24,6 +24,39 @@ test('parseUsageResponse returns nulls when buckets are missing', () => {
   const quota = parseUsageResponse({});
   assert.equal(quota.session, null);
   assert.equal(quota.weeklyAll, null);
+  assert.equal(quota.extraUsage, null);
+});
+
+test('parseExtraUsage maps fields when the feature is enabled', () => {
+  const extra = parseExtraUsage({
+    is_enabled: true,
+    monthly_limit: 50,
+    used_credits: 12.5,
+    utilization: 25
+  });
+  assert.deepEqual(extra, { monthlyLimit: 50, usedCredits: 12.5, utilization: 25 });
+});
+
+test('parseExtraUsage returns null when disabled, absent, or malformed', () => {
+  assert.equal(parseExtraUsage({ is_enabled: false, monthly_limit: 50 }), null);
+  assert.equal(parseExtraUsage(undefined), null);
+  assert.equal(parseExtraUsage(null), null);
+  assert.equal(parseExtraUsage({ monthly_limit: 50 }), null);
+});
+
+test('parseExtraUsage defaults missing numeric fields to 0', () => {
+  const extra = parseExtraUsage({ is_enabled: true });
+  assert.deepEqual(extra, { monthlyLimit: 0, usedCredits: 0, utilization: 0 });
+});
+
+test('parseUsageResponse exposes extraUsage when present', () => {
+  const quota = parseUsageResponse({
+    five_hour: { utilization: 10, resets_at: '2026-04-27T18:30:00.000Z' },
+    extra_usage: { is_enabled: true, monthly_limit: 100, used_credits: 40, utilization: 40 }
+  });
+  assert.equal(quota.extraUsage.monthlyLimit, 100);
+  assert.equal(quota.extraUsage.usedCredits, 40);
+  assert.equal(quota.extraUsage.utilization, 40);
 });
 
 test('parseUsageResponse tolerates null payload', () => {

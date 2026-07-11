@@ -12,7 +12,19 @@ export class QuotaError extends Error {
 export function parseUsageResponse(raw) {
   return {
     session: parseBucket(raw?.five_hour),
-    weeklyAll: parseBucket(raw?.seven_day)
+    weeklyAll: parseBucket(raw?.seven_day),
+    extraUsage: parseExtraUsage(raw?.extra_usage)
+  };
+}
+
+// Purchased extra credits beyond the plan quota. Only present when the account
+// has the feature enabled; returns null otherwise so the UI card auto-hides.
+export function parseExtraUsage(extra) {
+  if (!extra || extra.is_enabled !== true) return null;
+  return {
+    monthlyLimit: Number(extra.monthly_limit ?? 0),
+    usedCredits: Number(extra.used_credits ?? 0),
+    utilization: Number(extra.utilization ?? 0)
   };
 }
 

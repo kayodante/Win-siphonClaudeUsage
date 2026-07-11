@@ -790,6 +790,45 @@ body[data-view="onboard"] .app-footer {
   display: none;
 }
 
+/* Extra-usage card: compact quota-panel variant for purchased credits.
+   Auto-hidden (via [hidden]) on accounts without the feature. */
+.quota-panel--extra {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.quota-headline--extra {
+  margin-top: var(--space-4);
+}
+
+.quota-credits {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-pixel);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+}
+
+.quota-credits-used {
+  font-size: var(--text-2xl);
+  color: var(--foreground);
+}
+
+.quota-credits-sep,
+.quota-credits-limit {
+  font-size: var(--text-xl);
+  color: var(--muted-foreground);
+}
+
+.quota-panel--extra > .meter--thin {
+  margin-top: var(--space-4);
+}
+
+.meter--thin .meter-segment {
+  height: var(--space-2);
+}
+
 .quota-meta {
   display: flex;
   align-items: center;

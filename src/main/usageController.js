@@ -282,7 +282,8 @@ function refreshIntervalMs(preferences) {
 function serializeQuota(quota) {
   return {
     session: serializeSlot(quota.session),
-    weeklyAll: serializeSlot(quota.weeklyAll)
+    weeklyAll: serializeSlot(quota.weeklyAll),
+    extraUsage: quota.extraUsage ?? null
   };
 }
 

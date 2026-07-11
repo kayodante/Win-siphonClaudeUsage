@@ -194,6 +194,22 @@
           </div>
         </section>
 
+        <section class="card quota-panel quota-panel--extra" id="extraUsageCard" hidden>
+          <div class="card-eyebrow">
+            <!-- Carbon: Wallet -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,6H6A2,2,0,0,0,4,8V24a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V8A2,2,0,0,0,26,6Zm0,2v3H6V8ZM6,24V13H26V24Z"/><path d="M21 18H24V20H21z"/></svg>
+            <span data-i18n="home.extraUsage">Extra usage</span>
+          </div>
+          <div class="quota-headline quota-headline--extra">
+            <span class="quota-credits">
+              <span class="quota-credits-used" id="extraUsedCredits">--</span>
+              <span class="quota-credits-sep" aria-hidden="true">/</span>
+              <span class="quota-credits-limit" id="extraMonthlyLimit">--</span>
+            </span>
+          </div>
+          <div id="extraMeter" class="meter meter--thin" aria-hidden="true"></div>
+        </section>
+
         <section class="grid">
           <article class="card cost-card">
             <span class="card-eyebrow" data-i18n="home.today">Today</span>

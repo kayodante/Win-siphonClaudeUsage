@@ -22,6 +22,7 @@ const STRINGS = Object.freeze({
 
     'home.session': 'Current Session',
     'home.weekly': 'Weekly Limit',
+    'home.extraUsage': 'Extra usage',
     'home.today': 'Today',
     'home.month': 'This Month',
     'home.notif.on': 'Notify reset',
@@ -164,6 +165,7 @@ const STRINGS = Object.freeze({
 
     'home.session': 'Sessão Atual',
     'home.weekly': 'Limite Semanal',
+    'home.extraUsage': 'Uso extra',
     'home.today': 'Hoje',
     'home.month': 'Este mês',
     'home.notif.on': 'Notificar reset',
