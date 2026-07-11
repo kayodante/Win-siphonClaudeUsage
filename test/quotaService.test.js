@@ -113,7 +113,7 @@ test('QuotaService.fetchQuota maps abort to QuotaError("server") timeout', async
   });
 });
 
-test('QuotaService.fetchQuota maps 401 to QuotaError("unauthorized") and clears store', async () => {
+test('QuotaService.fetchQuota 401 with no refresh token clears store and throws "unauthorized"', async () => {
   let cleared = false;
   const service = new QuotaService({
     tokenStore: {
@@ -139,6 +139,146 @@ test('QuotaService.fetchQuota maps 401 to QuotaError("unauthorized") and clears 
     return true;
   });
   assert.equal(cleared, true);
+});
+
+test('QuotaService.fetchQuota 401 with refresh token refreshes, retries, and succeeds without clearing', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, options) => {
+      if (url === 'https://platform.claude.com/v1/oauth/token') {
+        const body = JSON.parse(options.body);
+        assert.equal(body.grant_type, 'refresh_token');
+        assert.equal(body.refresh_token, 'refresh_1');
+        return {
+          status: 200,
+          json: async () => ({ access_token: 'tok_2', refresh_token: 'refresh_2', expires_in: 3600 })
+        };
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    };
+
+    let cleared = false;
+    let savedToken = null;
+    let usageCalls = 0;
+    const service = new QuotaService({
+      tokenStore: {
+        load: async () => ({
+          accessToken: 'tok_1',
+          refreshToken: 'refresh_1',
+          expiresAt: new Date(Date.now() + 60_000).toISOString()
+        }),
+        clear: async () => {
+          cleared = true;
+        },
+        save: async creds => {
+          savedToken = creds.accessToken;
+        }
+      },
+      fetchImpl: async (_url, options) => {
+        usageCalls += 1;
+        if (usageCalls === 1) {
+          assert.match(options.headers.Authorization, /tok_1/);
+          return { status: 401, headers: { get: () => null } };
+        }
+        assert.match(options.headers.Authorization, /tok_2/);
+        return {
+          status: 200,
+          headers: { get: () => null },
+          json: async () => ({ five_hour: { utilization: 33, resets_at: '2026-04-27T18:30:00.000Z' } })
+        };
+      }
+    });
+
+    const quota = await service.fetchQuota();
+    assert.equal(quota.session.percent, 33);
+    assert.equal(usageCalls, 2);
+    assert.equal(savedToken, 'tok_2');
+    assert.equal(cleared, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('QuotaService.fetchQuota 401 clears store when the refresh call fails', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async url => {
+      if (url === 'https://platform.claude.com/v1/oauth/token') {
+        return { status: 400, text: async () => 'invalid_grant' };
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    };
+
+    let cleared = false;
+    const service = new QuotaService({
+      tokenStore: {
+        load: async () => ({
+          accessToken: 'tok_1',
+          refreshToken: 'refresh_1',
+          expiresAt: new Date(Date.now() + 60_000).toISOString()
+        }),
+        clear: async () => {
+          cleared = true;
+        },
+        save: async () => {}
+      },
+      fetchImpl: async () => ({ status: 401, headers: { get: () => null } })
+    });
+
+    await assert.rejects(() => service.fetchQuota(), error => {
+      assert.ok(error instanceof QuotaError);
+      assert.equal(error.code, 'unauthorized');
+      return true;
+    });
+    assert.equal(cleared, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('QuotaService.fetchQuota 401 clears store when the retry still returns 401 (no loop)', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async url => {
+      if (url === 'https://platform.claude.com/v1/oauth/token') {
+        return {
+          status: 200,
+          json: async () => ({ access_token: 'tok_2', refresh_token: 'refresh_2', expires_in: 3600 })
+        };
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    };
+
+    let cleared = false;
+    let usageCalls = 0;
+    const service = new QuotaService({
+      tokenStore: {
+        load: async () => ({
+          accessToken: 'tok_1',
+          refreshToken: 'refresh_1',
+          expiresAt: new Date(Date.now() + 60_000).toISOString()
+        }),
+        clear: async () => {
+          cleared = true;
+        },
+        save: async () => {}
+      },
+      fetchImpl: async () => {
+        usageCalls += 1;
+        return { status: 401, headers: { get: () => null } };
+      }
+    });
+
+    await assert.rejects(() => service.fetchQuota(), error => {
+      assert.ok(error instanceof QuotaError);
+      assert.equal(error.code, 'unauthorized');
+      return true;
+    });
+    assert.equal(usageCalls, 2);
+    assert.equal(cleared, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('QuotaService.fetchQuota maps 429 to QuotaError("rate_limited") with retryAfter', async () => {

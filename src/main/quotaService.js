@@ -1,4 +1,4 @@
-import { isExpired, refreshIfExpired } from './tokenLifecycle.js';
+import { forceRefresh, isExpired, refreshIfExpired } from './tokenLifecycle.js';
 
 export class QuotaError extends Error {
   constructor(code, message, options = {}) {
@@ -28,11 +28,49 @@ export class QuotaService {
 
   async fetchQuota() {
     const token = await this.#validToken();
+    let response = await this.#requestUsage(token);
+
+    // A 401 on a token that looked valid locally may be a transient rejection
+    // rather than a real expiry. Try a single forced refresh + retry before
+    // giving up the session; only clear the store if that also fails.
+    if (response.status === 401) {
+      const refreshedToken = await this.#refreshAfterUnauthorized();
+      if (refreshedToken) {
+        response = await this.#requestUsage(refreshedToken);
+      }
+      if (response.status === 401) {
+        await this.tokenStore.clear();
+        throw new QuotaError('unauthorized', 'Session expired. Please sign in again.');
+      }
+    }
+
+    if (response.status === 200) {
+      let payload;
+      try {
+        payload = await response.json();
+      } catch {
+        throw new QuotaError('server', 'Malformed response from quota endpoint.');
+      }
+      return parseUsageResponse(payload);
+    }
+
+    if (response.status === 403) {
+      throw new QuotaError('scope_insufficient', 'Re-authentication required.');
+    }
+
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get('retry-after')) || 300;
+      throw new QuotaError('rate_limited', 'Rate limited', { retryAfter });
+    }
+
+    throw new QuotaError('server', `Server error (${response.status})`);
+  }
+
+  async #requestUsage(token) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    let response;
     try {
-      response = await this.fetchImpl(this.usageUrl, {
+      return await this.fetchImpl(this.usageUrl, {
         signal: controller.signal,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -53,32 +91,19 @@ export class QuotaService {
     } finally {
       clearTimeout(timer);
     }
+  }
 
-    if (response.status === 200) {
-      let payload;
-      try {
-        payload = await response.json();
-      } catch {
-        throw new QuotaError('server', 'Malformed response from quota endpoint.');
-      }
-      return parseUsageResponse(payload);
+  // Force a token refresh after a 401. Returns the new access token, or null if
+  // no refresh token exists or the refresh fails (caller then clears the store).
+  async #refreshAfterUnauthorized() {
+    try {
+      const credentials = await this.tokenStore.load();
+      if (!credentials?.refreshToken) return null;
+      const refreshed = await forceRefresh(this.tokenStore, credentials);
+      return refreshed.accessToken;
+    } catch {
+      return null;
     }
-
-    if (response.status === 401) {
-      await this.tokenStore.clear();
-      throw new QuotaError('unauthorized', 'Session expired. Please sign in again.');
-    }
-
-    if (response.status === 403) {
-      throw new QuotaError('scope_insufficient', 'Re-authentication required.');
-    }
-
-    if (response.status === 429) {
-      const retryAfter = Number(response.headers.get('retry-after')) || 300;
-      throw new QuotaError('rate_limited', 'Rate limited', { retryAfter });
-    }
-
-    throw new QuotaError('server', `Server error (${response.status})`);
   }
 
   async #validToken() {

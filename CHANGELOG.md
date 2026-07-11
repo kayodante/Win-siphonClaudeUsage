@@ -13,6 +13,16 @@ is added above it.
 
 ### Fixed
 
+- A `401` from the OAuth usage endpoint no longer signs you out on the first
+  transient rejection. `QuotaService` now attempts a single forced token
+  refresh and retries the request; credentials are only cleared if the refresh
+  itself fails or the retry is still `401`. Matches the existing `403`
+  re-auth pattern instead of wiping the session outright.
+
+## [1.5.1] - 2026-07-10
+
+### Fixed
+
 - Update banner no longer stalls right after a release. The updater now checks
   whether the winget catalog *already has* the new version instead of only
   whether Siphon was installed via winget; since the winget manifest lags

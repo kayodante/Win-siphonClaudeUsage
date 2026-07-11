@@ -14,9 +14,21 @@ export function isExpired(credentials) {
 // OAuthService is imported lazily so it isn't loaded unless a refresh is needed.
 export async function refreshIfExpired(tokenStore, credentials) {
   if (isExpired(credentials) && credentials.refreshToken) {
-    const { OAuthService } = await import('./oauthService.js');
-    credentials = await new OAuthService().refresh(credentials.refreshToken);
-    await tokenStore.save(credentials);
+    credentials = await forceRefresh(tokenStore, credentials);
   }
   return credentials;
+}
+
+// Refresh the access token regardless of expiry and persist it. Used when the
+// server rejects a token that still looks valid locally (e.g. a 401 that isn't
+// an expiry race). Returns the refreshed credentials; throws if no refresh
+// token is available or the refresh call fails.
+export async function forceRefresh(tokenStore, credentials) {
+  if (!credentials?.refreshToken) {
+    throw new Error('No refresh token available.');
+  }
+  const { OAuthService } = await import('./oauthService.js');
+  const refreshed = await new OAuthService().refresh(credentials.refreshToken);
+  await tokenStore.save(refreshed);
+  return refreshed;
 }
