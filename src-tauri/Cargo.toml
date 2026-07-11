@@ -1,0 +1,54 @@
+[package]
+name = "siphon"
+version = "1.6.0"
+description = "Windows tray app for Claude Code usage and reset notifications."
+authors = ["Kayo Dante"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+[workspace]
+members = [".", "crates/siphon-core"]
+
+# The Tauri binary. This crate is Windows-targeted: it pulls in the `windows`
+# crate (DPAPI), tray, notifications and WebView2. It does not build on Linux —
+# all cross-platform, unit-tested logic lives in the `siphon-core` library so it
+# can be exercised with `cargo test -p siphon-core` on any host.
+[[bin]]
+name = "siphon"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+siphon-core = { path = "crates/siphon-core" }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "fs"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+futures-util = "0.3"
+chrono = { version = "0.4", features = ["clock"] }
+sha2 = "0.10"
+log = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+    "Win32_System_Memory",
+] }
+window-vibrancy = "0.5"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

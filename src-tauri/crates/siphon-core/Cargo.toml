@@ -1,0 +1,24 @@
+[package]
+name = "siphon-core"
+version = "1.6.0"
+description = "Pure, cross-platform business logic for Siphon (usage parsing, pricing, OAuth/PKCE, quota, preferences)."
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+# Deliberately dependency-light and free of Tauri / reqwest / windows so it
+# compiles and unit-tests on any host. HTTP calls live in the binary crate; this
+# library exposes the pure functions (URL building, PKCE, response parsing,
+# pricing, JSONL summarisation, preference merge) that back them.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["clock"] }
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+thiserror = "1"
+regex-lite = "0.1"
+
+[dev-dependencies]
+serde_json = "1"

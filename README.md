@@ -110,6 +110,35 @@ npm run lint  # syntax-only check
 
 Tests live in `test/` and mirror the `src/main/` module structure. The test for `resetNotificationScheduler.test.js` covers the tricky timer-clamp and persistence paths — run it whenever you touch the scheduler.
 
+### Rust / Tauri migration (in progress)
+
+A migration of the backend from the Electron main process to a **Rust + Tauri v2**
+core lives under [`src-tauri/`](src-tauri/). The frontend (`src/renderer/`,
+`src/shared/`) is reused as-is; the only new frontend file is
+[`src/renderer/siphonBridge.js`](src/renderer/siphonBridge.js), which re-creates the
+`window.siphon.*` API on top of Tauri's `invoke`/`event` instead of Electron's
+preload bridge.
+
+The workspace is split so the business logic is testable on any host:
+
+- **`src-tauri/crates/siphon-core`** — a pure, cross-platform library (no Tauri, no
+  `windows` crate) porting the usage/pricing/JSONL parsing, OAuth PKCE, quota,
+  preferences, reset-scheduler and updater logic. Fully unit-tested; CI runs
+  `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test` for it on Linux.
+- **`src-tauri/src`** — the Windows-targeted Tauri binary: IPC commands, the state
+  controller, tray, floating widget, DPAPI credential store, notifications and the
+  updater. Build it on Windows with the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
+  (WebView2 + the MSVC toolchain) installed:
+
+  ```powershell
+  cd src-tauri
+  cargo tauri dev     # run against src/renderer
+  cargo tauri build   # produce the NSIS installer
+  ```
+
+  The full binary build is not part of the Linux CI job because it needs the
+  Windows WebView2/NSIS toolchain.
+
 ## Privacy
 
 - **On-device only** — outbound requests go exclusively to Anthropic (`api.anthropic.com`). No telemetry, no analytics, no third-party data sharing.

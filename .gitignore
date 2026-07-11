@@ -7,6 +7,11 @@ out/
 /Siphon Setup *.exe
 /*.exe
 
+# Rust / Tauri build output
+src-tauri/target/
+src-tauri/gen/
+target/
+
 # Logs
 *.log
 npm-debug.log*
