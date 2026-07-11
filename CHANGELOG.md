@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-10
+
 ### Added
 
 - "Extra usage" card on the main view for accounts that purchased credits
