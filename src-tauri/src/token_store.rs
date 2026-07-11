@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use serde_json::Value;
 use siphon_core::json_store::{config_dir, set_owner_only};
 use siphon_core::token::{
-    Cipher, Credentials, PlaintextCipher, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN,
+    Cipher, Credentials, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN,
 };
 
 pub struct TokenStore {
@@ -93,7 +93,7 @@ fn default_cipher() -> Box<dyn Cipher + Send + Sync> {
     }
     #[cfg(not(windows))]
     {
-        Box::new(PlaintextCipher)
+        Box::new(siphon_core::token::PlaintextCipher)
     }
 }
 

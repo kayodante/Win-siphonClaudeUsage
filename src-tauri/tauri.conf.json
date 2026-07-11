@@ -26,12 +26,6 @@
         "skipTaskbar": false
       }
     ],
-    "trayIcon": {
-      "id": "main",
-      "iconPath": "icons/tray-ok-ok.png",
-      "iconAsTemplate": false,
-      "tooltip": "Siphon"
-    },
     "security": {
       "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost; media-src 'self'"
     }
@@ -44,10 +38,9 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "installerIcon": "../assets/installer/icon.ico",
-        "headerImage": "../assets/installer/installer-header.bmp",
-        "sidebarImage": "../assets/installer/installer-sidebar.bmp",
-        "shortcutName": "Siphon"
+        "installerIcon": "../src/assets/installer/icon.ico",
+        "headerImage": "../src/assets/installer/installer-header.bmp",
+        "sidebarImage": "../src/assets/installer/installer-sidebar.bmp"
       }
     }
   },

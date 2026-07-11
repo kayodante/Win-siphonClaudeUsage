@@ -18,8 +18,8 @@ fn icon_bytes(session: &str, weekly: &str) -> &'static [u8] {
     macro_rules! pick {
         ($($s:literal, $w:literal);+ $(;)?) => {
             match (session, weekly) {
-                $(($s, $w) => include_bytes!(concat!("../../assets/tray-icon/tray-", $s, "-", $w, ".png")),)+
-                _ => include_bytes!("../../assets/tray-icon/tray-ok-ok.png"),
+                $(($s, $w) => include_bytes!(concat!("../../src/assets/tray-icon/tray-", $s, "-", $w, ".png")),)+
+                _ => include_bytes!("../../src/assets/tray-icon/tray-ok-ok.png"),
             }
         };
     }
@@ -41,10 +41,9 @@ pub fn build(app: &AppHandle, state: &AppState) -> tauri::Result<TrayIcon> {
         .menu(&menu)
         .on_menu_event(on_menu_event)
         .on_tray_icon_event(|tray, event| {
-            use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
+            use tauri::tray::{MouseButton, TrayIconEvent};
             if let TrayIconEvent::DoubleClick {
                 button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
                 ..
             } = event
             {

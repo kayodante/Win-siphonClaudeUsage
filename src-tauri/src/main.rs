@@ -185,8 +185,13 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
         }
         _ => {}
     }
-    // Re-render immediately for widget open/close/style changes.
-    let _ = app.emit("state-changed", &ctx.controller.get_state());
+    // Re-render immediately for widget open/close/style changes. Mirror the
+    // controller's emit side effects so the floating window is created/closed
+    // synchronously instead of waiting for the next refresh tick.
+    let state = ctx.controller.get_state();
+    let _ = app.emit("state-changed", &state);
+    crate::tray::update(app, &state);
+    crate::floating::sync(app, &state);
 }
 
 fn apply_autostart(app: &tauri::AppHandle, enabled: bool, _show_window: bool) {

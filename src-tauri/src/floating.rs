@@ -78,15 +78,22 @@ fn create(app: &AppHandle, state: &AppState) {
     let _ = win.set_always_on_top(true);
     let _ = win.emit("state-changed", state);
 
-    // Persist position on move (debounced by the OS event cadence).
+    // Persist position on move (debounced by the OS event cadence). Store the
+    // LOGICAL position so it round-trips with `restore_position`; the `Moved`
+    // event carries a physical position, so divide by the scale factor.
     let handle = app.clone();
     win.on_window_event(move |event| {
         if let tauri::WindowEvent::Moved(pos) = event {
-            if let Some(ctx) = handle.try_state::<crate::AppContext>() {
-                let _ = ctx.prefs.set_many(vec![
-                    ("floating.x".into(), pos.x.into()),
-                    ("floating.y".into(), pos.y.into()),
-                ]);
+            if let Some(w) = handle.get_webview_window("floating") {
+                let scale = w.scale_factor().unwrap_or(1.0);
+                let lx = (pos.x as f64 / scale).round() as i64;
+                let ly = (pos.y as f64 / scale).round() as i64;
+                if let Some(ctx) = handle.try_state::<crate::AppContext>() {
+                    let _ = ctx.prefs.set_many(vec![
+                        ("floating.x".into(), lx.into()),
+                        ("floating.y".into(), ly.into()),
+                    ]);
+                }
             }
         }
     });
@@ -101,22 +108,37 @@ fn apply_size(win: &tauri::WebviewWindow, state: &AppState) {
 }
 
 fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppState) {
-    match (state.preferences.floating.x, state.preferences.floating.y) {
-        (Some(x), Some(y)) => {
-            let _ = win.set_position(tauri::LogicalPosition::new(x as f64, y as f64));
-        }
-        _ => {
-            // Default to the top-right of the primary monitor.
-            if let Ok(Some(monitor)) = app.primary_monitor() {
-                let area = monitor.size();
-                let scale = monitor.scale_factor();
-                let (w, _) = size_for(
-                    &state.preferences.floating.style,
-                    state.preferences.floating.expanded,
-                );
-                let x = (area.width as f64 / scale) - w - 20.0;
-                let _ = win.set_position(tauri::LogicalPosition::new(x.max(0.0), 20.0));
-            }
+    let (w, h) = size_for(
+        &state.preferences.floating.style,
+        state.preferences.floating.expanded,
+    );
+
+    // Logical work area of the primary monitor + default top-right anchor.
+    let mut logical_bounds: Option<(f64, f64)> = None;
+    let mut default_x = 20.0_f64;
+    if let Ok(Some(monitor)) = app.primary_monitor() {
+        let scale = monitor.scale_factor();
+        let lw = monitor.size().width as f64 / scale;
+        let lh = monitor.size().height as f64 / scale;
+        logical_bounds = Some((lw, lh));
+        default_x = (lw - w - 20.0).max(0.0);
+    }
+
+    // Saved position, else the default anchor.
+    let (mut x, mut y) = match (state.preferences.floating.x, state.preferences.floating.y) {
+        (Some(sx), Some(sy)) => (sx as f64, sy as f64),
+        _ => (default_x, 20.0),
+    };
+
+    // Clamp: if the saved position lands (mostly) off the primary monitor,
+    // fall back to the default anchor. Self-heals stale/corrupt coordinates.
+    if let Some((lw, lh)) = logical_bounds {
+        let off_screen = x < 0.0 || y < 0.0 || x > lw - w * 0.5 || y > lh - h * 0.5;
+        if off_screen {
+            x = default_x;
+            y = 20.0;
         }
     }
+
+    let _ = win.set_position(tauri::LogicalPosition::new(x, y));
 }
