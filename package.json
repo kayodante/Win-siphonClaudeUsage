@@ -13,10 +13,12 @@
   },
   "homepage": "https://github.com/kayodante/Win-siphonClaudeUsage#readme",
   "scripts": {
-    "start": "electron .",
+    "start": "cd src-tauri && cargo tauri dev",
+    "build:win": "cd src-tauri && cargo tauri build",
+    "start:electron": "electron .",
+    "build:win:electron": "electron-builder --win",
     "test": "node --test test/*.test.js",
     "lint": "node scripts/check-syntax.js && eslint .",
-    "build:win": "electron-builder --win",
     "fallow": "fallow"
   },
   "keywords": [
@@ -29,10 +31,14 @@
   "author": "Kayo Dante",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^41.3.0",
+    "electron": "^43.1.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.0.0",
     "fallow": "^2.102.0",
     "globals": "^16.0.0"
+  },
+  "allowScripts": {
+    "electron@41.3.0": true,
+    "electron-winstaller@5.4.0": true
   }
 }
