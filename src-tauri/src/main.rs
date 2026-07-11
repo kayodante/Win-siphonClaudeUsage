@@ -104,12 +104,12 @@ fn main() {
             let c = controller.clone();
             let p = prefs.clone();
             tauri::async_runtime::spawn(async move {
-                c.start().await;
+                c.clone().start().await;
                 let mut elapsed_since_quota = 0u64;
                 loop {
                     let interval = refresh_interval_secs(&p);
                     tokio::time::sleep(Duration::from_secs(interval)).await;
-                    c.refresh_local();
+                    c.clone().refresh_local_blocking().await;
                     elapsed_since_quota += interval * 1000;
                     let quota_interval = interval.saturating_mul(1000).max(MIN_QUOTA_INTERVAL_MS);
                     if elapsed_since_quota >= quota_interval && c.get_state().is_signed_in {
@@ -178,7 +178,12 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
     ctx.controller.sync_preferences();
 
     match change.path.as_str() {
-        "claudePath" => ctx.controller.refresh_local(),
+        "claudePath" => {
+            let c = ctx.controller.clone();
+            tauri::async_runtime::spawn(async move {
+                c.refresh_local_blocking().await;
+            });
+        }
         p if p.starts_with("startup.") => {
             let s = &change.preferences.startup;
             apply_autostart(app, s.open_at_login, s.show_window_on_login);

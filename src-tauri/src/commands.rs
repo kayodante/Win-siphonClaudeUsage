@@ -19,7 +19,7 @@ pub fn state_get(ctx: State<'_, AppContext>) -> AppState {
 
 #[tauri::command]
 pub async fn refresh(ctx: State<'_, AppContext>) -> Result<(), ()> {
-    ctx.controller.refresh_all().await;
+    ctx.controller.clone().refresh_all().await;
     Ok(())
 }
 

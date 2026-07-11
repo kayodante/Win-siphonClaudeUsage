@@ -98,14 +98,19 @@ impl Controller {
         }
     }
 
-    pub async fn start(&self) {
+    /// Run `refresh_local` off the async runtime (file I/O + JSONL parse).
+    pub async fn refresh_local_blocking(self: std::sync::Arc<Self>) {
+        let _ = tauri::async_runtime::spawn_blocking(move || self.refresh_local()).await;
+    }
+
+    pub async fn start(self: std::sync::Arc<Self>) {
         {
             let mut state = self.state.lock().unwrap();
             state.is_signed_in = self.tokens.load().ok().flatten().is_some();
             state.preferences = self.prefs.load();
         }
         self.restore_reset().await;
-        self.refresh_local();
+        self.clone().refresh_local_blocking().await;
         if self.get_state().is_signed_in {
             self.refresh_profile().await;
             self.refresh_quota().await;
@@ -121,28 +126,31 @@ impl Controller {
     pub fn refresh_local(&self) {
         let claude_dir = self.prefs.claude_dir();
         let service = LocalDataService::new(Some(claude_dir), self.cache_path.clone());
-        let mut state = self.state.lock().unwrap();
-        match service.load(Utc::now()) {
-            Ok(summary) => {
-                state.today_stats = summary.today_stats;
-                state.month_stats = summary.month_stats;
-                state.last_updated = Some(
-                    summary
-                        .last_updated
-                        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                        .to_string(),
-                );
-                state.local_error = None;
-            }
-            Err(siphon_core::local_data::LocalError::NoData) => {
-                state.local_error = Some("error.local.missing".to_string());
-            }
-            Err(e) => {
-                log::error!("refreshLocal failed: {e}");
-                state.local_error = Some("Could not read ~/.claude usage files.".to_string());
+        let result = service.load(Utc::now());
+        {
+            let mut state = self.state.lock().unwrap();
+            match result {
+                Ok(summary) => {
+                    state.today_stats = summary.today_stats;
+                    state.month_stats = summary.month_stats;
+                    state.last_updated = Some(
+                        summary
+                            .last_updated
+                            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+                            .to_string(),
+                    );
+                    state.local_error = None;
+                }
+                Err(siphon_core::local_data::LocalError::NoData) => {
+                    state.local_error = Some("error.local.missing".to_string());
+                }
+                Err(e) => {
+                    log::error!("refreshLocal failed: {e}");
+                    state.local_error =
+                        Some("Could not read ~/.claude usage files.".to_string());
+                }
             }
         }
-        drop(state);
         self.emit();
     }
 
@@ -315,8 +323,8 @@ impl Controller {
         self.emit();
     }
 
-    pub async fn refresh_all(&self) {
-        self.refresh_local();
+    pub async fn refresh_all(self: std::sync::Arc<Self>) {
+        self.clone().refresh_local_blocking().await;
         if self.get_state().is_signed_in {
             self.refresh_quota().await;
         }
