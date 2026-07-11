@@ -40,6 +40,16 @@ impl Credentials {
             .map(|s| !s.is_empty())
             .unwrap_or(false)
     }
+
+    /// Keep the previous refresh token when a token-refresh response omits one
+    /// (some providers only rotate it occasionally). Losing it would force a
+    /// full re-login at the next expiry.
+    pub fn preserving_refresh_from(mut self, previous: &Credentials) -> Self {
+        if self.refresh_token.is_none() {
+            self.refresh_token = previous.refresh_token.clone();
+        }
+        self
+    }
 }
 
 // On-disk format markers, identical to `tokenStore.js`.
@@ -109,5 +119,32 @@ mod tests {
         let buf = cipher.encrypt("{\"a\":1}").unwrap();
         assert_eq!(buf[0], MARKER_PLAIN);
         assert_eq!(cipher.decrypt(&buf).unwrap(), "{\"a\":1}");
+    }
+
+    #[test]
+    fn refresh_response_without_token_keeps_previous() {
+        let old = Credentials {
+            access_token: "old".into(),
+            refresh_token: Some("keepme".into()),
+            expires_at: None,
+        };
+        let refreshed = Credentials {
+            access_token: "new".into(),
+            refresh_token: None,
+            expires_at: None,
+        };
+        let merged = refreshed.preserving_refresh_from(&old);
+        assert_eq!(merged.refresh_token.as_deref(), Some("keepme"));
+        assert_eq!(merged.access_token, "new");
+
+        let rotated = Credentials {
+            access_token: "new2".into(),
+            refresh_token: Some("rotated".into()),
+            expires_at: None,
+        };
+        assert_eq!(
+            rotated.preserving_refresh_from(&old).refresh_token.as_deref(),
+            Some("rotated")
+        );
     }
 }

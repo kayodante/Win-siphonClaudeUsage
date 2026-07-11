@@ -296,7 +296,8 @@ impl Controller {
             .http
             .post_token(oauth::refresh_body(refresh_token))
             .await
-            .ok()?;
+            .ok()?
+            .preserving_refresh_from(creds);
         let _ = self.tokens.save(&refreshed);
         Some(refreshed)
     }
