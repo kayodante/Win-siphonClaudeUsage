@@ -10,6 +10,23 @@ use crate::quota::Quota;
 /// this to re-arm long waits in chunks.
 pub const MAX_TIMER_DELAY_MS: i64 = 2_147_483_647;
 
+/// Max chunk for one timer sleep. The binary crate re-checks the wall clock
+/// (and cancellation) on every wake, so a system suspend can delay the toast
+/// by at most one chunk instead of indefinitely.
+pub const RESET_POLL_CHUNK_MS: i64 = 60_000;
+
+/// Milliseconds to sleep before re-checking, or `None` when `resets_at` is due.
+pub fn next_sleep_ms(
+    now: DateTime<Utc>,
+    resets_at: DateTime<Utc>,
+) -> Option<u64> {
+    let remaining = (resets_at - now).num_milliseconds();
+    if remaining <= 0 {
+        return None;
+    }
+    Some(remaining.min(RESET_POLL_CHUNK_MS) as u64)
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResetDecision {
     /// Nothing to do (percent in the "already tracked" / not-full band).
@@ -108,5 +125,23 @@ mod tests {
         let key = "2026-07-06T15:00:00.000Z";
         assert_eq!(decide_update(&q, Some(key), None), ResetDecision::NoChange);
         assert_eq!(decide_update(&q, None, Some(key)), ResetDecision::NoChange);
+    }
+
+    #[test]
+    fn next_sleep_is_none_when_due_or_past() {
+        use chrono::TimeZone;
+        let now = Utc.with_ymd_and_hms(2026, 7, 6, 15, 0, 0).unwrap();
+        assert_eq!(next_sleep_ms(now, now), None);
+        assert_eq!(next_sleep_ms(now, now - chrono::Duration::seconds(5)), None);
+    }
+
+    #[test]
+    fn next_sleep_clamps_to_poll_chunk() {
+        use chrono::TimeZone;
+        let now = Utc.with_ymd_and_hms(2026, 7, 6, 12, 0, 0).unwrap();
+        let far = now + chrono::Duration::hours(5);
+        assert_eq!(next_sleep_ms(now, far), Some(RESET_POLL_CHUNK_MS as u64));
+        let near = now + chrono::Duration::seconds(10);
+        assert_eq!(next_sleep_ms(now, near), Some(10_000));
     }
 }
