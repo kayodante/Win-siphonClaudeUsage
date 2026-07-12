@@ -11,6 +11,20 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-07-12
+
+### Fixed
+- Restored the automatic update check (lost in the 1.7.0 Tauri migration):
+  the app now checks GitHub releases 15 s after boot and every 6 hours, and
+  the in-app update banner works again.
+- Updater downloads now have connect/read timeouts and no longer spam
+  progress events.
+
+### Changed
+- Webview capabilities reduced to the minimum the renderer actually uses
+  (defense in depth; no user-visible change).
+- Removed dead code left over from the migration.
+
 ## [1.7.1] - 2026-07-12
 
 ### Fixed
