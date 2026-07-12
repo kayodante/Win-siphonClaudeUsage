@@ -30,13 +30,16 @@ impl HttpClient {
         }
     }
 
-    fn oauth_headers(token: &str) -> reqwest::header::HeaderMap {
+    fn oauth_headers(token: &str) -> Result<reqwest::header::HeaderMap, QuotaError> {
         use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+        let auth = HeaderValue::from_str(&format!("Bearer {token}")).map_err(|_| {
+            QuotaError::new(
+                QuotaErrorCode::NotSignedIn,
+                "Stored token is invalid. Please sign in again.",
+            )
+        })?;
         let mut h = HeaderMap::new();
-        h.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
-        );
+        h.insert(AUTHORIZATION, auth);
         h.insert(ACCEPT, HeaderValue::from_static("application/json"));
         h.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         h.insert("anthropic-beta", HeaderValue::from_static("oauth-2025-04-20"));
@@ -44,7 +47,7 @@ impl HttpClient {
             reqwest::header::USER_AGENT,
             HeaderValue::from_static("claude-code/2.1.121"),
         );
-        h
+        Ok(h)
     }
 
     /// GET the usage endpoint with an already-valid token. Returns the raw
@@ -54,7 +57,7 @@ impl HttpClient {
         let resp = self
             .client
             .get(USAGE_URL)
-            .headers(Self::oauth_headers(token))
+            .headers(Self::oauth_headers(token)?)
             .send()
             .await
             .map_err(map_reqwest_err)?;
@@ -76,10 +79,11 @@ impl HttpClient {
     /// GET the profile endpoint. Returns `None` on any non-200 or error, matching
     /// `ProfileService.fetchProfile`.
     pub async fn get_profile(&self, token: &str) -> Option<Profile> {
+        let headers = Self::oauth_headers(token).ok()?;
         let resp = self
             .client
             .get(PROFILE_URL)
-            .headers(Self::oauth_headers(token))
+            .headers(headers)
             .send()
             .await
             .ok()?;

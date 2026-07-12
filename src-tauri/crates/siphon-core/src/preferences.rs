@@ -193,12 +193,14 @@ pub fn set_path(object: &mut Value, path: &str, value: Value) {
         if FORBIDDEN.contains(part) {
             return;
         }
-        if !current.get(*part).map(|v| v.is_object()).unwrap_or(false) {
-            current
-                .as_object_mut()
-                .map(|m| m.insert(part.to_string(), Value::Object(Map::new())));
+        let Some(map) = current.as_object_mut() else { return };
+        let entry = map
+            .entry(part.to_string())
+            .or_insert_with(|| Value::Object(Map::new()));
+        if !entry.is_object() {
+            *entry = Value::Object(Map::new());
         }
-        current = current.get_mut(*part).unwrap();
+        current = entry;
     }
     let last = parts[parts.len() - 1];
     if !FORBIDDEN.contains(&last) {
@@ -257,5 +259,12 @@ mod tests {
         let mut v = Preferences::default_value();
         set_path(&mut v, "__proto__.polluted", Value::Bool(true));
         assert!(get_path(&v, "__proto__.polluted").is_none());
+    }
+
+    #[test]
+    fn set_path_through_scalar_replaces_instead_of_panicking() {
+        let mut v = json!({ "language": "en" });
+        set_path(&mut v, "language.nested", Value::Bool(true));
+        assert_eq!(get_path(&v, "language.nested"), Some(&Value::Bool(true)));
     }
 }
