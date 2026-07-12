@@ -11,6 +11,25 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-07-12
+
+### Fixed
+
+- Reset toast timers are now cancelable: rescheduling, sign-out, or disabling
+  the notification no longer leaves a stale toast armed, and system suspend
+  can delay the toast by at most one minute.
+- Local usage refresh no longer holds the state lock during JSONL parsing
+  (UI could freeze on large first parses) and runs off the async runtime.
+- `settings.json` integration no longer panics on a corrupt file and refuses
+  to edit hooks when the app's own executable path is unknown (previously it
+  could remove the user's other SessionStart hooks).
+- The stored refresh token is preserved when a token refresh response omits
+  a new one (prevented forced re-logins).
+- Removed latent panics on preference-path traversal and on building the
+  Authorization header from a tampered credentials file.
+- Floating-widget drags now persist their position once per burst instead of
+  writing preferences.json dozens of times per second.
+
 ## [1.7.0] - 2026-07-11
 
 Runtime migration: Siphon now ships as a native **Rust/Tauri 2** app instead of
