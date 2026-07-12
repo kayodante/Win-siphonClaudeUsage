@@ -37,7 +37,11 @@ pub async fn download(app: AppHandle, payload: Value) {
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("{download_url}.sha256"));
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .read_timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("reqwest client");
     if let Err(e) = fetch_to_file(&client, download_url, &dest, Some(&app)).await {
         let _ = std::fs::remove_file(&dest);
         return emit_error(&app, &e);
@@ -89,6 +93,7 @@ async fn fetch_to_file(
     }
     let total = resp.content_length().unwrap_or(0);
     let mut received: u64 = 0;
+    let mut last_percent: u64 = u64::MAX;
     let mut file = tokio::fs::File::create(dest).await.map_err(|e| e.to_string())?;
     let mut stream = resp.bytes_stream();
     use futures_util::StreamExt;
@@ -98,7 +103,10 @@ async fn fetch_to_file(
         file.write_all(&chunk).await.map_err(|e| e.to_string())?;
         if let (Some(app), true) = (progress, total > 0) {
             let percent = ((received as f64 / total as f64) * 100.0).round() as u64;
-            let _ = app.emit("update:progress", json!({ "percent": percent }));
+            if percent != last_percent {
+                last_percent = percent;
+                let _ = app.emit("update:progress", json!({ "percent": percent }));
+            }
         }
     }
     file.flush().await.map_err(|e| e.to_string())?;
