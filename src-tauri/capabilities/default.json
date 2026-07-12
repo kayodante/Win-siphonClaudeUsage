@@ -1,20 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capabilities for the Siphon main and floating windows.",
+  "description": "Minimal capabilities: the renderer only uses invoke (custom commands) and event listen; all plugin and window APIs are called from Rust.",
   "windows": ["main", "floating"],
-  "permissions": [
-    "core:default",
-    "core:window:allow-minimize",
-    "core:window:allow-hide",
-    "core:window:allow-show",
-    "core:window:allow-set-focus",
-    "core:window:allow-set-position",
-    "core:window:allow-set-size",
-    "core:window:allow-set-always-on-top",
-    "core:event:default",
-    "dialog:allow-open",
-    "notification:default",
-    "opener:allow-open-url"
-  ]
+  "permissions": ["core:default"]
 }
