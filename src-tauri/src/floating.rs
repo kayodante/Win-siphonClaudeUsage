@@ -10,6 +10,11 @@ const MINI: (f64, f64) = (71.0, 32.0);
 const COMPACT: (f64, f64) = (220.0, 104.0);
 const EXPANDED: (f64, f64) = (220.0, 192.0);
 
+/// Latest dragged position waiting to be persisted. `Some` also means a
+/// flush task is already scheduled (trailing debounce, one write per burst).
+static PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
+const POS_FLUSH_DELAY_MS: u64 = 500;
+
 fn size_for(style: &str, expanded: bool) -> (f64, f64) {
     if style == "mini" {
         MINI
@@ -78,22 +83,32 @@ fn create(app: &AppHandle, state: &AppState) {
     let _ = win.set_always_on_top(true);
     let _ = win.emit("state-changed", state);
 
-    // Persist position on move (debounced by the OS event cadence). Store the
-    // LOGICAL position so it round-trips with `restore_position`; the `Moved`
-    // event carries a physical position, so divide by the scale factor.
     let handle = app.clone();
     win.on_window_event(move |event| {
         if let tauri::WindowEvent::Moved(pos) = event {
-            if let Some(w) = handle.get_webview_window("floating") {
-                let scale = w.scale_factor().unwrap_or(1.0);
-                let lx = (pos.x as f64 / scale).round() as i64;
-                let ly = (pos.y as f64 / scale).round() as i64;
-                if let Some(ctx) = handle.try_state::<crate::AppContext>() {
-                    let _ = ctx.prefs.set_many(vec![
-                        ("floating.x".into(), lx.into()),
-                        ("floating.y".into(), ly.into()),
-                    ]);
-                }
+            let Some(w) = handle.get_webview_window("floating") else { return };
+            let scale = w.scale_factor().unwrap_or(1.0);
+            let lx = (pos.x as f64 / scale).round() as i64;
+            let ly = (pos.y as f64 / scale).round() as i64;
+            let schedule_flush = {
+                let mut p = PENDING_POS.lock().unwrap();
+                let first = p.is_none();
+                *p = Some((lx, ly));
+                first
+            };
+            if schedule_flush {
+                let handle = handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(POS_FLUSH_DELAY_MS))
+                        .await;
+                    let Some((x, y)) = PENDING_POS.lock().unwrap().take() else { return };
+                    if let Some(ctx) = handle.try_state::<crate::AppContext>() {
+                        let _ = ctx.prefs.set_many(vec![
+                            ("floating.x".into(), x.into()),
+                            ("floating.y".into(), y.into()),
+                        ]);
+                    }
+                });
             }
         }
     });
