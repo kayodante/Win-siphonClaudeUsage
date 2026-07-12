@@ -15,6 +15,7 @@ mod notify;
 mod prefs;
 mod token_store;
 mod tray;
+mod update_check;
 mod updater_bin;
 mod windows_ctl;
 
@@ -118,6 +119,9 @@ fn main() {
                     }
                 }
             });
+
+            // Periodic update check (boot + every 6h) → `update-available` event.
+            update_check::spawn(handle.clone());
 
             Ok(())
         })
