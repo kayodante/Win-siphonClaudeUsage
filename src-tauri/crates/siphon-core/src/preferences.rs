@@ -134,14 +134,6 @@ impl Preferences {
     pub fn default_value() -> Value {
         serde_json::to_value(Preferences::default()).expect("defaults serialize")
     }
-
-    /// Merge stored JSON over the defaults and deserialize. Unknown keys in the
-    /// stored blob are preserved through the merge but dropped on typed
-    /// deserialization — same observable behaviour as the JS `mergePreferences`.
-    pub fn merged(stored: Option<Value>) -> Preferences {
-        let value = merge(stored.unwrap_or(Value::Null));
-        serde_json::from_value(value).unwrap_or_default()
-    }
 }
 
 const FORBIDDEN: [&str; 3] = ["__proto__", "constructor", "prototype"];
@@ -215,9 +207,16 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    /// Merge stored JSON over the defaults and deserialize. Unknown keys in the
+    /// stored blob are preserved through the merge but dropped on typed
+    /// deserialization — same observable behaviour as the JS `mergePreferences`.
+    fn merged(stored: Option<Value>) -> Preferences {
+        serde_json::from_value(merge(stored.unwrap_or(Value::Null))).unwrap_or_default()
+    }
+
     #[test]
     fn defaults_round_trip() {
-        let prefs = Preferences::merged(None);
+        let prefs = merged(None);
         assert_eq!(prefs.language, "en");
         assert!(prefs.notifications.session_reset);
         assert_eq!(prefs.refresh.interval_seconds, 30);
@@ -232,7 +231,7 @@ mod tests {
             "notifications": { "sound": true },
             "refresh": { "intervalSeconds": 300 }
         });
-        let prefs = Preferences::merged(Some(stored));
+        let prefs = merged(Some(stored));
         assert_eq!(prefs.language, "pt-BR");
         assert!(prefs.notifications.sound);
         // Untouched nested default preserved by deep-merge.

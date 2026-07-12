@@ -118,11 +118,6 @@ impl Controller {
         self.emit();
     }
 
-    pub fn update_claude_dir(&self) {
-        // The next refresh_local reads the effective dir from prefs; nothing to
-        // cache here. Kept for parity with `updateClaudePath`.
-    }
-
     pub fn refresh_local(&self) {
         let claude_dir = self.prefs.claude_dir();
         let service = LocalDataService::new(Some(claude_dir), self.cache_path.clone());

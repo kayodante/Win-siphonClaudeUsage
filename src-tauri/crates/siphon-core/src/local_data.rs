@@ -380,6 +380,8 @@ fn parse_jsonl_file(
         .and_then(|p| p.get("days"))
         .and_then(|v| v.as_object().cloned())
         .unwrap_or_default();
+    // `hourly` is not consumed yet — kept for cache parity with the macOS app
+    // and a future hourly-stats view.
     let mut hourly = previous
         .filter(|_| should_append)
         .and_then(|p| p.get("hourly"))

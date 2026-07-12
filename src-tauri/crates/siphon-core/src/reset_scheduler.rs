@@ -6,10 +6,6 @@ use chrono::{DateTime, Utc};
 
 use crate::quota::Quota;
 
-/// The i64-ms clamp on JS timers (`MAX_TIMER_DELAY_MS`). The binary crate uses
-/// this to re-arm long waits in chunks.
-pub const MAX_TIMER_DELAY_MS: i64 = 2_147_483_647;
-
 /// Max chunk for one timer sleep. The binary crate re-checks the wall clock
 /// (and cancellation) on every wake, so a system suspend can delay the toast
 /// by at most one chunk instead of indefinitely.
