@@ -143,7 +143,10 @@ mod tests {
             expires_at: None,
         };
         assert_eq!(
-            rotated.preserving_refresh_from(&old).refresh_token.as_deref(),
+            rotated
+                .preserving_refresh_from(&old)
+                .refresh_token
+                .as_deref(),
             Some("rotated")
         );
     }

@@ -12,10 +12,7 @@ use crate::quota::Quota;
 pub const RESET_POLL_CHUNK_MS: i64 = 60_000;
 
 /// Milliseconds to sleep before re-checking, or `None` when `resets_at` is due.
-pub fn next_sleep_ms(
-    now: DateTime<Utc>,
-    resets_at: DateTime<Utc>,
-) -> Option<u64> {
+pub fn next_sleep_ms(now: DateTime<Utc>, resets_at: DateTime<Utc>) -> Option<u64> {
     let remaining = (resets_at - now).num_milliseconds();
     if remaining <= 0 {
         return None;

@@ -185,7 +185,9 @@ pub fn set_path(object: &mut Value, path: &str, value: Value) {
         if FORBIDDEN.contains(part) {
             return;
         }
-        let Some(map) = current.as_object_mut() else { return };
+        let Some(map) = current.as_object_mut() else {
+            return;
+        };
         let entry = map
             .entry(part.to_string())
             .or_insert_with(|| Value::Object(Map::new()));
