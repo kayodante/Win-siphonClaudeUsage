@@ -2,7 +2,7 @@
 //! GitHub "latest release" payload into an `UpdateInfo`. The download, checksum
 //! verification and winget spawn live in the binary crate.
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub const REPO: &str = "kayodante/Win-siphonClaudeUsage";
 pub const WINGET_ID: &str = "kayodante.Siphon";
@@ -30,6 +30,20 @@ fn semver(v: &str) -> (u64, u64, u64) {
 /// `isNewer(tag, current)` — true when `tag` > `current` by semver.
 pub fn is_newer(tag: &str, current: &str) -> bool {
     semver(tag) > semver(current)
+}
+
+impl UpdateInfo {
+    /// The `update-available` event payload. Field names are the contract with
+    /// `renderer.js` (`onUpdateAvailable`) — do not rename.
+    pub fn to_payload(&self, winget_upgrade_available: bool) -> Value {
+        json!({
+            "version": self.version,
+            "url": self.url,
+            "downloadUrl": self.download_url,
+            "checksumUrl": self.checksum_url,
+            "wingetUpgradeAvailable": winget_upgrade_available,
+        })
+    }
 }
 
 /// Parse a GitHub release payload into `UpdateInfo` when it is a newer,
@@ -114,5 +128,21 @@ mod tests {
     fn ignores_drafts_and_older() {
         assert!(parse_release(&json!({ "tag_name": "v2.0.0", "draft": true }), "1.0.0").is_none());
         assert!(parse_release(&json!({ "tag_name": "v1.0.0" }), "1.6.0").is_none());
+    }
+
+    #[test]
+    fn payload_shape_matches_renderer_contract() {
+        let info = UpdateInfo {
+            version: "1.8.0".into(),
+            url: "https://github.com/x/releases/latest".into(),
+            download_url: Some("https://github.com/d.exe".into()),
+            checksum_url: None,
+        };
+        let p = info.to_payload(true);
+        assert_eq!(p["version"], "1.8.0");
+        assert_eq!(p["url"], "https://github.com/x/releases/latest");
+        assert_eq!(p["downloadUrl"], "https://github.com/d.exe");
+        assert!(p["checksumUrl"].is_null());
+        assert_eq!(p["wingetUpgradeAvailable"], true);
     }
 }
