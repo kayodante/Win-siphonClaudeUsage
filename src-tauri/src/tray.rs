@@ -9,6 +9,7 @@ use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Manager};
 
 use siphon_core::format::level_for_percent;
+use siphon_core::i18n::t;
 use siphon_core::state::AppState;
 use siphon_core::tray_status::build_tray_status;
 
@@ -96,12 +97,12 @@ fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wr
         menu.append(&item)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "show", "Mostrar aplicativo", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "widget", "Widget flutuante", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "show", t("tray.showApp", &lang), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "widget", t("tray.widget", &lang), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "settings", t("tray.settings", &lang), true, None::<&str>)?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "restart", "Reiniciar", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "restart", t("tray.restart", &lang), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "quit", t("tray.quit", &lang), true, None::<&str>)?)?;
     Ok(menu)
 }
 

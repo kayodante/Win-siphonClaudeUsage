@@ -21,6 +21,11 @@ const EN: &[(&str, &str)] = &[
     ("tray.weekly", "Weekly"),
     ("tray.sessionReset", "Session reset"),
     ("tray.updated", "Updated"),
+    ("tray.showApp", "Show app"),
+    ("tray.widget", "Floating widget"),
+    ("tray.settings", "Settings"),
+    ("tray.restart", "Restart"),
+    ("tray.quit", "Quit"),
     ("quota.suffix.used", "used"),
     ("quota.suffix.remaining", "left"),
     ("notification.resetTitle", "Claude session reset"),
@@ -44,6 +49,11 @@ const PT: &[(&str, &str)] = &[
     ("tray.weekly", "Semanal"),
     ("tray.sessionReset", "Reset da sessão"),
     ("tray.updated", "Atualizado"),
+    ("tray.showApp", "Mostrar aplicativo"),
+    ("tray.widget", "Widget flutuante"),
+    ("tray.settings", "Configurações"),
+    ("tray.restart", "Reiniciar"),
+    ("tray.quit", "Sair"),
     ("quota.suffix.used", "usado"),
     ("quota.suffix.remaining", "restante"),
     ("notification.resetTitle", "Sessão do Claude reiniciada"),
@@ -65,6 +75,20 @@ const PT: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tray_menu_actions_are_localized() {
+        assert_eq!(t("tray.showApp", "en"), "Show app");
+        assert_eq!(t("tray.showApp", "pt-BR"), "Mostrar aplicativo");
+        assert_eq!(t("tray.widget", "en"), "Floating widget");
+        assert_eq!(t("tray.widget", "pt-BR"), "Widget flutuante");
+        assert_eq!(t("tray.settings", "en"), "Settings");
+        assert_eq!(t("tray.settings", "pt-BR"), "Configurações");
+        assert_eq!(t("tray.restart", "en"), "Restart");
+        assert_eq!(t("tray.restart", "pt-BR"), "Reiniciar");
+        assert_eq!(t("tray.quit", "en"), "Quit");
+        assert_eq!(t("tray.quit", "pt-BR"), "Sair");
+    }
 
     #[test]
     fn resolves_lang_and_fallback() {
