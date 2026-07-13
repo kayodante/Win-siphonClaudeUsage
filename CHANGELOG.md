@@ -11,6 +11,15 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-07-12
+
+### Fixed
+- The main window now remembers its position across a full quit and relaunch,
+  not just hide-to-tray. The position is saved on drag and restored before the
+  window is first shown, clamped to the primary monitor so a stale off-screen
+  spot self-heals to the default. (The Tauri migration only persisted the
+  floating widget's position.)
+
 ## [1.7.2] - 2026-07-12
 
 ### Fixed

@@ -70,6 +70,8 @@ const ALLOWED_PREFS: &[&str] = &[
     "floating.x",
     "floating.y",
     "floating.style",
+    "window.x",
+    "window.y",
     "startup.openAtLogin",
     "startup.showWindowOnLogin",
     "refresh.intervalSeconds",

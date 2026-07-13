@@ -32,6 +32,12 @@ use token_store::TokenStore;
 
 const STARTUP_HIDDEN_ARG: &str = "--hidden";
 
+/// Latest main-window position waiting to be persisted. `Some` also means a
+/// flush task is already scheduled (trailing debounce, one write per drag burst).
+/// Mirrors the floating widget's `PENDING_POS`.
+static MAIN_PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
+const MAIN_POS_FLUSH_DELAY_MS: u64 = 500;
+
 /// Managed application state, shared by every command and background task.
 pub struct AppContext {
     pub controller: Arc<Controller>,
@@ -97,6 +103,9 @@ fn main() {
             let initial_state = controller.get_state();
             tray::build(&handle, &initial_state)?;
 
+            // Put the window back where the user left it before first paint.
+            // Runs even when launching hidden so a later tray-show is anchored.
+            windows_ctl::restore_main_position(&handle);
             if !launch_hidden {
                 windows_ctl::show_main(&handle);
             }
@@ -126,13 +135,45 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the main window hides it (tray app), matching the old
-            // `window.on('close')` guard.
-            if window.label() == "main" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            if window.label() != "main" {
+                return;
+            }
+            match event {
+                // Closing the main window hides it (tray app), matching the old
+                // `window.on('close')` guard.
+                tauri::WindowEvent::CloseRequested { api, .. } => {
                     api.prevent_close();
                     let _ = window.hide();
                 }
+                // Persist the position on drag so it survives a full quit, not
+                // just a hide-to-tray. Debounced like the floating widget.
+                tauri::WindowEvent::Moved(pos) => {
+                    let scale = window.scale_factor().unwrap_or(1.0);
+                    let lx = (pos.x as f64 / scale).round() as i64;
+                    let ly = (pos.y as f64 / scale).round() as i64;
+                    let schedule_flush = {
+                        let mut p = MAIN_PENDING_POS.lock().unwrap();
+                        let first = p.is_none();
+                        *p = Some((lx, ly));
+                        first
+                    };
+                    if schedule_flush {
+                        let handle = window.app_handle().clone();
+                        tauri::async_runtime::spawn(async move {
+                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS)).await;
+                            let Some((x, y)) = MAIN_PENDING_POS.lock().unwrap().take() else {
+                                return;
+                            };
+                            if let Some(ctx) = handle.try_state::<AppContext>() {
+                                let _ = ctx.prefs.set_many(vec![
+                                    ("window.x".into(), x.into()),
+                                    ("window.y".into(), y.into()),
+                                ]);
+                            }
+                        });
+                    }
+                }
+                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![

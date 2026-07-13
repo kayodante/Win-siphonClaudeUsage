@@ -1,6 +1,6 @@
 [package]
 name = "siphon"
-version = "1.7.2"
+version = "1.7.3"
 description = "Windows tray app for Claude Code usage and reset notifications."
 authors = ["Kayo Dante"]
 license = "MIT"
