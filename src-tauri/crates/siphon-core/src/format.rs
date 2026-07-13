@@ -1,8 +1,8 @@
 //! Port of the numeric/percentage helpers from `src/shared/format.js` that the
 //! native side needs (the renderer keeps its own JS copy). Only the functions
 //! used by the tray/controller are ported here: `level_for_percent`,
-//! `clamp_percent`, `quota_display_value`, `format_percent`,
-//! `format_quota_percent`, `format_clock_time` and `format_relative_updated`.
+//! `clamp_percent`, `quota_display_value`, `format_quota_percent`,
+//! `format_clock_time` and `format_relative_updated`.
 
 use chrono::{DateTime, Local, TimeZone, Utc};
 
@@ -34,14 +34,6 @@ pub fn quota_display_value(used_percent: f64, mode: &str) -> i64 {
         100 - used
     } else {
         used
-    }
-}
-
-/// `"73%"`; `"--"` for non-finite. Matches `formatPercent` (rounds).
-pub fn format_percent(value: Option<f64>) -> String {
-    match value {
-        Some(v) if v.is_finite() => format!("{}%", v.round() as i64),
-        _ => "--".to_string(),
     }
 }
 
