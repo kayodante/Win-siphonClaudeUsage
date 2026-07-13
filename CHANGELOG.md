@@ -19,6 +19,13 @@ is added above it.
   window is first shown, clamped to the primary monitor so a stale off-screen
   spot self-heals to the default. (The Tauri migration only persisted the
   floating widget's position.)
+- "Show window after login" now works: an autostart launch shows the main
+  window when the preference is enabled (the toggle previously had no effect).
+- A transient network or server failure while refreshing the OAuth token no
+  longer signs you out and discards the refresh token; Siphon keeps the
+  credentials, reports offline, and retries on the next tick.
+- Tray menu actions ("Show app", "Settings", "Restart", "Quit", "Floating
+  widget") are now localized in English and pt-BR instead of always Portuguese.
 
 ## [1.7.2] - 2026-07-12
 
