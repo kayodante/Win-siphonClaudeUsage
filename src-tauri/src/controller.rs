@@ -38,6 +38,16 @@ struct ResetRuntime {
     generation: u64,
 }
 
+/// Result of attempting a refresh-token grant.
+enum RefreshOutcome {
+    /// New credentials saved to the token store.
+    Refreshed(Credentials),
+    /// The grant was rejected — stored credentials are dead.
+    Rejected,
+    /// Network/server trouble — keep stored credentials, retry later.
+    Transient,
+}
+
 pub struct Controller {
     app: AppHandle,
     pub prefs: std::sync::Arc<PrefsStore>,
@@ -173,30 +183,50 @@ impl Controller {
             }
         };
 
-        // Single forced refresh + retry on a 401, matching fetchQuota.
+        // Single forced refresh + retry on a 401, matching fetchQuota — but a
+        // transient refresh failure must not sign the user out.
         if status == 401 {
-            if let Some(new_token) = self.force_refresh().await {
-                match self.http.get_usage(&new_token).await {
-                    Ok(r) => {
-                        status = r.0;
-                        retry_after = r.1;
-                        body = r.2;
+            match self.force_refresh().await {
+                RefreshOutcome::Refreshed(creds) => {
+                    match self.http.get_usage(&creds.access_token).await {
+                        Ok(r) => {
+                            status = r.0;
+                            retry_after = r.1;
+                            body = r.2;
+                        }
+                        Err(e) => {
+                            self.apply_quota_error(e);
+                            self.emit();
+                            return;
+                        }
                     }
-                    Err(e) => {
-                        self.apply_quota_error(e);
+                    if status == 401 {
+                        let _ = self.tokens.clear();
+                        self.apply_quota_error(QuotaError::new(
+                            QuotaErrorCode::Unauthorized,
+                            "Session expired. Please sign in again.",
+                        ));
                         self.emit();
                         return;
                     }
                 }
-            }
-            if status == 401 {
-                let _ = self.tokens.clear();
-                self.apply_quota_error(QuotaError::new(
-                    QuotaErrorCode::Unauthorized,
-                    "Session expired. Please sign in again.",
-                ));
-                self.emit();
-                return;
+                RefreshOutcome::Transient => {
+                    self.apply_quota_error(QuotaError::new(
+                        QuotaErrorCode::Network,
+                        "Could not refresh token (network).",
+                    ));
+                    self.emit();
+                    return;
+                }
+                RefreshOutcome::Rejected => {
+                    let _ = self.tokens.clear();
+                    self.apply_quota_error(QuotaError::new(
+                        QuotaErrorCode::Unauthorized,
+                        "Session expired. Please sign in again.",
+                    ));
+                    self.emit();
+                    return;
+                }
             }
         }
 
@@ -254,7 +284,9 @@ impl Controller {
         }
     }
 
-    /// Load credentials, refreshing if expired. Errors mirror `#validToken`.
+    /// Load credentials, refreshing if expired. A transiently-failed refresh
+    /// keeps the stored credentials and reports `Network` so the next tick
+    /// retries; only a rejected grant (or no refresh token) clears them.
     async fn valid_token(&self) -> Result<String, QuotaError> {
         let creds = self
             .tokens
@@ -262,39 +294,48 @@ impl Controller {
             .ok()
             .flatten()
             .ok_or_else(|| QuotaError::new(QuotaErrorCode::NotSignedIn, "Not signed in"))?;
-        let creds = if creds.is_expired(Utc::now()) && creds.has_refresh_token() {
+        if !creds.is_expired(Utc::now()) {
+            return Ok(creds.access_token);
+        }
+        if creds.has_refresh_token() {
             match self.refresh_credentials(&creds).await {
-                Some(c) => c,
-                None => creds,
+                RefreshOutcome::Refreshed(c) => return Ok(c.access_token),
+                RefreshOutcome::Transient => {
+                    return Err(QuotaError::new(
+                        QuotaErrorCode::Network,
+                        "Could not refresh token (network).",
+                    ));
+                }
+                RefreshOutcome::Rejected => {}
             }
-        } else {
-            creds
+        }
+        let _ = self.tokens.clear();
+        Err(QuotaError::new(QuotaErrorCode::NotSignedIn, "Not signed in"))
+    }
+
+    async fn force_refresh(&self) -> RefreshOutcome {
+        let Some(creds) = self.tokens.load().ok().flatten() else {
+            return RefreshOutcome::Rejected;
         };
-        if creds.is_expired(Utc::now()) {
-            let _ = self.tokens.clear();
-            return Err(QuotaError::new(QuotaErrorCode::NotSignedIn, "Not signed in"));
-        }
-        Ok(creds.access_token)
-    }
-
-    async fn force_refresh(&self) -> Option<String> {
-        let creds = self.tokens.load().ok().flatten()?;
         if !creds.has_refresh_token() {
-            return None;
+            return RefreshOutcome::Rejected;
         }
-        self.refresh_credentials(&creds).await.map(|c| c.access_token)
+        self.refresh_credentials(&creds).await
     }
 
-    async fn refresh_credentials(&self, creds: &Credentials) -> Option<Credentials> {
-        let refresh_token = creds.refresh_token.as_deref()?;
-        let refreshed = self
-            .http
-            .post_token(oauth::refresh_body(refresh_token))
-            .await
-            .ok()?
-            .preserving_refresh_from(creds);
-        let _ = self.tokens.save(&refreshed);
-        Some(refreshed)
+    async fn refresh_credentials(&self, creds: &Credentials) -> RefreshOutcome {
+        let Some(refresh_token) = creds.refresh_token.as_deref() else {
+            return RefreshOutcome::Rejected;
+        };
+        match self.http.post_token(oauth::refresh_body(refresh_token)).await {
+            Ok(new_creds) => {
+                let refreshed = new_creds.preserving_refresh_from(creds);
+                let _ = self.tokens.save(&refreshed);
+                RefreshOutcome::Refreshed(refreshed)
+            }
+            Err(crate::http::TokenError::Rejected(_)) => RefreshOutcome::Rejected,
+            Err(crate::http::TokenError::Transient(_)) => RefreshOutcome::Transient,
+        }
     }
 
     pub async fn refresh_profile(&self) {
@@ -365,10 +406,10 @@ impl Controller {
                 self.refresh_profile().await;
                 self.refresh_quota().await;
             }
-            Err(message) => {
+            Err(err) => {
                 self.state.lock().unwrap().auth_error = Some(
                     siphon_core::diagnostics::safe_error_message(
-                        &message,
+                        err.message(),
                         "Authentication failed. Please try again.",
                     ),
                 );

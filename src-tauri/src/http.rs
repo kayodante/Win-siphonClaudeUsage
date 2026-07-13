@@ -15,6 +15,24 @@ const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
 const USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
 const PROFILE_URL: &str = "https://api.anthropic.com/api/oauth/profile";
 
+/// Outcome classification for token-endpoint POSTs (exchange and refresh).
+#[derive(Debug)]
+pub enum TokenError {
+    /// Network trouble, 429/5xx, or a malformed body — retry later, do NOT
+    /// discard stored credentials.
+    Transient(String),
+    /// The endpoint rejected the request (400/401/403) — the grant is bad.
+    Rejected(String),
+}
+
+impl TokenError {
+    pub fn message(&self) -> &str {
+        match self {
+            TokenError::Transient(m) | TokenError::Rejected(m) => m,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
@@ -95,7 +113,7 @@ impl HttpClient {
     }
 
     /// POST the token endpoint (exchange or refresh). Parses into `Credentials`.
-    pub async fn post_token(&self, body: Value) -> Result<Credentials, String> {
+    pub async fn post_token(&self, body: Value) -> Result<Credentials, TokenError> {
         let resp = self
             .client
             .post(TOKEN_URL)
@@ -103,20 +121,28 @@ impl HttpClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| format!("Auth failed: {e}"))?;
-        if resp.status().as_u16() != 200 {
+            .map_err(|e| TokenError::Transient(format!("Auth failed: {e}")))?;
+        let status = resp.status().as_u16();
+        if status != 200 {
             let text = resp.text().await.unwrap_or_default();
             let snippet: String = text.chars().take(1024).collect();
-            return Err(siphon_core::diagnostics::safe_error_message(
+            let message = siphon_core::diagnostics::safe_error_message(
                 &format!("Auth failed: {snippet}"),
                 "Auth failed.",
-            ));
+            );
+            return Err(if oauth::refresh_failure_is_fatal(status) {
+                TokenError::Rejected(message)
+            } else {
+                TokenError::Transient(message)
+            });
         }
         let json = resp
             .json::<Value>()
             .await
-            .map_err(|_| "Auth failed: malformed response".to_string())?;
-        oauth::parse_token_response(&json, chrono::Utc::now())
+            .map_err(|_| TokenError::Transient("Auth failed: malformed response".to_string()))?;
+        // A 200 with no access token is a server quirk, not a dead grant —
+        // classify transient so a refresh never destroys credentials over it.
+        oauth::parse_token_response(&json, chrono::Utc::now()).map_err(TokenError::Transient)
     }
 }
 

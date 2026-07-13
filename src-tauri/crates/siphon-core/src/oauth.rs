@@ -110,6 +110,14 @@ pub fn refresh_body(refresh_token: &str) -> Value {
     })
 }
 
+/// Whether a failed token-endpoint POST is fatal for the stored credentials.
+/// 400/401/403 mean the grant itself was rejected (e.g. `invalid_grant`) — the
+/// refresh token is dead and must be discarded. Anything else (429, 5xx,
+/// network) is transient: keep the credentials and retry later.
+pub fn refresh_failure_is_fatal(status: u16) -> bool {
+    matches!(status, 400 | 401 | 403)
+}
+
 /// Parse a successful token response into `Credentials`. Matches `#postToken`'s
 /// success branch (default 3600s expiry, `expiresAt` = now + expires_in).
 pub fn parse_token_response(json: &Value, now: DateTime<Utc>) -> Result<Credentials, String> {
@@ -171,6 +179,19 @@ fn url_decode(s: &str) -> String {
 mod tests {
     use super::*;
     use chrono::TimeZone;
+
+    #[test]
+    fn refresh_failure_classification() {
+        // Grant rejected — stored refresh token is dead, clearing is correct.
+        assert!(refresh_failure_is_fatal(400));
+        assert!(refresh_failure_is_fatal(401));
+        assert!(refresh_failure_is_fatal(403));
+        // Transient — server/rate trouble, keep credentials and retry.
+        assert!(!refresh_failure_is_fatal(429));
+        assert!(!refresh_failure_is_fatal(500));
+        assert!(!refresh_failure_is_fatal(502));
+        assert!(!refresh_failure_is_fatal(503));
+    }
 
     #[test]
     fn challenge_is_deterministic_base64url() {
