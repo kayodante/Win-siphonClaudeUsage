@@ -39,6 +39,17 @@ test('formatRelativeUpdated localizes Portuguese output', () => {
   );
 });
 
+test('formatRelativeUpdated localizes Japanese output', () => {
+  assert.equal(
+    formatRelativeUpdated(
+      new Date('2026-05-04T12:03:00Z'),
+      new Date('2026-05-04T12:05:00Z'),
+      'ja'
+    ),
+    '2分前に更新'
+  );
+});
+
 test('clampPercent rounds and clamps to the 0-100 range', () => {
   assert.equal(clampPercent(54.4), 54);
   assert.equal(clampPercent(54.5), 55);
@@ -106,6 +117,11 @@ test('formatTokens scales into K and M with a unit suffix', () => {
   assert.equal(formatTokens(2_000_000), '2.0M tokens');
 });
 
+test('formatTokens localizes Japanese output', () => {
+  assert.equal(formatTokens(999, 'ja'), '999トークン');
+  assert.equal(formatTokens(1500, 'ja'), '1.5Kトークン');
+});
+
 test('formatClockTime pads to HH:MM', () => {
   const date = new Date('2026-05-04T17:42:00');
   assert.equal(formatClockTime(date), '17:42');
@@ -147,6 +163,17 @@ test('formatTimeRemaining drops hour when under one hour', () => {
   );
 });
 
+test('formatTimeRemaining produces Japanese output', () => {
+  assert.equal(
+    formatTimeRemaining(
+      new Date('2026-05-04T14:14:00Z'),
+      new Date('2026-05-04T12:00:00Z'),
+      'ja'
+    ),
+    '残り2時間14分'
+  );
+});
+
 test('formatDaysRemaining pluralizes correctly in PT', () => {
   assert.equal(
     formatDaysRemaining(
@@ -168,10 +195,28 @@ test('formatDaysRemaining handles singular day in EN', () => {
   );
 });
 
+test('formatDaysRemaining localizes Japanese output', () => {
+  assert.equal(
+    formatDaysRemaining(
+      new Date('2026-05-08T00:00:00Z'),
+      new Date('2026-05-04T00:00:00Z'),
+      'ja'
+    ),
+    '4日後にリセット'
+  );
+});
+
 test('formatWeekdayClock combines weekday and 24h time', () => {
   const date = new Date('2026-05-05T00:00:00');
   const result = formatWeekdayClock(date, 'pt-BR');
   assert.match(result, /^[A-ZÁ-Ú][a-zá-ú]+, \d{2}:\d{2}$/);
+});
+
+test('formatWeekdayClock uses Japanese weekday name', () => {
+  const date = new Date('2026-05-05T00:00:00');
+  const result = formatWeekdayClock(date, 'ja');
+  assert.match(result, /^.+, \d{2}:\d{2}$/);
+  assert.equal(/^[A-Z][a-z]+,/.test(result), false);
 });
 
 test('hydrateSlot returns null for falsy input', () => {

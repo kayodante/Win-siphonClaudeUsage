@@ -1,7 +1,7 @@
 // fallow-ignore-file unused-file -- loaded via <script src> in floating.html, not a JS import
 import { logSafeError } from '../shared/diagnostics.js';
 import { clampPercent, formatClockTime, formatCurrency, formatQuotaPercent, hydrateSlot, levelForPercent } from '../shared/format.js';
-import { t, tFormat } from '../shared/i18n.js';
+import { SUPPORTED_LANGUAGES, t, tFormat } from '../shared/i18n.js';
 
 const METER_SEGMENTS = 40;
 
@@ -126,7 +126,8 @@ function applyStaticLabels() {
 }
 
 function languageOf(state) {
-  return state?.preferences?.language === 'pt-BR' ? 'pt-BR' : 'en';
+  const lang = state?.preferences?.language;
+  return SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
 }
 
 function renderMeter(percent) {

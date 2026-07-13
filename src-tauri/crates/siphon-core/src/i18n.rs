@@ -5,7 +5,13 @@
 
 /// `t(key, lang)` — looks up `lang`, falls back to `en`, then to the key.
 pub fn t(key: &str, lang: &str) -> String {
-    let table = if lang == "pt-BR" { PT } else { EN };
+    let table = if lang == "pt-BR" {
+        PT
+    } else if lang == "ja" {
+        JA
+    } else {
+        EN
+    };
     lookup(table, key)
         .or_else(|| lookup(EN, key))
         .unwrap_or(key)
@@ -72,6 +78,34 @@ const PT: &[(&str, &str)] = &[
     ("alert.critical.body", "Sessão atingiu 90%."),
 ];
 
+const JA: &[(&str, &str)] = &[
+    ("tray.session", "セッション"),
+    ("tray.weekly", "週間"),
+    ("tray.sessionReset", "セッションリセット"),
+    ("tray.updated", "更新日時"),
+    ("tray.showApp", "アプリを開く"),
+    ("tray.widget", "フローティングウィジェット"),
+    ("tray.settings", "設定"),
+    ("tray.restart", "再起動"),
+    ("tray.quit", "終了"),
+    ("quota.suffix.used", "使用済み"),
+    ("quota.suffix.remaining", "残り"),
+    ("notification.resetTitle", "Claudeセッションがリセットされました"),
+    (
+        "notification.resetBody",
+        "Claudeのセッション制限がリセットされ、再び利用可能です。",
+    ),
+    ("notification.expireTitle", "セッションが終了しました"),
+    (
+        "notification.expireBody",
+        "Claudeのセッションが制限に達しました。",
+    ),
+    ("alert.highUsage.title", "使用量が多めです"),
+    ("alert.highUsage.body", "セッションの70%に達しました。"),
+    ("alert.critical.title", "使用量が限界に近いです"),
+    ("alert.critical.body", "セッションの90%に達しました。"),
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,14 +114,19 @@ mod tests {
     fn tray_menu_actions_are_localized() {
         assert_eq!(t("tray.showApp", "en"), "Show app");
         assert_eq!(t("tray.showApp", "pt-BR"), "Mostrar aplicativo");
+        assert_eq!(t("tray.showApp", "ja"), "アプリを開く");
         assert_eq!(t("tray.widget", "en"), "Floating widget");
         assert_eq!(t("tray.widget", "pt-BR"), "Widget flutuante");
+        assert_eq!(t("tray.widget", "ja"), "フローティングウィジェット");
         assert_eq!(t("tray.settings", "en"), "Settings");
         assert_eq!(t("tray.settings", "pt-BR"), "Configurações");
+        assert_eq!(t("tray.settings", "ja"), "設定");
         assert_eq!(t("tray.restart", "en"), "Restart");
         assert_eq!(t("tray.restart", "pt-BR"), "Reiniciar");
+        assert_eq!(t("tray.restart", "ja"), "再起動");
         assert_eq!(t("tray.quit", "en"), "Quit");
         assert_eq!(t("tray.quit", "pt-BR"), "Sair");
+        assert_eq!(t("tray.quit", "ja"), "終了");
     }
 
     #[test]

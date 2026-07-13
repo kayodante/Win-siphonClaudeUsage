@@ -11,7 +11,7 @@ import {
   quotaDisplayValue
 } from '../shared/format.js';
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
-import { t, tFormat } from '../shared/i18n.js';
+import { SUPPORTED_LANGUAGES, t, tFormat } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
@@ -616,7 +616,9 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   elements.peakHoursBadge.hidden = !inPeakHours;
   if (inPeakHours) {
     const { start, end } = peakHoursLocalRange(now);
-    elements.peakHoursInfo.title = tFormat('home.peakHoursTooltip', lang, { start, end });
+    const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
+    elements.peakHoursInfo.title = titleText;
+    elements.peakHoursInfo.setAttribute('aria-label', titleText);
   }
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
@@ -625,8 +627,8 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
 
 function updateStatsAndPills({ state, notificationsEnabled, lang }) {
   renderNotificationPill(notificationsEnabled, lang);
-  elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens) ?? '';
-  elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens) ?? '';
+  elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens, lang) ?? '';
+  elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens, lang) ?? '';
   updateLastUpdatedLine();
 }
 
@@ -955,7 +957,8 @@ function renderActiveView() {
 }
 
 function currentLanguage() {
-  return currentState?.preferences?.language === 'pt-BR' ? 'pt-BR' : 'en';
+  const lang = currentState?.preferences?.language;
+  return SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
 }
 
 function applyTranslations(lang) {

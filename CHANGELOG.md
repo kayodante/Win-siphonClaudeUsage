@@ -11,6 +11,11 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+- Japanese (`日本語`) as a third UI language, switchable from Settings. Covers
+  the renderer, the native tray menu, and toast notifications; all date/time
+  and token-count formatting is localized.
+
 ## [1.7.3] - 2026-07-12
 
 ### Fixed

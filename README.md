@@ -39,7 +39,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
 * **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
 * **Color-coded tray icon** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
-* **Localization** | English and Brazilian Portuguese, switchable from Settings
+* **Localization** | English, Brazilian Portuguese, and Japanese, switchable from Settings
 
 ## Requirements
 
