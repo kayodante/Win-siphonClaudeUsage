@@ -426,7 +426,7 @@ body[data-view="onboard"] .app-footer {
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  letter-spacing: 0.12em;
+  letter-spacing: -0.02em;
   text-transform: lowercase;
 }
 
