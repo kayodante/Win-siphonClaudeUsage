@@ -97,7 +97,7 @@ for known Claude models. No data leaves your machine for usage calculations.
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
 | `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
-| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget position, autostart, refresh, and Claude Code launch integration settings |
+| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget + main-window position, autostart, refresh, and Claude Code launch integration settings |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
 
 ### Sign-in

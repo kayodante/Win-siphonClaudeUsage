@@ -311,9 +311,12 @@ Same endpoint:
 }
 ```
 
-`QuotaService.#validToken()` triggers a refresh when `expiresAt` is within
-30 seconds. If the refresh fails the credentials are cleared and the
-controller flips to `isSignedIn: false`.
+`QuotaService.#validToken()` (`controller::valid_token`) triggers a refresh when
+`expiresAt` is within 30 seconds. Failures are classified: a **rejected** grant
+(`400`/`401`/`403` from the token endpoint) clears the credentials and flips the
+controller to `isSignedIn: false`; a **transient** failure (network, `429`, or
+`5xx`) keeps the credentials, reports offline (`isOffline: true`), and retries on
+the next tick. See `siphon_core::oauth::refresh_failure_is_fatal`.
 
 ## 4. Files Siphon writes
 
@@ -333,8 +336,9 @@ Written by `TokenStore.save()` with mode `0600`.
 }
 ```
 
-Deleted by `TokenStore.clear()` on sign-out, on a `401`, or when refresh
-fails.
+Deleted by `TokenStore.clear()` on sign-out, on a `401`, or when a refresh
+grant is rejected (`400`/`401`/`403`). A transient refresh failure keeps the
+file.
 
 ### `%APPDATA%\Siphon\preferences.json`
 
@@ -362,6 +366,10 @@ with defaults on load so old files remain valid.
   },
   "integration": {
     "launchWithClaudeCode": false
+  },
+  "window": {
+    "x": null,
+    "y": null
   },
   "claudePath": null
 }
