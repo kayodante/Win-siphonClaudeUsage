@@ -88,11 +88,7 @@ fn main() {
 
             // Apply persisted autostart + launch-with-Claude-Code on boot.
             let initial = prefs.load();
-            apply_autostart(
-                &handle,
-                initial.startup.open_at_login,
-                initial.startup.show_window_on_login,
-            );
+            apply_autostart(&handle, initial.startup.open_at_login);
             if initial.integration.launch_with_claude_code {
                 if let Some(ctx) = handle.try_state::<AppContext>() {
                     let _ = ctx.claude_settings.enable();
@@ -106,7 +102,10 @@ fn main() {
             // Put the window back where the user left it before first paint.
             // Runs even when launching hidden so a later tray-show is anchored.
             windows_ctl::restore_main_position(&handle);
-            if !launch_hidden {
+            if siphon_core::preferences::show_window_at_boot(
+                launch_hidden,
+                initial.startup.show_window_on_login,
+            ) {
                 windows_ctl::show_main(&handle);
             }
 
@@ -231,7 +230,7 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
         }
         p if p.starts_with("startup.") => {
             let s = &change.preferences.startup;
-            apply_autostart(app, s.open_at_login, s.show_window_on_login);
+            apply_autostart(app, s.open_at_login);
         }
         _ => {}
     }
@@ -244,7 +243,7 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
     crate::floating::sync(app, &state);
 }
 
-fn apply_autostart(app: &tauri::AppHandle, enabled: bool, _show_window: bool) {
+fn apply_autostart(app: &tauri::AppHandle, enabled: bool) {
     use tauri_plugin_autostart::ManagerExt;
     let manager = app.autolaunch();
     let _ = if enabled {

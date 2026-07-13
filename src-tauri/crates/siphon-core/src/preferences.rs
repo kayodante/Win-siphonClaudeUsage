@@ -136,6 +136,13 @@ impl Preferences {
     }
 }
 
+/// Whether the main window should be shown at boot. A manual launch (no
+/// `--hidden` arg) always shows; an autostart launch (`--hidden`) shows only
+/// when the user opted in via `startup.showWindowOnLogin`.
+pub fn show_window_at_boot(launch_hidden: bool, show_window_on_login: bool) -> bool {
+    !launch_hidden || show_window_on_login
+}
+
 const FORBIDDEN: [&str; 3] = ["__proto__", "constructor", "prototype"];
 
 fn is_plain_object(v: &Value) -> bool {
@@ -260,6 +267,16 @@ mod tests {
         let mut v = Preferences::default_value();
         set_path(&mut v, "__proto__.polluted", Value::Bool(true));
         assert!(get_path(&v, "__proto__.polluted").is_none());
+    }
+
+    #[test]
+    fn show_window_at_boot_matrix() {
+        // Manual launch (no --hidden): always show, pref is irrelevant.
+        assert!(show_window_at_boot(false, false));
+        assert!(show_window_at_boot(false, true));
+        // Autostart launch (--hidden): the pref decides.
+        assert!(!show_window_at_boot(true, false));
+        assert!(show_window_at_boot(true, true));
     }
 
     #[test]
