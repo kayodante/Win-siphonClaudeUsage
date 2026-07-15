@@ -11,6 +11,21 @@ pub struct ClaudeSettings {
     settings_path: PathBuf,
 }
 
+/// True for `... Start-Process '<dir>\siphon*.exe'` at any install location.
+/// Only recognizes the shape this module writes, so a user's own hook that
+/// merely mentions Siphon (writing a state file, say) is left alone.
+fn launches_siphon(cmd: &str) -> bool {
+    let lower = cmd.to_lowercase();
+    if !lower.contains("start-process") {
+        return false;
+    }
+    lower
+        .split('\'')
+        .nth(1)
+        .and_then(|target| target.rsplit(['\\', '/']).next())
+        .is_some_and(|file| file.starts_with("siphon") && file.ends_with(".exe"))
+}
+
 impl ClaudeSettings {
     pub fn new(exe_path: String) -> Self {
         Self::with_paths(
@@ -35,12 +50,15 @@ impl ClaudeSettings {
         })
     }
 
+    /// Matches the current exe path *and* any hook launching another Siphon
+    /// build (dev, portable, an older install dir). Without the second case
+    /// every build location leaves its own entry behind and each Claude Code
+    /// session starts one Siphon per stale hook.
     fn is_siphon_entry(&self, entry: &Value) -> bool {
-        entry
-            .pointer("/hooks/0/command")
-            .and_then(|v| v.as_str())
-            .map(|cmd| cmd == self.exe_path || cmd.contains(&self.exe_path))
-            .unwrap_or(false)
+        let Some(cmd) = entry.pointer("/hooks/0/command").and_then(|v| v.as_str()) else {
+            return false;
+        };
+        cmd == self.exe_path || cmd.contains(&self.exe_path) || launches_siphon(cmd)
     }
 
     /// Returns `None` for a missing, unparsable, or non-object settings file so
@@ -172,6 +190,31 @@ mod tests {
         let svc = ClaudeSettings::with_paths(String::new(), dir.join("settings.json"));
         assert!(svc.enable().is_err());
         assert!(svc.disable().is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn enable_replaces_hooks_from_other_siphon_builds() {
+        let dir = temp_dir("otherbuilds");
+        let path = dir.join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{"hooks":{"SessionStart":[
+                {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'C:\\old\\Programs\\Siphon\\Siphon.exe'\""}]},
+                {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'K:\\repo\\target\\debug\\siphon.exe'\""}]},
+                {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'K:\\repo\\nsis\\Siphon.Portable.1.7.3.exe'\""}]},
+                {"matcher":"startup","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Set-Content -Path 'K:\\other\\state.json'\""}]}
+            ]}}"#,
+        )
+        .unwrap();
+        let svc = ClaudeSettings::with_paths("C:\\apps\\siphon.exe".into(), path.clone());
+        svc.enable().unwrap();
+        let v: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let entries = v.pointer("/hooks/SessionStart").unwrap().as_array().unwrap();
+        // the foreign state-file hook plus exactly one Siphon launcher
+        assert_eq!(entries.len(), 2);
+        assert!(entries[0].to_string().contains("state.json"));
+        assert!(entries[1].to_string().contains("C:\\\\apps\\\\siphon.exe"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
