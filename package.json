@@ -18,6 +18,8 @@
     "test": "node --test test/*.test.js",
     "test:rust": "cargo test -p siphon-core --manifest-path src-tauri/Cargo.toml",
     "lint": "node scripts/check-syntax.js && eslint .",
+    "sync-version": "node scripts/sync-version.js",
+    "version": "node scripts/sync-version.js",
     "fallow": "fallow"
   },
   "keywords": [

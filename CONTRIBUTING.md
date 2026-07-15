@@ -34,10 +34,16 @@ easy to break without noticing).
 
 ## PR expectations
 
-- **Bump `package.json` version on every commit** — run
+- **Bump the version on every commit** — run
   `npm version <patch|minor|major> --no-git-tag-version` before committing.
   `feat` → minor, `fix`/`chore`/`style`/`refactor` → patch, breaking change →
-  major. Include the updated `package.json` in the same commit.
+  major. The version lives in four files: `package.json`,
+  `src-tauri/Cargo.toml`, `src-tauri/crates/siphon-core/Cargo.toml` and
+  `src-tauri/tauri.conf.json`. `npm version` writes only the first — the
+  `version` lifecycle hook runs `scripts/sync-version.js` to copy it into the
+  rest. Include all four in the same commit; `tauri.conf.json` is the version
+  the built app reports to the update check, so it must not lag behind the
+  released tag.
 - Keep the diff scoped to one change. Unrelated cleanup makes review harder
   and slows down merging.
 - No bundler, TypeScript, UI framework, or native module additions without
