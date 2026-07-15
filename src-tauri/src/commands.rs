@@ -79,6 +79,8 @@ const ALLOWED_PREFS: &[&str] = &[
     "integration.launchWithClaudeCode",
     "privacy.maskEmail",
     "display.quotaMode",
+    "updates.autoCheck",
+    "updates.autoDownload",
 ];
 
 #[derive(Deserialize)]
@@ -225,7 +227,10 @@ pub async fn update_download(app: AppHandle, payload: Value) -> Result<(), ()> {
 
 #[tauri::command]
 pub fn update_install(app: AppHandle) {
-    crate::updater_bin::install(&app);
+    // Exit once the installer is running: NSIS cannot overwrite a running exe.
+    if crate::updater_bin::install(&app) {
+        app.exit(0);
+    }
 }
 
 #[tauri::command]

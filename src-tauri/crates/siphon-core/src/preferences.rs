@@ -52,6 +52,13 @@ pub struct Integration {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct Updates {
+    pub auto_check: bool,
+    pub auto_download: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Privacy {
     pub mask_email: bool,
 }
@@ -80,6 +87,8 @@ pub struct Preferences {
     pub startup: Startup,
     pub refresh: Refresh,
     pub integration: Integration,
+    #[serde(default = "default_updates")]
+    pub updates: Updates,
     pub privacy: Privacy,
     pub display: Display,
     pub claude_path: Option<String>,
@@ -119,6 +128,7 @@ impl Default for Preferences {
             integration: Integration {
                 launch_with_claude_code: false,
             },
+            updates: default_updates(),
             privacy: Privacy { mask_email: false },
             display: Display {
                 quota_mode: "used".to_string(),
@@ -126,6 +136,15 @@ impl Default for Preferences {
             claude_path: None,
             window: None,
         }
+    }
+}
+
+/// `auto_check` defaults on — it matches how the update check behaved before
+/// the toggle existed. Downloading without asking does not, so it stays off.
+fn default_updates() -> Updates {
+    Updates {
+        auto_check: true,
+        auto_download: false,
     }
 }
 
@@ -231,6 +250,17 @@ mod tests {
         assert_eq!(prefs.refresh.interval_seconds, 30);
         assert_eq!(prefs.display.quota_mode, "used");
         assert_eq!(prefs.floating.style, "classic");
+        assert!(prefs.updates.auto_check);
+        assert!(!prefs.updates.auto_download);
+    }
+
+    /// A preferences.json written before `updates` existed must still load, with
+    /// auto-check on — the behaviour those users already had.
+    #[test]
+    fn preferences_without_updates_block_keep_auto_check_on() {
+        let prefs = merged(Some(json!({ "language": "pt-BR" })));
+        assert!(prefs.updates.auto_check);
+        assert!(!prefs.updates.auto_download);
     }
 
     #[test]

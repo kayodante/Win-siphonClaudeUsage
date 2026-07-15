@@ -232,6 +232,10 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
             let s = &change.preferences.startup;
             apply_autostart(app, s.open_at_login);
         }
+        // Enabling auto-check shouldn't wait out the 6-hour interval.
+        "updates.autoCheck" if change.preferences.updates.auto_check => {
+            crate::update_check::check_now(app.clone());
+        }
         _ => {}
     }
     // Re-render immediately for widget open/close/style changes. Mirror the

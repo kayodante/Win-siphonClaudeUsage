@@ -92,6 +92,8 @@ const STRINGS = Object.freeze({
     'settings.floating': 'Floating widget',
     'settings.startupOpenAtLogin': 'Start with Windows',
     'settings.startupShowWindow': 'Show window after login',
+    'settings.updatesAutoCheck': 'Check for updates automatically',
+    'settings.updatesAutoDownload': 'Download updates in the background',
     'settings.launchWithClaudeCode': 'Open with Claude Code',
     'settings.refreshInterval': 'Refresh interval',
     'settings.refresh30s': '30 seconds',
@@ -135,6 +137,8 @@ const STRINGS = Object.freeze({
     'update.install': 'Install',
     'update.updating': 'Updating…',
     'update.updateRestart': 'Update & restart',
+    'update.readyToApply': 'Update ready. Restart to apply.',
+    'update.restart': 'Restart',
 
     'common.dismiss': 'Dismiss',
 
@@ -250,6 +254,8 @@ const STRINGS = Object.freeze({
     'settings.floating': 'Widget flutuante',
     'settings.startupOpenAtLogin': 'Iniciar com o Windows',
     'settings.startupShowWindow': 'Mostrar janela ao entrar',
+    'settings.updatesAutoCheck': 'Verificar atualizações automaticamente',
+    'settings.updatesAutoDownload': 'Baixar atualizações em segundo plano',
     'settings.launchWithClaudeCode': 'Abrir com Claude Code',
     'settings.refreshInterval': 'Intervalo de atualização',
     'settings.refresh30s': '30 segundos',
@@ -293,6 +299,8 @@ const STRINGS = Object.freeze({
     'update.install': 'Instalar',
     'update.updating': 'Atualizando…',
     'update.updateRestart': 'Atualizar e reiniciar',
+    'update.readyToApply': 'Atualização pronta. Reinicie para aplicar.',
+    'update.restart': 'Reiniciar',
 
     'common.dismiss': 'Dispensar',
 
@@ -408,6 +416,8 @@ const STRINGS = Object.freeze({
     'settings.floating': 'フローティングウィジェット',
     'settings.startupOpenAtLogin': 'Windowsの起動時に開く',
     'settings.startupShowWindow': 'ログイン時にウィンドウを表示',
+    'settings.updatesAutoCheck': '自動的に更新を確認',
+    'settings.updatesAutoDownload': 'バックグラウンドで更新をダウンロード',
     'settings.launchWithClaudeCode': 'Claude Codeで開く',
     'settings.refreshInterval': '更新間隔',
     'settings.refresh30s': '30秒',
@@ -451,6 +461,8 @@ const STRINGS = Object.freeze({
     'update.install': 'インストール',
     'update.updating': '更新中…',
     'update.updateRestart': '更新して再起動',
+    'update.readyToApply': '更新の準備ができました。再起動して適用してください。',
+    'update.restart': '再起動',
 
     'common.dismiss': '閉じる',
 

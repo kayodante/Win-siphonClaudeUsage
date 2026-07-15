@@ -16,7 +16,20 @@ fn emit_error(app: &AppHandle, message: &str) {
     let _ = app.emit("update:error", json!({ "message": message }));
 }
 
+static IN_FLIGHT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// One download at a time — a background auto-download and a manual click would
+/// otherwise race writing the same temp file.
 pub async fn download(app: AppHandle, payload: Value) {
+    use std::sync::atomic::Ordering;
+    if IN_FLIGHT.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    download_inner(app, payload).await;
+    IN_FLIGHT.store(false, Ordering::SeqCst);
+}
+
+async fn download_inner(app: AppHandle, payload: Value) {
     let download_url = payload.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or("");
     let checksum_url = payload.get("checksumUrl").and_then(|v| v.as_str());
     let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or("");
@@ -125,8 +138,10 @@ fn hex(bytes: &[u8]) -> String {
 
 static PENDING: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
 
-pub fn install(app: &AppHandle) {
-    let Some(path) = PENDING.lock().unwrap().take() else { return };
+/// Launch the downloaded installer. Returns true once it is running, so the
+/// caller can quit and let it replace the exe.
+pub fn install(app: &AppHandle) -> bool {
+    let Some(path) = PENDING.lock().unwrap().take() else { return false };
     // Validate it is the installer we downloaded to temp.
     let temp = std::env::temp_dir();
     let is_ours = path.starts_with(&temp)
@@ -137,15 +152,22 @@ pub fn install(app: &AppHandle) {
             .unwrap_or(false);
     if !is_ours || !path.exists() {
         emit_error(app, "invalid installer path");
-        return;
+        return false;
     }
     #[cfg(windows)]
     {
-        let _ = std::process::Command::new(&path).spawn();
+        match std::process::Command::new(&path).spawn() {
+            Ok(_) => true,
+            Err(e) => {
+                emit_error(app, &format!("failed to launch installer: {e}"));
+                false
+            }
+        }
     }
     #[cfg(not(windows))]
     {
         let _ = &path;
+        false
     }
 }
 

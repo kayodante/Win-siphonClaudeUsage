@@ -81,6 +81,8 @@ const elements = {
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
+  settingsUpdatesAutoCheckToggle: document.querySelector('#settingsUpdatesAutoCheckToggle'),
+  settingsUpdatesAutoDownloadToggle: document.querySelector('#settingsUpdatesAutoDownloadToggle'),
   settingsLaunchWithClaudeCodeToggle: document.querySelector('#settingsLaunchWithClaudeCodeToggle'),
   settingsTabSystem: document.querySelector('#settingsTabSystem'),
   settingsTabNotification: document.querySelector('#settingsTabNotification'),
@@ -185,13 +187,19 @@ function setDownloadUI(state, percent) {
     btn.disabled = true;
     dismiss.hidden = true;
   } else if (state === 'ready') {
-    btn.textContent = t('update.install', lang);
+    btn.textContent = t('update.restart', lang);
     btn.disabled = false;
     dismiss.hidden = false;
   } else {
     btn.textContent = t('update.download', lang);
     btn.disabled = false;
     dismiss.hidden = false;
+  }
+  // The installer is already on disk — ask for the restart, not the download.
+  if (state === 'ready') {
+    elements.updateBannerVersion.textContent = t('update.readyToApply', lang);
+  } else if (updateVersion) {
+    elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version: updateVersion });
   }
 }
 
@@ -398,6 +406,20 @@ elements.settingsStartupShowWindowToggle.addEventListener('change', async event 
     handleToggleError('Failed to save startup window preference:', error, event, 'error.saveStartup');
   }
 });
+elements.settingsUpdatesAutoCheckToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('updates.autoCheck', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save auto-update-check preference:', error);
+  }
+});
+elements.settingsUpdatesAutoDownloadToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('updates.autoDownload', event.target.checked);
+  } catch (error) {
+    logSafeError('Failed to save auto-download preference:', error);
+  }
+});
 elements.settingsLaunchWithClaudeCodeToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('integration.launchWithClaudeCode', event.target.checked);
@@ -478,7 +500,8 @@ window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, winge
 });
 
 window.siphon.onUpdateProgress(({ percent }) => {
-  if (downloadState === 'downloading') setDownloadUI('downloading', percent);
+  // Also covers the background auto-download, which nothing in the UI started.
+  if (downloadState !== 'ready' && downloadState !== 'updating') setDownloadUI('downloading', percent);
 });
 
 window.siphon.onUpdateDownloaded(() => {
@@ -728,6 +751,10 @@ function renderSettingsControls(state, lang) {
   elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
   elements.settingsLaunchWithClaudeCodeToggle.checked = state.preferences?.integration?.launchWithClaudeCode ?? false;
   elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
+  const autoCheck = state.preferences?.updates?.autoCheck ?? true;
+  elements.settingsUpdatesAutoCheckToggle.checked = autoCheck;
+  elements.settingsUpdatesAutoDownloadToggle.checked = state.preferences?.updates?.autoDownload ?? false;
+  elements.settingsUpdatesAutoDownloadToggle.disabled = !autoCheck;
 }
 
 function renderBannersAndErrors(state, sessionPercent, lang) {
