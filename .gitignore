@@ -67,3 +67,5 @@ credentials.json
 .DS_Store
 Thumbs.db
 desktop.ini
+# Added by code-review-graph
+.code-review-graph/

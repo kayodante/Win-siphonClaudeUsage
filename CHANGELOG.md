@@ -11,10 +11,79 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-07-29
+
+### Fixed
+
+- The main window and the floating widget came back in the wrong place on a
+  mixed-DPI setup. Positions were saved as logical (DPI-scaled) pixels, but a
+  logical coordinate is only meaningful on the monitor it was measured on — a
+  spot saved on a 125% laptop panel was restored against the 100% monitor the
+  app boots on, landing the window a fifth of the way off. Positions, monitor
+  rectangles, and the visibility check are all in physical pixels now, which is
+  the one coordinate space every display shares.
+- The floating widget lost its position whenever it was closed. Windows parks
+  hidden windows at `-32000, -32000` and reports it as a genuine move, so the
+  sentinel was persisted over the real coordinates. Both move handlers drop it
+  instead of writing it.
+
+## [1.8.2] - 2026-07-29
+
+The 1.8.0 and 1.8.1 versions were never published; everything below shipped in
+this release.
+
 ### Added
+
 - Japanese (`日本語`) as a third UI language, switchable from Settings. Covers
   the renderer, the native tray menu, and toast notifications; all date/time
-  and token-count formatting is localized.
+  and token-count formatting is localized (weekday names use the `ja-JP`
+  locale).
+- Two update preferences in Settings (System tab), grouped under their own
+  divider: "Check for updates automatically" (`updates.autoCheck`, default on,
+  matching the previous behavior) and background download
+  (`updates.autoDownload`, default off). Turning auto-check on runs a check
+  immediately instead of waiting out the 6-hour tick. With auto-download on and
+  no winget install, the installer is fetched in the background once per
+  version per run and the banner asks for a restart.
+- Portable release asset: `scripts/pack-release.ps1` now also copies the raw
+  build output as `Siphon.Portable.<version>.exe` with its own `.sha256`, for
+  people who don't want the NSIS installer.
+- Bundled fallback pricing for `opus-5` and `mythos-5`. The table stopped at
+  Opus 4.8, so Claude Opus 5 sessions were costed at `$0` on machines without a
+  `readout-pricing.json`.
+
+### Fixed
+
+- Claude Code launched several copies of Siphon per session. The
+  `SessionStart` hook was only recognized for the exe currently running, so
+  every build location (dev, release, portable, an old install dir) left its
+  own entry behind and each one launched a Siphon. The single-instance guard
+  couldn't clean up after it, because simultaneous launches race before any
+  window exists. Hook matching is now path-shaped, so any build replaces the
+  stale entries instead of appending; hooks that merely mention Siphon without
+  launching it are left alone.
+- The "Extra usage" card showed cents as dollars (`$1,556.00 / $2,000.00`
+  instead of `$15.56 / $20.00`). The OAuth endpoint returns those credits in
+  cents; they're converted at parse time now.
+- A main window or floating widget parked on a **secondary** monitor no longer
+  snaps back to the default anchor on launch. Saved positions were validated
+  against the primary monitor only; they're now accepted when at least half the
+  window lands on *any* connected monitor. An unplugged display still falls
+  back to the OS default.
+- "Update & restart" left the app running: NSIS can't overwrite a running exe,
+  so the install path now reports whether the installer launched and exits,
+  the same way the winget path already did.
+- Release version drift. The version lives in five files and `npm version`
+  writes only `package.json`, so the Rust manifests trailed behind — and since
+  `tauri.conf.json` is what the built app reports, a release would have offered
+  an update to itself on every check. `scripts/sync-version.js` now runs from
+  the `version` npm lifecycle hook and copies the version into the rest.
+
+### Removed
+
+- Dead code left from the Tauri migration: the `trayStatus.js` module (the tray
+  is fully Rust since 1.7.0), the unused `format_percent` export in
+  `siphon-core`, and the leftover Electron dependency tree in the lockfile.
 
 ## [1.7.3] - 2026-07-12
 
@@ -255,7 +324,16 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.4.5...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.3...HEAD
+[1.8.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.2...v1.8.3
+[1.8.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.3...v1.8.2
+[1.7.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.2...v1.7.3
+[1.7.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.1...v1.7.2
+[1.7.1]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.0...v1.7.1
+[1.7.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.5.1...v1.6.0
+[1.5.1]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.5.0...v1.5.1
+[1.5.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.4.3...v1.4.5
 [1.4.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.4.0...v1.4.2

@@ -86,14 +86,16 @@ fn create(app: &AppHandle, state: &AppState) {
     let handle = app.clone();
     win.on_window_event(move |event| {
         if let tauri::WindowEvent::Moved(pos) = event {
-            let Some(w) = handle.get_webview_window("floating") else { return };
-            let scale = w.scale_factor().unwrap_or(1.0);
-            let lx = (pos.x as f64 / scale).round() as i64;
-            let ly = (pos.y as f64 / scale).round() as i64;
+            // Physical pixels, unscaled: see `windows_ctl::monitor_rects`.
+            // Closing the widget fires a move to Windows' off-screen sentinel —
+            // persisting that would lose the real position.
+            if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
+                return;
+            }
             let schedule_flush = {
                 let mut p = PENDING_POS.lock().unwrap();
                 let first = p.is_none();
-                *p = Some((lx, ly));
+                *p = Some((pos.x as i64, pos.y as i64));
                 first
             };
             if schedule_flush {
@@ -123,22 +125,30 @@ fn apply_size(win: &tauri::WebviewWindow, state: &AppState) {
 }
 
 fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppState) {
-    let (w, h) = size_for(
-        &state.preferences.floating.style,
-        state.preferences.floating.expanded,
-    );
+    // Physical pixels throughout, matching what the move handler saved — see
+    // `windows_ctl::monitor_rects` for why logical coordinates cannot be
+    // compared across monitors.
+    let (w, h) = win.outer_size().map(|s| (s.width as f64, s.height as f64)).unwrap_or_else(|_| {
+        size_for(
+            &state.preferences.floating.style,
+            state.preferences.floating.expanded,
+        )
+    });
 
-    // Default top-right anchor on the primary monitor.
-    let mut default_x = 20.0_f64;
+    // Default top-right anchor on the primary monitor, inset by a 20px margin
+    // scaled to that monitor's DPI.
+    let (mut default_x, mut default_y) = (20.0_f64, 20.0_f64);
     if let Ok(Some(monitor)) = app.primary_monitor() {
-        let scale = monitor.scale_factor();
-        default_x = (monitor.size().width as f64 / scale - w - 20.0).max(0.0);
+        let margin = 20.0 * monitor.scale_factor();
+        let (mx, my) = (monitor.position().x as f64, monitor.position().y as f64);
+        default_x = (mx + monitor.size().width as f64 - w - margin).max(mx);
+        default_y = my + margin;
     }
 
     // Saved position, else the default anchor.
     let (mut x, mut y) = match (state.preferences.floating.x, state.preferences.floating.y) {
         (Some(sx), Some(sy)) => (sx as f64, sy as f64),
-        _ => (default_x, 20.0),
+        _ => (default_x, default_y),
     };
 
     // Clamp: if the saved position lands (mostly) off every connected monitor,
@@ -152,8 +162,8 @@ fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppStat
         h,
     ) {
         x = default_x;
-        y = 20.0;
+        y = default_y;
     }
 
-    let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+    let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
 }

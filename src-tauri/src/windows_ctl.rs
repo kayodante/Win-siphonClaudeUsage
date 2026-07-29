@@ -25,8 +25,14 @@ fn send_view(app: &AppHandle, view: &str) {
     let _ = app.emit_to("main", "view-changed", view);
 }
 
-/// Logical work areas of every connected monitor, for
+/// Physical work areas of every connected monitor, for
 /// `siphon_core::geometry::position_is_visible`. Empty when the OS won't say.
+///
+/// Deliberately *not* divided by each monitor's scale factor: a monitor's
+/// position is an offset in the shared virtual desktop, so scaling it by the
+/// per-monitor DPI produces coordinates that belong to no space at all (a 125%
+/// panel starting at physical x=2560 would report x=2048, overlapping the
+/// monitor to its left). Physical pixels keep every rect comparable.
 pub fn monitor_rects(app: &AppHandle) -> Vec<siphon_core::geometry::MonitorRect> {
     let Ok(monitors) = app.available_monitors() else {
         return Vec::new();
@@ -34,12 +40,11 @@ pub fn monitor_rects(app: &AppHandle) -> Vec<siphon_core::geometry::MonitorRect>
     monitors
         .iter()
         .map(|m| {
-            let s = m.scale_factor();
             (
-                m.position().x as f64 / s,
-                m.position().y as f64 / s,
-                m.size().width as f64 / s,
-                m.size().height as f64 / s,
+                m.position().x as f64,
+                m.position().y as f64,
+                m.size().width as f64,
+                m.size().height as f64,
             )
         })
         .collect()
@@ -50,6 +55,11 @@ pub fn monitor_rects(app: &AppHandle) -> Vec<siphon_core::geometry::MonitorRect>
 /// connected monitor, leave the OS default position — self-heals a monitor that
 /// was unplugged since the position was saved. Mirrors
 /// `floating::restore_position`.
+///
+/// Physical pixels throughout, matching what the move handler in `main.rs`
+/// saved. A logical restore would be resolved against whichever monitor the
+/// window currently sits on, so a position saved on a 125% panel came back
+/// scaled by 1/1.25 once the window booted on a 100% monitor.
 pub fn restore_main_position(app: &AppHandle) {
     let Some(win) = app.get_webview_window("main") else {
         return;
@@ -67,14 +77,13 @@ pub fn restore_main_position(app: &AppHandle) {
 
     // Clamp against every connected monitor, not just the primary one — a
     // window parked on a secondary display is a valid saved position.
-    let scale = win.scale_factor().unwrap_or(1.0);
     let (ww, wh) = win
         .outer_size()
-        .map(|s| (s.width as f64 / scale, s.height as f64 / scale))
+        .map(|s| (s.width as f64, s.height as f64))
         .unwrap_or((320.0, 700.0));
     if !siphon_core::geometry::position_is_visible(&monitor_rects(app), x, y, ww, wh) {
         return;
     }
 
-    let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+    let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
 }
