@@ -21,7 +21,7 @@ pub struct Tokens {
 
 /// Bundled fallback pricing (USD per million tokens) used when
 /// `readout-pricing.json` is absent. Keys match `pricing_key` output.
-/// Verified against platform.claude.com/docs (2026-07-06).
+/// Verified against platform.claude.com/docs (2026-07-28).
 pub const BUNDLED_PRICING: &[(&str, Price)] = &[
     (
         "fable-5",
@@ -30,6 +30,24 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
             output: 50.0,
             cache_read: 1.00,
             cache_write: 12.50,
+        },
+    ),
+    (
+        "mythos-5",
+        Price {
+            input: 10.0,
+            output: 50.0,
+            cache_read: 1.00,
+            cache_write: 12.50,
+        },
+    ),
+    (
+        "opus-5",
+        Price {
+            input: 5.0,
+            output: 25.0,
+            cache_read: 0.50,
+            cache_write: 6.25,
         },
     ),
     (
@@ -253,6 +271,10 @@ mod tests {
     #[test]
     fn bundled_price_lookup() {
         let p = find_price(None, "claude-opus-4-8-20260101").unwrap();
+        assert_eq!(p.input, 5.0);
+        assert_eq!(p.output, 25.0);
+
+        let p = find_price(None, "claude-opus-5").unwrap();
         assert_eq!(p.input, 5.0);
         assert_eq!(p.output, 25.0);
     }
