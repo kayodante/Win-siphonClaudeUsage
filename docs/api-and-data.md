@@ -371,6 +371,16 @@ with defaults on load so old files remain valid.
   "integration": {
     "launchWithClaudeCode": false
   },
+  "updates": {
+    "autoCheck": true,
+    "autoDownload": false
+  },
+  "display": {
+    "quotaMode": "used"
+  },
+  "privacy": {
+    "maskEmail": false
+  },
   "window": {
     "x": null,
     "y": null
@@ -384,6 +394,13 @@ the renderer. `refresh.intervalSeconds` supports `30`, `60`, `300`, and `900`;
 local JSONL refresh uses that value, while OAuth quota polling keeps a
 120-second minimum. `startup.showWindowOnLogin` only affects app-managed
 Windows login launches; normal/manual launches still show the main window.
+`updates.autoCheck` (default `true`) gates the periodic GitHub release check;
+`updates.autoDownload` (default `false`) additionally fetches the installer in
+the background. `display.quotaMode` is `used` or `remaining` and flips only the
+displayed percentage and its suffix — meters, colors, pace, and alert thresholds
+stay on the raw *used* percent. `window.x/y` is the main window's logical
+position, accepted on restore when at least half the window still lands on a
+connected monitor (`siphon_core::geometry`), same rule as `floating.x/y`.
 
 ### `%APPDATA%\Siphon\local-usage-cache.json`
 

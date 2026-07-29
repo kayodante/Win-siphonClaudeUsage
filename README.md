@@ -55,7 +55,7 @@ Download the latest `Siphon Setup <version>.exe` from [Releases](../../releases)
 
 ### Portable
 
-Download `Siphon-Portable-<version>.exe` from [Releases](../../releases) — no install, just run.
+Download `Siphon.Portable.<version>.exe` from [Releases](../../releases) — no install, just run. It needs the WebView2 runtime, which ships with Windows 11 and is installed by most modern apps on Windows 10.
 
 ### Via winget
 
@@ -97,7 +97,7 @@ for known Claude models. No data leaves your machine for usage calculations.
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
 | `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
-| `%APPDATA%\Siphon\preferences.json` | Language, notification toggle, widget + main-window position, autostart, refresh, and Claude Code launch integration settings |
+| `%APPDATA%\Siphon\preferences.json` | Language, notification toggles, widget + main-window position, autostart, refresh interval, update checking, quota display mode, email masking, and Claude Code launch integration settings |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
 
 ### Sign-in
@@ -130,7 +130,8 @@ split so the business logic is testable on any host:
 Renderer/shared JS tests live in `test/` (covering `src/shared/` and
 `src/renderer/viewState.js`). `scripts/pack-release.ps1` repackages the Tauri
 NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
-`.sha256`).
+`.sha256`) and copies the raw build binary alongside it as
+`Siphon.Portable.<version>.exe`, with its own `.sha256`.
 
 ## Privacy
 
