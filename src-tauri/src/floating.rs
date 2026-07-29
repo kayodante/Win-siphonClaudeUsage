@@ -128,15 +128,11 @@ fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppStat
         state.preferences.floating.expanded,
     );
 
-    // Logical work area of the primary monitor + default top-right anchor.
-    let mut logical_bounds: Option<(f64, f64)> = None;
+    // Default top-right anchor on the primary monitor.
     let mut default_x = 20.0_f64;
     if let Ok(Some(monitor)) = app.primary_monitor() {
         let scale = monitor.scale_factor();
-        let lw = monitor.size().width as f64 / scale;
-        let lh = monitor.size().height as f64 / scale;
-        logical_bounds = Some((lw, lh));
-        default_x = (lw - w - 20.0).max(0.0);
+        default_x = (monitor.size().width as f64 / scale - w - 20.0).max(0.0);
     }
 
     // Saved position, else the default anchor.
@@ -145,14 +141,18 @@ fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppStat
         _ => (default_x, 20.0),
     };
 
-    // Clamp: if the saved position lands (mostly) off the primary monitor,
-    // fall back to the default anchor. Self-heals stale/corrupt coordinates.
-    if let Some((lw, lh)) = logical_bounds {
-        let off_screen = x < 0.0 || y < 0.0 || x > lw - w * 0.5 || y > lh - h * 0.5;
-        if off_screen {
-            x = default_x;
-            y = 20.0;
-        }
+    // Clamp: if the saved position lands (mostly) off every connected monitor,
+    // fall back to the default anchor. Self-heals stale/corrupt coordinates,
+    // while keeping a widget parked on a secondary display where it was.
+    if !siphon_core::geometry::position_is_visible(
+        &crate::windows_ctl::monitor_rects(app),
+        x,
+        y,
+        w,
+        h,
+    ) {
+        x = default_x;
+        y = 20.0;
     }
 
     let _ = win.set_position(tauri::LogicalPosition::new(x, y));

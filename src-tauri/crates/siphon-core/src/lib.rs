@@ -12,6 +12,7 @@
 pub mod alerts;
 pub mod diagnostics;
 pub mod format;
+pub mod geometry;
 pub mod i18n;
 pub mod json_store;
 pub mod local_data;
