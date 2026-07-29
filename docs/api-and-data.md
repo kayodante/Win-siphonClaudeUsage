@@ -166,12 +166,16 @@ credits beyond the plan quota:
 {
   "extra_usage": {
     "is_enabled":    true,
-    "monthly_limit": 50,
-    "used_credits":  12.5,
-    "utilization":   25
+    "monthly_limit": 2000,  // cents — $20.00
+    "used_credits":  1556,  // cents — $15.56
+    "utilization":   77.8
   }
 }
 ```
+
+`monthly_limit` and `used_credits` are **cents**; `parse_extra_usage()` divides
+them by 100 so the renderer's `formatCurrency()` prints dollars. `utilization`
+is already a percentage and passes through untouched.
 
 `parseExtraUsage()` maps this to `extraUsage: { monthlyLimit, usedCredits,
 utilization }`, but only when `is_enabled` is `true` — otherwise it returns

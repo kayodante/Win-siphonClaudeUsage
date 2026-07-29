@@ -100,8 +100,9 @@ pub fn parse_extra_usage(extra: Option<&Value>) -> Option<ExtraUsage> {
     }
     let num = |k: &str| extra.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
     Some(ExtraUsage {
-        monthly_limit: num("monthly_limit"),
-        used_credits: num("used_credits"),
+        // Credit fields arrive in cents; the UI formats them as dollars.
+        monthly_limit: num("monthly_limit") / 100.0,
+        used_credits: num("used_credits") / 100.0,
         utilization: num("utilization"),
     })
 }
@@ -139,13 +140,16 @@ mod tests {
         let raw = json!({
             "five_hour": { "utilization": 42.5, "resets_at": "2026-07-06T15:00:00Z" },
             "seven_day": { "utilization": 10 },
-            "extra_usage": { "is_enabled": true, "monthly_limit": 100, "used_credits": 25, "utilization": 25 }
+            "extra_usage": { "is_enabled": true, "monthly_limit": 2000, "used_credits": 1556, "utilization": 77.8 }
         });
         let q = parse_usage_response(&raw);
         assert_eq!(q.session.as_ref().unwrap().percent, 42.5);
         assert!(q.session.as_ref().unwrap().resets_at.is_some());
         assert_eq!(q.weekly_all.as_ref().unwrap().percent, 10.0);
-        assert_eq!(q.extra_usage.as_ref().unwrap().used_credits, 25.0);
+        // Cents in, dollars out.
+        let extra = q.extra_usage.as_ref().unwrap();
+        assert_eq!(extra.used_credits, 15.56);
+        assert_eq!(extra.monthly_limit, 20.0);
     }
 
     #[test]
