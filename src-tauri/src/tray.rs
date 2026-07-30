@@ -4,7 +4,7 @@
 //! `siphon_core::tray_status`.
 
 use tauri::image::Image;
-use tauri::menu::{CheckMenuItem, IconMenuItem, Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, IconMenuItem, Menu, PredefinedMenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Manager};
 
@@ -50,7 +50,7 @@ fn menu_icon(name: &str, hidpi: bool) -> Option<Image<'static>> {
             }
         };
     }
-    let bytes = pick!("show", "settings", "restart", "quit");
+    let bytes = pick!("show", "settings", "restart", "quit", "session", "weekly", "update");
     Image::from_bytes(bytes).ok()
 }
 
@@ -113,11 +113,6 @@ fn levels(state: &AppState) -> (&'static str, &'static str) {
 fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wry>> {
     let lang = state.preferences.language.clone();
     let status = build_tray_status(state, &lang);
-    let menu = Menu::new(app)?;
-    for (i, row) in status.menu_items.iter().enumerate() {
-        let item = MenuItem::with_id(app, format!("status_{i}"), row, false, None::<&str>)?;
-        menu.append(&item)?;
-    }
     // A Win32 menu item carries either a check mark or a bitmap, never both, so
     // the widget row trades its icon for the checkbox.
     let hidpi = app
@@ -127,6 +122,14 @@ fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wr
         .map(|m| m.scale_factor() >= 1.5)
         .unwrap_or(false);
     let icon = |name: &str| menu_icon(name, hidpi);
+
+    let menu = Menu::new(app)?;
+    // session, weekly, session reset, updated — reset reuses the session icon.
+    const STATUS_ICONS: [&str; 4] = ["session", "weekly", "session", "update"];
+    for (i, row) in status.menu_items.iter().enumerate() {
+        let item = IconMenuItem::with_id(app, format!("status_{i}"), row, false, icon(STATUS_ICONS[i]), None::<&str>)?;
+        menu.append(&item)?;
+    }
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     menu.append(&IconMenuItem::with_id(app, "show", t("tray.showApp", &lang), true, icon("show"), None::<&str>)?)?;
