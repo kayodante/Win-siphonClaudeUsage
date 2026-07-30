@@ -11,6 +11,15 @@ is added above it.
 
 ## [Unreleased]
 
+### Changed
+
+- The tray menu's "Floating widget" entry is now "Show widget" and finally
+  shows a check mark when the widget is on — it had always been a plain menu
+  item, so the only way to know the widget's state was to look for the widget.
+- The other tray menu actions (show app, settings, restart, quit) carry icons.
+  A Windows menu row can have a check mark or an icon but not both, so the
+  widget row keeps the check.
+
 ## [1.8.3] - 2026-07-29
 
 ### Fixed

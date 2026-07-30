@@ -28,7 +28,7 @@ const EN: &[(&str, &str)] = &[
     ("tray.sessionReset", "Session reset"),
     ("tray.updated", "Updated"),
     ("tray.showApp", "Show app"),
-    ("tray.widget", "Floating widget"),
+    ("tray.widget", "Show widget"),
     ("tray.settings", "Settings"),
     ("tray.restart", "Restart"),
     ("tray.quit", "Quit"),
@@ -56,7 +56,7 @@ const PT: &[(&str, &str)] = &[
     ("tray.sessionReset", "Reset da sessão"),
     ("tray.updated", "Atualizado"),
     ("tray.showApp", "Mostrar aplicativo"),
-    ("tray.widget", "Widget flutuante"),
+    ("tray.widget", "Mostrar widget"),
     ("tray.settings", "Configurações"),
     ("tray.restart", "Reiniciar"),
     ("tray.quit", "Sair"),
@@ -84,7 +84,7 @@ const JA: &[(&str, &str)] = &[
     ("tray.sessionReset", "セッションリセット"),
     ("tray.updated", "更新日時"),
     ("tray.showApp", "アプリを開く"),
-    ("tray.widget", "フローティングウィジェット"),
+    ("tray.widget", "ウィジェットを表示"),
     ("tray.settings", "設定"),
     ("tray.restart", "再起動"),
     ("tray.quit", "終了"),
@@ -115,9 +115,9 @@ mod tests {
         assert_eq!(t("tray.showApp", "en"), "Show app");
         assert_eq!(t("tray.showApp", "pt-BR"), "Mostrar aplicativo");
         assert_eq!(t("tray.showApp", "ja"), "アプリを開く");
-        assert_eq!(t("tray.widget", "en"), "Floating widget");
-        assert_eq!(t("tray.widget", "pt-BR"), "Widget flutuante");
-        assert_eq!(t("tray.widget", "ja"), "フローティングウィジェット");
+        assert_eq!(t("tray.widget", "en"), "Show widget");
+        assert_eq!(t("tray.widget", "pt-BR"), "Mostrar widget");
+        assert_eq!(t("tray.widget", "ja"), "ウィジェットを表示");
         assert_eq!(t("tray.settings", "en"), "Settings");
         assert_eq!(t("tray.settings", "pt-BR"), "Configurações");
         assert_eq!(t("tray.settings", "ja"), "設定");

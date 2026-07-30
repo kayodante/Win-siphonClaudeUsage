@@ -4,7 +4,7 @@
 //! `siphon_core::tray_status`.
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, IconMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Manager};
 
@@ -30,6 +30,28 @@ fn icon_bytes(session: &str, weekly: &str) -> &'static [u8] {
         "high","ok"; "high","warn"; "high","high"; "high","critical";
         "critical","ok"; "critical","warn"; "critical","high"; "critical","critical";
     )
+}
+
+/// Icon for an action row of the tray menu, from `src/assets/tray-menu/`.
+///
+/// Win32 draws a menu bitmap at its native size — nothing rescales it per
+/// display — so a 200% monitor needs the `@2x` export, same two-file convention
+/// as the tray icon itself. Returns `None` when the PNG is missing/unreadable
+/// (the placeholders ship empty), and `IconMenuItem` then renders a plain row.
+fn menu_icon(name: &str, hidpi: bool) -> Option<Image<'static>> {
+    macro_rules! pick {
+        ($($n:literal),+ $(,)?) => {
+            match (name, hidpi) {
+                $(
+                    ($n, false) => include_bytes!(concat!("../../src/assets/tray-menu/menu-", $n, ".png")).as_slice(),
+                    ($n, true) => include_bytes!(concat!("../../src/assets/tray-menu/menu-", $n, "@2x.png")).as_slice(),
+                )+
+                _ => return None,
+            }
+        };
+    }
+    let bytes = pick!("show", "settings", "restart", "quit");
+    Image::from_bytes(bytes).ok()
 }
 
 pub fn build(app: &AppHandle, state: &AppState) -> tauri::Result<TrayIcon> {
@@ -96,13 +118,30 @@ fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wr
         let item = MenuItem::with_id(app, format!("status_{i}"), row, false, None::<&str>)?;
         menu.append(&item)?;
     }
+    // A Win32 menu item carries either a check mark or a bitmap, never both, so
+    // the widget row trades its icon for the checkbox.
+    let hidpi = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|m| m.scale_factor() >= 1.5)
+        .unwrap_or(false);
+    let icon = |name: &str| menu_icon(name, hidpi);
+
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "show", t("tray.showApp", &lang), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "widget", t("tray.widget", &lang), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "settings", t("tray.settings", &lang), true, None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(app, "show", t("tray.showApp", &lang), true, icon("show"), None::<&str>)?)?;
+    menu.append(&CheckMenuItem::with_id(
+        app,
+        "widget",
+        t("tray.widget", &lang),
+        true,
+        state.preferences.floating.enabled,
+        None::<&str>,
+    )?)?;
+    menu.append(&IconMenuItem::with_id(app, "settings", t("tray.settings", &lang), true, icon("settings"), None::<&str>)?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "restart", t("tray.restart", &lang), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, "quit", t("tray.quit", &lang), true, None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(app, "restart", t("tray.restart", &lang), true, icon("restart"), None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(app, "quit", t("tray.quit", &lang), true, icon("quit"), None::<&str>)?)?;
     Ok(menu)
 }
 
