@@ -21,17 +21,19 @@ pnpm-debug.log*
 # Tooling / local
 .impeccable/
 .claude/
+.code-review-graph/
 .agents/
 .codex/
 .fallow/
 .jules/
-.graphifyignore
-graphify-out/
-.code-review-graphignore
-coverage/
-.nyc_output/
-/docs/superpowers/
 .superpowers/
+coverage/
+graphify-out/
+docs/superpowers/
+.graphifyignore
+.code-review-graphignore
+.nyc_output/
+
 .lore/
 
 # Docs (local only)
@@ -44,6 +46,7 @@ ROADMAP.md
 lore.md
 skills-lock.json
 .mcp.json
+.github/code-review-graph.instruction.md
 
 # Secrets / credentials
 .env
@@ -67,5 +70,3 @@ credentials.json
 .DS_Store
 Thumbs.db
 desktop.ini
-# Added by code-review-graph
-.code-review-graph/
