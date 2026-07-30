@@ -45,7 +45,6 @@ const elements = {
   extraUsageCard: document.querySelector('#extraUsageCard'),
   extraUsedCredits: document.querySelector('#extraUsedCredits'),
   extraMonthlyLimit: document.querySelector('#extraMonthlyLimit'),
-  extraMeter: document.querySelector('#extraMeter'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
@@ -848,7 +847,6 @@ function renderExtraUsage(extra) {
   elements.extraUsageCard.hidden = false;
   elements.extraUsedCredits.textContent = formatCurrency(extra.usedCredits);
   elements.extraMonthlyLimit.textContent = formatCurrency(extra.monthlyLimit);
-  renderMeter(elements.extraMeter, clampPercent(extra.utilization));
 }
 
 function renderMeter(meter, percent) {

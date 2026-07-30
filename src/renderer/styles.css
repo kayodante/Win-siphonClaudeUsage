@@ -803,11 +803,11 @@ body[data-view="onboard"] .app-footer {
    Auto-hidden (via [hidden]) on accounts without the feature. */
 .quota-panel--extra {
   padding-top: var(--space-6);
-  padding-bottom: var(--space-6);
+  padding-bottom: var(--space-7);
 }
 
 .quota-headline--extra {
-  margin-top: var(--space-4);
+  margin-top: var(--space-6);
 }
 
 .quota-credits {
@@ -828,14 +828,6 @@ body[data-view="onboard"] .app-footer {
 .quota-credits-limit {
   font-size: var(--text-xl);
   color: var(--muted-foreground);
-}
-
-.quota-panel--extra > .meter--thin {
-  margin-top: var(--space-4);
-}
-
-.meter--thin .meter-segment {
-  height: var(--space-2);
 }
 
 .quota-meta {
