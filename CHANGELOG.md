@@ -11,6 +11,12 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- The main window remembers its size, not just its position. Resizing is saved
+  to `window.width/height` and restored on the next launch, clamped by the
+  window's minimum size.
+
 ### Changed
 
 - The tray menu's "Floating widget" entry is now "Show widget" and finally

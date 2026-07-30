@@ -38,6 +38,9 @@ const STARTUP_HIDDEN_ARG: &str = "--hidden";
 static MAIN_PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
 const MAIN_POS_FLUSH_DELAY_MS: u64 = 500;
 
+/// Same debounce as `MAIN_PENDING_POS`, for window size.
+static MAIN_PENDING_SIZE: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
+
 /// Managed application state, shared by every command and background task.
 pub struct AppContext {
     pub controller: Arc<Controller>,
@@ -170,6 +173,44 @@ fn main() {
                                 let _ = ctx.prefs.set_many(vec![
                                     ("window.x".into(), x.into()),
                                     ("window.y".into(), y.into()),
+                                ]);
+                            }
+                        });
+                    }
+                }
+                // Persist size on resize, same debounce as `Moved`. Minimizing
+                // reports 0×0, which would wipe the real size.
+                //
+                // Logical pixels, unlike the position next door: a size is not a
+                // point in the virtual desktop, it is a measurement, and Windows
+                // rescales a window's physical size when it crosses onto a
+                // monitor with a different DPI. Storing physical here made the
+                // window grow by the scale factor on every restart — save the
+                // physical 400px a 320px window reports on a 125% panel, restore
+                // it on a 100% one, and it comes back 400px wide for real.
+                tauri::WindowEvent::Resized(size) => {
+                    if size.width == 0 || size.height == 0 {
+                        return;
+                    }
+                    let scale = window.scale_factor().unwrap_or(1.0);
+                    let size = size.to_logical::<f64>(scale);
+                    let schedule_flush = {
+                        let mut p = MAIN_PENDING_SIZE.lock().unwrap();
+                        let first = p.is_none();
+                        *p = Some((size.width.round() as i64, size.height.round() as i64));
+                        first
+                    };
+                    if schedule_flush {
+                        let handle = window.app_handle().clone();
+                        tauri::async_runtime::spawn(async move {
+                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS)).await;
+                            let Some((w, h)) = MAIN_PENDING_SIZE.lock().unwrap().take() else {
+                                return;
+                            };
+                            if let Some(ctx) = handle.try_state::<AppContext>() {
+                                let _ = ctx.prefs.set_many(vec![
+                                    ("window.width".into(), w.into()),
+                                    ("window.height".into(), h.into()),
                                 ]);
                             }
                         });

@@ -398,9 +398,13 @@ Windows login launches; normal/manual launches still show the main window.
 `updates.autoDownload` (default `false`) additionally fetches the installer in
 the background. `display.quotaMode` is `used` or `remaining` and flips only the
 displayed percentage and its suffix — meters, colors, pace, and alert thresholds
-stay on the raw *used* percent. `window.x/y` is the main window's logical
+stay on the raw *used* percent. `window.x/y` is the main window's **physical**
 position, accepted on restore when at least half the window still lands on a
 connected monitor (`siphon_core::geometry`), same rule as `floating.x/y`.
+`window.width/height` is its size in **logical** pixels — physical position,
+logical size, because a position is a point in the shared virtual desktop while
+a size is a measurement Windows rescales across a DPI boundary. Size is restored
+unconditionally; the OS clamps it to `minWidth`/`minHeight`.
 
 ### `%APPDATA%\Siphon\local-usage-cache.json`
 

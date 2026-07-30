@@ -70,6 +70,18 @@ pub fn restore_main_position(app: &AppHandle) {
     let Some(bounds) = ctx.prefs.load().window else {
         return;
     };
+
+    // Size is independent of monitor placement (the OS clamps to
+    // minWidth/minHeight from tauri.conf.json), so restore it unconditionally.
+    //
+    // Logical, matching what the resize handler saved and the units in
+    // tauri.conf.json. Windows preserves a window's logical size across a
+    // DPI change, so applying it here — before the move onto whichever monitor
+    // the position belongs to — still lands the size the user left behind.
+    if let (Some(w), Some(h)) = (bounds.width, bounds.height) {
+        let _ = win.set_size(tauri::LogicalSize::new(w as f64, h as f64));
+    }
+
     let (Some(x), Some(y)) = (bounds.x, bounds.y) else {
         return;
     };
