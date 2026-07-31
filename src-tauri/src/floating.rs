@@ -15,6 +15,48 @@ const EXPANDED: (f64, f64) = (220.0, 192.0);
 static PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
 const POS_FLUSH_DELAY_MS: u64 = 500;
 
+/// Bumped by every `create`; the topmost-keeper task exits when it no longer
+/// matches, so re-enabling the widget can never leave two loops running.
+static RAISE_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+const RAISE_INTERVAL_MS: u64 = 2000;
+
+/// Put the widget back at the top of the topmost band.
+///
+/// `WebviewWindow::set_always_on_top(true)` cannot do this: tao diffs window
+/// flags and returns early when nothing changed, so re-asserting `true` on a
+/// window that is already topmost issues no `SetWindowPos` at all. Windows
+/// orders the topmost band by activation, so any *other* topmost window
+/// (Task Manager, a game or capture overlay, another widget) activated after
+/// us sits above the widget permanently. Re-issuing `HWND_TOPMOST` restores
+/// the order; `SWP_NOACTIVATE` keeps focus where the user left it.
+#[cfg(windows)]
+fn raise(win: &tauri::WebviewWindow) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    };
+
+    let Ok(handle) = win.hwnd() else { return };
+    // Tauri re-exports a newer `windows` crate than this one; rebuild the
+    // handle from the raw pointer rather than depending on both versions.
+    unsafe {
+        let _ = SetWindowPos(
+            HWND(handle.0 as _),
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn raise(win: &tauri::WebviewWindow) {
+    let _ = win.set_always_on_top(true);
+}
+
 fn size_for(style: &str, expanded: bool) -> (f64, f64) {
     if style == "mini" {
         MINI
@@ -39,7 +81,7 @@ pub fn sync(app: &AppHandle, state: &AppState) {
     if let Some(win) = app.get_webview_window("floating") {
         apply_size(&win, state);
         let _ = win.emit("state-changed", state);
-        let _ = win.set_always_on_top(true);
+        raise(&win);
     } else {
         create(app, state);
     }
@@ -80,8 +122,27 @@ fn create(app: &AppHandle, state: &AppState) {
     }
 
     let _ = win.show();
-    let _ = win.set_always_on_top(true);
+    raise(&win);
     let _ = win.emit("state-changed", state);
+
+    // Keep the widget on top for as long as it exists. A refresh tick would be
+    // far too coarse (30 s of the widget sitting behind another topmost window).
+    // ponytail: 2 s poll; `RegisterShellHookWindow` + HSHELL_WINDOWACTIVATED
+    // would make this event-driven if the delay ever becomes noticeable.
+    let generation = RAISE_GEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+    let keeper = app.clone();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_millis(RAISE_INTERVAL_MS)).await;
+            if RAISE_GEN.load(std::sync::atomic::Ordering::Relaxed) != generation {
+                return;
+            }
+            let Some(win) = keeper.get_webview_window("floating") else {
+                return;
+            };
+            raise(&win);
+        }
+    });
 
     let handle = app.clone();
     win.on_window_event(move |event| {
