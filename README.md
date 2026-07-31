@@ -4,12 +4,13 @@
   <br/>
   <p>A Windows tray app that tracks your Claude Code usage in real time.</p>
 
-  [![CI](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml/badge.svg)](https://github.com/kayodante/Win-siphonClaudeUsage/actions/workflows/ci.yml)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app/)
-  [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
-  [![Node](https://img.shields.io/badge/Node-22%2B-5FA04E?logo=node.js&logoColor=white)](https://nodejs.org/)
-  [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+  ![Release](https://www.shieldcn.dev/github/release/kayodante/Win-siphonClaudeUsage.svg?size=sm&theme=stone&font=geist&variant=default)
+  ![CI](https://www.shieldcn.dev/github/ci/kayodante/Win-siphonClaudeUsage.svg?variant=default&size=sm&theme=stone&font=geist)
+  ![License](https://www.shieldcn.dev/github/license/kayodante/Win-siphonClaudeUsage.svg?variant=default&size=sm&theme=stone&font=geist)
+  [![Tauri](https://www.shieldcn.dev/badge/Tauri-2-24C8DB.svg?variant=default&size=sm&theme=stone&font=geist&logo=tauri&logoColor=white)](https://tauri.app/)
+  [![Rust](https://www.shieldcn.dev/badge/Rust-stable-000000.svg?variant=default&size=sm&theme=stone&font=geist&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+  [![Node](https://www.shieldcn.dev/badge/Node-22%2B-5FA04E.svg?variant=default&size=sm&theme=stone&font=geist&logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![Platform](https://www.shieldcn.dev/badge/Platform-Windows%2010%2B-0078D4.svg?variant=default&size=sm&theme=stone&font=geist&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 
   <br/>
   <br/>
