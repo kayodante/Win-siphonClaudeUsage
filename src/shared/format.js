@@ -62,13 +62,18 @@ export function formatClockTime(date) {
   return `${hours}:${minutes}`;
 }
 
+export function remainingParts(date, now = new Date()) {
+  if (!date) return { zero: true, hours: 0, minutes: 0 };
+  const diffMs = date.getTime() - now.getTime();
+  if (diffMs <= 0) return { zero: true, hours: 0, minutes: 0 };
+  const totalMinutes = Math.ceil(diffMs / 60_000);
+  return { zero: false, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
 export function formatTimeRemaining(date, now = new Date(), lang = 'en') {
   if (!date) return '';
-  const diffMs = date.getTime() - now.getTime();
-  if (diffMs <= 0) return t('time.remaining.zero', lang);
-  const totalMinutes = Math.ceil(diffMs / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const { zero, hours, minutes } = remainingParts(date, now);
+  if (zero) return t('time.remaining.zero', lang);
   if (hours > 0) return tFormat('time.remaining.hourMin', lang, { hours, minutes });
   return tFormat('time.remaining.min', lang, { minutes });
 }

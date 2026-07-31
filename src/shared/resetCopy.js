@@ -2,7 +2,8 @@ import {
   formatClockTime,
   formatDaysRemaining,
   formatTimeRemaining,
-  formatWeekdayClock
+  formatWeekdayClock,
+  remainingParts
 } from './format.js';
 import { t, tFormat } from './i18n.js';
 
@@ -15,10 +16,18 @@ export function buildSessionResetLine(slot, now = new Date(), lang = 'en') {
   if (percent === 0) return t('session.reset.empty', lang);
 
   const time = formatClockTime(slot.resetsAt);
+
+  if (percent >= 100) {
+    const { zero, hours, minutes } = remainingParts(slot.resetsAt, now);
+    const resetsLine = zero
+      ? tFormat('reset.connector.at', lang, { time })
+      : hours > 0
+        ? tFormat('reset.connector.exhausted_hourMin', lang, { hours, minutes, time })
+        : tFormat('reset.connector.exhausted_min', lang, { minutes, time });
+    return `${t('session.reset.full', lang)}${SEPARATOR}${resetsLine}`;
+  }
+
   const resetsLine = tFormat('reset.connector.at', lang, { time });
-
-  if (percent >= 100) return `${t('session.reset.full', lang)}${SEPARATOR}${resetsLine}`;
-
   const remaining = formatTimeRemaining(slot.resetsAt, now, lang);
   return `${remaining}${SEPARATOR}${resetsLine}`;
 }

@@ -53,6 +53,8 @@ const STRINGS = Object.freeze({
     'weekly.reset.full': 'Limit reached',
     'reset.connector.at': 'Resets at {time}',
     'reset.connector.day': 'Resets {weekday}',
+    'reset.connector.exhausted_hourMin': 'Resets in {hours}h {minutes}min, at {time}',
+    'reset.connector.exhausted_min': 'Resets in {minutes}min, at {time}',
 
     'floating.title': 'Current Session',
     'floating.refresh': 'Refresh',
@@ -133,6 +135,8 @@ const STRINGS = Object.freeze({
 
     'update.title': 'New version available.',
     'update.available': 'v{version} is available.',
+    'update.error': 'Update failed: {message}',
+    'update.errorUnknown': 'unknown error',
     'update.download': 'Download',
     'update.install': 'Install',
     'update.updating': 'Updating…',
@@ -215,6 +219,8 @@ const STRINGS = Object.freeze({
     'weekly.reset.full': 'Limite atingido',
     'reset.connector.at': 'Reseta às {time}',
     'reset.connector.day': 'Reseta {weekday}',
+    'reset.connector.exhausted_hourMin': 'Reseta em {hours}h {minutes}min, às {time}',
+    'reset.connector.exhausted_min': 'Reseta em {minutes}min, às {time}',
 
     'floating.title': 'Sessão Atual',
     'floating.refresh': 'Atualizar',
@@ -295,6 +301,8 @@ const STRINGS = Object.freeze({
 
     'update.title': 'Nova versão disponível.',
     'update.available': 'v{version} disponível.',
+    'update.error': 'Falha na atualização: {message}',
+    'update.errorUnknown': 'erro desconhecido',
     'update.download': 'Baixar',
     'update.install': 'Instalar',
     'update.updating': 'Atualizando…',
@@ -377,6 +385,8 @@ const STRINGS = Object.freeze({
     'weekly.reset.full': '制限に到達しました',
     'reset.connector.at': '{time} にリセット',
     'reset.connector.day': '{weekday} にリセット',
+    'reset.connector.exhausted_hourMin': '残り{hours}時間{minutes}分、{time} にリセット',
+    'reset.connector.exhausted_min': '残り{minutes}分、{time} にリセット',
 
     'floating.title': '現在のセッション',
     'floating.refresh': '更新',
@@ -457,6 +467,8 @@ const STRINGS = Object.freeze({
 
     'update.title': '新しいバージョンが利用可能です。',
     'update.available': 'v{version} が利用可能です。',
+    'update.error': '更新に失敗しました: {message}',
+    'update.errorUnknown': '不明なエラー',
     'update.download': 'ダウンロード',
     'update.install': 'インストール',
     'update.updating': '更新中…',

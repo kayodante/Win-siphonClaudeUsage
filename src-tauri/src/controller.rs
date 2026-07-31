@@ -565,6 +565,9 @@ impl Controller {
                 }
             }
             let _ = controller.reset_store.save(None);
+            // Refresh so the session card reflects 0% without a manual click,
+            // regardless of whether the toast itself was shown.
+            controller.refresh_quota().await;
         });
     }
 }

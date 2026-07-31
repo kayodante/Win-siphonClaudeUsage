@@ -516,7 +516,9 @@ window.siphon.onUpdateDownloaded(() => {
   setDownloadUI('ready', 100);
 });
 
-window.siphon.onUpdateError(() => {
+window.siphon.onUpdateError(({ message } = {}) => {
+  const lang = currentState?.preferences?.language ?? 'en';
+  elements.updateBannerVersion.textContent = tFormat('update.error', lang, { message: message || t('update.errorUnknown', lang) });
   setDownloadUI('idle', 0);
 });
 

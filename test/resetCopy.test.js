@@ -27,16 +27,22 @@ test('session in progress shows remaining + clock in PT', () => {
   assert.match(result, /restantes · Reseta às \d{2}:\d{2}$/);
 });
 
-test('session at 100% shows full message in PT', () => {
+test('session at 100% shows full message + remaining time in PT', () => {
   const slot = { percent: 100, resetsAt: new Date('2026-05-04T14:14:00Z') };
   const result = buildSessionResetLine(slot, NOW, 'pt-BR');
-  assert.match(result, /^Sessão esgotada · Reseta às \d{2}:\d{2}$/);
+  assert.match(result, /^Sessão esgotada · Reseta em \d+h \d+min, às \d{2}:\d{2}$/);
 });
 
-test('session at 100% shows full message in EN', () => {
+test('session at 100% shows full message + remaining time in EN', () => {
   const slot = { percent: 100, resetsAt: new Date('2026-05-04T14:14:00Z') };
   const result = buildSessionResetLine(slot, NOW, 'en');
-  assert.match(result, /^Session full · Resets at \d{2}:\d{2}$/);
+  assert.match(result, /^Session full · Resets in \d+h \d+min, at \d{2}:\d{2}$/);
+});
+
+test('session at 100% with < 1h left shows minutes only in PT', () => {
+  const slot = { percent: 100, resetsAt: new Date('2026-05-04T12:50:00Z') };
+  const result = buildSessionResetLine(slot, NOW, 'pt-BR');
+  assert.match(result, /^Sessão esgotada · Reseta em \d+min, às \d{2}:\d{2}$/);
 });
 
 test('null session shows empty prompt', () => {

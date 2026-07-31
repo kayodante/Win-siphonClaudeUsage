@@ -11,6 +11,18 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.8.5] - 2026-07-31
+
+### Fixed
+
+- The session card now updates to 0% as soon as the session-reset timer
+  fires, instead of waiting for the next refresh tick or a manual click.
+- The "Session full" message now also shows the remaining time until reset
+  (e.g. "Session full · Resets in 50min, at 13:00"), not just the clock time.
+- Update-download errors (missing/mismatched checksum, untrusted redirect
+  host) now show in the update banner instead of silently resetting the
+  button to "Download" with no explanation.
+
 ## [1.8.4] - 2026-07-30
 
 ### Added
