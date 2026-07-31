@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.8.4] - 2026-07-30
+
 ### Added
 
 - The main window remembers its size, not just its position. Resizing is saved
@@ -25,6 +27,31 @@ is added above it.
 - The other tray menu actions (show app, settings, restart, quit) carry icons.
   A Windows menu row can have a check mark or an icon but not both, so the
   widget row keeps the check.
+- The tray menu's status rows (session, weekly, session reset, last updated)
+  carry icons too, instead of reading as four bare lines of text.
+- The entrance animation plays once per run. This is a tray app opened dozens
+  of times a day to read one number, and that number used to arrive last, about
+  a second in, behind a 40-segment stagger. Later opens render immediately; the
+  highlight that marks a changed value still runs.
+- Every clickable element now responds to a press, and they all respond the
+  same way — the 16 that had no feedback at all were the ones that made the
+  window feel like a picture of an app.
+- The extra-usage card drops its progress bar. The credits used and the limit
+  are right there in the numbers; the meter repeated them in a thinner form.
+
+### Fixed
+
+- The floating widget could end up buried under other always-on-top windows —
+  Task Manager, a game overlay, another widget — with no way to bring it back
+  short of toggling it off and on. Windows orders that band by activation, and
+  re-asserting the flag did nothing because the flag had never changed. The
+  widget now reclaims the top on state changes and every couple of seconds
+  while it is open, without stealing focus.
+- The refresh icon no longer snaps mid-spin when an update finishes; it
+  completes the turn it is on. It also spins at a constant speed instead of
+  easing to a crawl while the work is still running.
+- The card glow that plays after a refresh animated a shadow on every card at
+  once, repainting each frame. It fades instead, which the GPU handles.
 
 ## [1.8.3] - 2026-07-29
 
@@ -339,7 +366,8 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.3...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.4...HEAD
+[1.8.4]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.3...v1.8.4
 [1.8.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.2...v1.8.3
 [1.8.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.3...v1.8.2
 [1.7.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.7.2...v1.7.3
