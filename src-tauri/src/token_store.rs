@@ -7,9 +7,7 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 use siphon_core::json_store::{config_dir, set_owner_only};
-use siphon_core::token::{
-    Cipher, Credentials, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN,
-};
+use siphon_core::token::{Cipher, Credentials, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN};
 
 pub struct TokenStore {
     path: PathBuf,
@@ -112,7 +110,7 @@ mod dpapi {
     //! fall back to the plaintext marker, matching `SafeStorageCrypto`.
 
     use siphon_core::token::{Cipher, MARKER_DPAPI, MARKER_PLAIN};
-    use windows::Win32::Foundation::{HLOCAL, LocalFree};
+    use windows::Win32::Foundation::{LocalFree, HLOCAL};
     use windows::Win32::Security::Cryptography::{
         CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB,
     };
@@ -150,12 +148,12 @@ mod dpapi {
 
     fn protect(data: &[u8]) -> Result<Vec<u8>, String> {
         unsafe {
-            let mut input = CRYPT_INTEGER_BLOB {
+            let input = CRYPT_INTEGER_BLOB {
                 cbData: data.len() as u32,
                 pbData: data.as_ptr() as *mut u8,
             };
             let mut output = CRYPT_INTEGER_BLOB::default();
-            CryptProtectData(&mut input, None, None, None, None, 0, &mut output)
+            CryptProtectData(&input, None, None, None, None, 0, &mut output)
                 .map_err(|e| e.to_string())?;
             let out = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
             let _ = LocalFree(HLOCAL(output.pbData as *mut _));
@@ -165,12 +163,12 @@ mod dpapi {
 
     fn unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
         unsafe {
-            let mut input = CRYPT_INTEGER_BLOB {
+            let input = CRYPT_INTEGER_BLOB {
                 cbData: data.len() as u32,
                 pbData: data.as_ptr() as *mut u8,
             };
             let mut output = CRYPT_INTEGER_BLOB::default();
-            CryptUnprotectData(&mut input, None, None, None, None, 0, &mut output)
+            CryptUnprotectData(&input, None, None, None, None, 0, &mut output)
                 .map_err(|e| e.to_string())?;
             let out = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
             let _ = LocalFree(HLOCAL(output.pbData as *mut _));

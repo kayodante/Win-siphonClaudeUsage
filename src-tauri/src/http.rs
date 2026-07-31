@@ -60,7 +60,10 @@ impl HttpClient {
         h.insert(AUTHORIZATION, auth);
         h.insert(ACCEPT, HeaderValue::from_static("application/json"));
         h.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        h.insert("anthropic-beta", HeaderValue::from_static("oauth-2025-04-20"));
+        h.insert(
+            "anthropic-beta",
+            HeaderValue::from_static("oauth-2025-04-20"),
+        );
         h.insert(
             reqwest::header::USER_AGENT,
             HeaderValue::from_static("claude-code/2.1.121"),

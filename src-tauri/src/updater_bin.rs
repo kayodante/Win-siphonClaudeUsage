@@ -30,15 +30,23 @@ pub async fn download(app: AppHandle, payload: Value) {
 }
 
 async fn download_inner(app: AppHandle, payload: Value) {
-    let download_url = payload.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or("");
+    let download_url = payload
+        .get("downloadUrl")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
     let checksum_url = payload.get("checksumUrl").and_then(|v| v.as_str());
-    let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or("");
+    let version = payload
+        .get("version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     if !is_valid_version(version) {
         return emit_error(&app, "invalid version");
     }
     if !is_trusted_download_url(download_url)
-        || checksum_url.map(|u| !is_trusted_download_url(u)).unwrap_or(false)
+        || checksum_url
+            .map(|u| !is_trusted_download_url(u))
+            .unwrap_or(false)
     {
         return emit_error(&app, "untrusted download URL");
     }
@@ -72,7 +80,10 @@ async fn download_inner(app: AppHandle, payload: Value) {
     match (expected, actual) {
         (Some(exp), Ok(act)) if exp == act => {
             *PENDING.lock().unwrap() = Some(dest.clone());
-            let _ = app.emit("update:downloaded", json!({ "filePath": dest.to_string_lossy() }));
+            let _ = app.emit(
+                "update:downloaded",
+                json!({ "filePath": dest.to_string_lossy() }),
+            );
         }
         _ => {
             let _ = std::fs::remove_file(&dest);
@@ -107,7 +118,9 @@ async fn fetch_to_file(
     let total = resp.content_length().unwrap_or(0);
     let mut received: u64 = 0;
     let mut last_percent: u64 = u64::MAX;
-    let mut file = tokio::fs::File::create(dest).await.map_err(|e| e.to_string())?;
+    let mut file = tokio::fs::File::create(dest)
+        .await
+        .map_err(|e| e.to_string())?;
     let mut stream = resp.bytes_stream();
     use futures_util::StreamExt;
     while let Some(chunk) = stream.next().await {
@@ -141,7 +154,9 @@ static PENDING: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
 /// Launch the downloaded installer. Returns true once it is running, so the
 /// caller can quit and let it replace the exe.
 pub fn install(app: &AppHandle) -> bool {
-    let Some(path) = PENDING.lock().unwrap().take() else { return false };
+    let Some(path) = PENDING.lock().unwrap().take() else {
+        return false;
+    };
     // Validate it is the installer we downloaded to temp.
     let temp = std::env::temp_dir();
     let is_ours = path.starts_with(&temp)

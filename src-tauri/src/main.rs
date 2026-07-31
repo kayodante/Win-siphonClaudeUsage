@@ -165,7 +165,8 @@ fn main() {
                     if schedule_flush {
                         let handle = window.app_handle().clone();
                         tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS)).await;
+                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
+                                .await;
                             let Some((x, y)) = MAIN_PENDING_POS.lock().unwrap().take() else {
                                 return;
                             };
@@ -203,7 +204,8 @@ fn main() {
                     if schedule_flush {
                         let handle = window.app_handle().clone();
                         tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS)).await;
+                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
+                                .await;
                             let Some((w, h)) = MAIN_PENDING_SIZE.lock().unwrap().take() else {
                                 return;
                             };

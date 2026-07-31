@@ -90,7 +90,10 @@ const JA: &[(&str, &str)] = &[
     ("tray.quit", "終了"),
     ("quota.suffix.used", "使用済み"),
     ("quota.suffix.remaining", "残り"),
-    ("notification.resetTitle", "Claudeセッションがリセットされました"),
+    (
+        "notification.resetTitle",
+        "Claudeセッションがリセットされました",
+    ),
     (
         "notification.resetBody",
         "Claudeのセッション制限がリセットされ、再び利用可能です。",

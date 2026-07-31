@@ -77,7 +77,9 @@ pub fn build(app: &AppHandle, state: &AppState) -> tauri::Result<TrayIcon> {
 }
 
 pub fn update(app: &AppHandle, state: &AppState) {
-    let Some(tray) = app.tray_by_id("main") else { return };
+    let Some(tray) = app.tray_by_id("main") else {
+        return;
+    };
     let (session, weekly) = levels(state);
     if let Ok(icon) = Image::from_bytes(icon_bytes(session, weekly)) {
         let _ = tray.set_icon(Some(icon));
@@ -127,12 +129,26 @@ fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wr
     // session, weekly, session reset, updated — reset reuses the session icon.
     const STATUS_ICONS: [&str; 4] = ["session", "weekly", "session", "update"];
     for (i, row) in status.menu_items.iter().enumerate() {
-        let item = IconMenuItem::with_id(app, format!("status_{i}"), row, false, icon(STATUS_ICONS[i]), None::<&str>)?;
+        let item = IconMenuItem::with_id(
+            app,
+            format!("status_{i}"),
+            row,
+            false,
+            icon(STATUS_ICONS[i]),
+            None::<&str>,
+        )?;
         menu.append(&item)?;
     }
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&IconMenuItem::with_id(app, "show", t("tray.showApp", &lang), true, icon("show"), None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(
+        app,
+        "show",
+        t("tray.showApp", &lang),
+        true,
+        icon("show"),
+        None::<&str>,
+    )?)?;
     menu.append(&CheckMenuItem::with_id(
         app,
         "widget",
@@ -141,10 +157,31 @@ fn build_menu(app: &AppHandle, state: &AppState) -> tauri::Result<Menu<tauri::Wr
         state.preferences.floating.enabled,
         None::<&str>,
     )?)?;
-    menu.append(&IconMenuItem::with_id(app, "settings", t("tray.settings", &lang), true, icon("settings"), None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(
+        app,
+        "settings",
+        t("tray.settings", &lang),
+        true,
+        icon("settings"),
+        None::<&str>,
+    )?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&IconMenuItem::with_id(app, "restart", t("tray.restart", &lang), true, icon("restart"), None::<&str>)?)?;
-    menu.append(&IconMenuItem::with_id(app, "quit", t("tray.quit", &lang), true, icon("quit"), None::<&str>)?)?;
+    menu.append(&IconMenuItem::with_id(
+        app,
+        "restart",
+        t("tray.restart", &lang),
+        true,
+        icon("restart"),
+        None::<&str>,
+    )?)?;
+    menu.append(&IconMenuItem::with_id(
+        app,
+        "quit",
+        t("tray.quit", &lang),
+        true,
+        icon("quit"),
+        None::<&str>,
+    )?)?;
     Ok(menu)
 }
 

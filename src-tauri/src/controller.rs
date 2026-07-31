@@ -98,11 +98,19 @@ impl Controller {
     }
 
     fn check_alerts(&self, state: &AppState) {
-        let percent = state.quota.as_ref().and_then(|q| q.session.as_ref()).map(|s| s.percent);
+        let percent = state
+            .quota
+            .as_ref()
+            .and_then(|q| q.session.as_ref())
+            .map(|s| s.percent);
         let lang = state.preferences.language.clone();
         let expire = state.preferences.notifications.expire_alert;
         let limit = state.preferences.notifications.limit_alert;
-        let alerts = self.alerts.lock().unwrap().check(percent, expire, limit, &lang);
+        let alerts = self
+            .alerts
+            .lock()
+            .unwrap()
+            .check(percent, expire, limit, &lang);
         for alert in alerts {
             crate::notify::show(&self.app, &alert.title, &alert.body);
         }
@@ -151,8 +159,7 @@ impl Controller {
                 }
                 Err(e) => {
                     log::error!("refreshLocal failed: {e}");
-                    state.local_error =
-                        Some("Could not read ~/.claude usage files.".to_string());
+                    state.local_error = Some("Could not read ~/.claude usage files.".to_string());
                 }
             }
         }
@@ -310,7 +317,10 @@ impl Controller {
             }
         }
         let _ = self.tokens.clear();
-        Err(QuotaError::new(QuotaErrorCode::NotSignedIn, "Not signed in"))
+        Err(QuotaError::new(
+            QuotaErrorCode::NotSignedIn,
+            "Not signed in",
+        ))
     }
 
     async fn force_refresh(&self) -> RefreshOutcome {
@@ -327,7 +337,11 @@ impl Controller {
         let Some(refresh_token) = creds.refresh_token.as_deref() else {
             return RefreshOutcome::Rejected;
         };
-        match self.http.post_token(oauth::refresh_body(refresh_token)).await {
+        match self
+            .http
+            .post_token(oauth::refresh_body(refresh_token))
+            .await
+        {
             Ok(new_creds) => {
                 let refreshed = new_creds.preserving_refresh_from(creds);
                 let _ = self.tokens.save(&refreshed);
@@ -352,8 +366,7 @@ impl Controller {
             let local = read_claude_credentials()
                 .map(|v| siphon_core::profile::read_local_profile(&v))
                 .unwrap_or_default();
-            self.state.lock().unwrap().profile =
-                Some(siphon_core::profile::merge_local(p, &local));
+            self.state.lock().unwrap().profile = Some(siphon_core::profile::merge_local(p, &local));
         } else {
             self.state.lock().unwrap().profile = None;
         }
@@ -407,12 +420,11 @@ impl Controller {
                 self.refresh_quota().await;
             }
             Err(err) => {
-                self.state.lock().unwrap().auth_error = Some(
-                    siphon_core::diagnostics::safe_error_message(
+                self.state.lock().unwrap().auth_error =
+                    Some(siphon_core::diagnostics::safe_error_message(
                         err.message(),
                         "Authentication failed. Please try again.",
-                    ),
-                );
+                    ));
                 self.emit();
             }
         }
@@ -452,8 +464,12 @@ impl Controller {
     // ----- reset scheduler -------------------------------------------------
 
     async fn restore_reset(&self) {
-        let Some(state) = self.reset_store.load().ok().flatten() else { return };
-        let Some(resets_at) = state.get("resetsAt").and_then(|v| v.as_str()) else { return };
+        let Some(state) = self.reset_store.load().ok().flatten() else {
+            return;
+        };
+        let Some(resets_at) = state.get("resetsAt").and_then(|v| v.as_str()) else {
+            return;
+        };
         let Ok(when) = chrono::DateTime::parse_from_rfc3339(resets_at) else {
             let _ = self.reset_store.save(None);
             return;
@@ -475,7 +491,10 @@ impl Controller {
         match decide_update(quota, current.as_deref(), last.as_deref()) {
             ResetDecision::Clear => self.clear_reset().await,
             ResetDecision::NoChange => {}
-            ResetDecision::Schedule { reset_key, resets_at } => {
+            ResetDecision::Schedule {
+                reset_key,
+                resets_at,
+            } => {
                 self.reset.lock().unwrap().current_key = Some(reset_key.clone());
                 let _ = self.reset_store.save(Some(&serde_json::json!({
                     "resetKey": reset_key,
@@ -510,17 +529,19 @@ impl Controller {
             r.generation
         };
         tauri::async_runtime::spawn(async move {
-            loop {
-                match siphon_core::reset_scheduler::next_sleep_ms(Utc::now(), resets_at) {
-                    Some(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
-                    None => break,
-                }
-                let Some(state) = app.try_state::<crate::AppContext>() else { return };
+            while let Some(ms) = siphon_core::reset_scheduler::next_sleep_ms(Utc::now(), resets_at)
+            {
+                tokio::time::sleep(Duration::from_millis(ms)).await;
+                let Some(state) = app.try_state::<crate::AppContext>() else {
+                    return;
+                };
                 if state.controller.reset.lock().unwrap().generation != generation {
                     return; // superseded — abandon silently
                 }
             }
-            let Some(state) = app.try_state::<crate::AppContext>() else { return };
+            let Some(state) = app.try_state::<crate::AppContext>() else {
+                return;
+            };
             let controller = &state.controller;
             {
                 let mut r = controller.reset.lock().unwrap();

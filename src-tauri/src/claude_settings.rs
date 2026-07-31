@@ -35,7 +35,10 @@ impl ClaudeSettings {
     }
 
     fn with_paths(exe_path: String, settings_path: PathBuf) -> Self {
-        ClaudeSettings { exe_path, settings_path }
+        ClaudeSettings {
+            exe_path,
+            settings_path,
+        }
     }
 
     fn hook_entry(&self) -> Value {
@@ -96,12 +99,16 @@ impl ClaudeSettings {
     pub fn enable(&self) -> std::io::Result<()> {
         self.check_exe_path()?;
         let mut settings = self.read().unwrap_or_else(|| json!({}));
-        let Some(root) = settings.as_object_mut() else { return Ok(()) };
+        let Some(root) = settings.as_object_mut() else {
+            return Ok(());
+        };
         let hooks = root.entry("hooks").or_insert_with(|| json!({}));
         if !hooks.is_object() {
             *hooks = json!({});
         }
-        let Some(hooks_map) = hooks.as_object_mut() else { return Ok(()) };
+        let Some(hooks_map) = hooks.as_object_mut() else {
+            return Ok(());
+        };
         let existing = hooks_map
             .get("SessionStart")
             .and_then(|v| v.as_array())
@@ -122,7 +129,9 @@ impl ClaudeSettings {
 
     pub fn disable(&self) -> std::io::Result<()> {
         self.check_exe_path()?;
-        let Some(mut settings) = self.read() else { return Ok(()) };
+        let Some(mut settings) = self.read() else {
+            return Ok(());
+        };
         let Some(existing) = settings
             .pointer("/hooks/SessionStart")
             .and_then(|v| v.as_array())
@@ -139,10 +148,7 @@ impl ClaudeSettings {
             return Ok(());
         }
         let hooks_empty = {
-            let Some(hooks) = settings
-                .get_mut("hooks")
-                .and_then(|h| h.as_object_mut())
-            else {
+            let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) else {
                 return Ok(());
             };
             if filtered.is_empty() {
@@ -166,8 +172,10 @@ mod tests {
     use super::*;
 
     fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir()
-            .join(format!("siphon-claude-settings-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "siphon-claude-settings-{name}-{}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -210,7 +218,11 @@ mod tests {
         let svc = ClaudeSettings::with_paths("C:\\apps\\siphon.exe".into(), path.clone());
         svc.enable().unwrap();
         let v: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        let entries = v.pointer("/hooks/SessionStart").unwrap().as_array().unwrap();
+        let entries = v
+            .pointer("/hooks/SessionStart")
+            .unwrap()
+            .as_array()
+            .unwrap();
         // the foreign state-file hook plus exactly one Siphon launcher
         assert_eq!(entries.len(), 2);
         assert!(entries[0].to_string().contains("state.json"));

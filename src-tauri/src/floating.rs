@@ -162,9 +162,10 @@ fn create(app: &AppHandle, state: &AppState) {
             if schedule_flush {
                 let handle = handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(POS_FLUSH_DELAY_MS))
-                        .await;
-                    let Some((x, y)) = PENDING_POS.lock().unwrap().take() else { return };
+                    tokio::time::sleep(std::time::Duration::from_millis(POS_FLUSH_DELAY_MS)).await;
+                    let Some((x, y)) = PENDING_POS.lock().unwrap().take() else {
+                        return;
+                    };
                     if let Some(ctx) = handle.try_state::<crate::AppContext>() {
                         let _ = ctx.prefs.set_many(vec![
                             ("floating.x".into(), x.into()),
@@ -189,12 +190,15 @@ fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppStat
     // Physical pixels throughout, matching what the move handler saved — see
     // `windows_ctl::monitor_rects` for why logical coordinates cannot be
     // compared across monitors.
-    let (w, h) = win.outer_size().map(|s| (s.width as f64, s.height as f64)).unwrap_or_else(|_| {
-        size_for(
-            &state.preferences.floating.style,
-            state.preferences.floating.expanded,
-        )
-    });
+    let (w, h) = win
+        .outer_size()
+        .map(|s| (s.width as f64, s.height as f64))
+        .unwrap_or_else(|_| {
+            size_for(
+                &state.preferences.floating.style,
+                state.preferences.floating.expanded,
+            )
+        });
 
     // Default top-right anchor on the primary monitor, inset by a 20px margin
     // scaled to that monitor's DPI.

@@ -49,8 +49,12 @@ async fn check_once(app: &AppHandle) {
         return;
     }
     let current = app.package_info().version.to_string();
-    let Some(release) = fetch_latest_release().await else { return };
-    let Some(info) = parse_release(&release, &current) else { return };
+    let Some(release) = fetch_latest_release().await else {
+        return;
+    };
+    let Some(info) = parse_release(&release, &current) else {
+        return;
+    };
     let winget = tauri::async_runtime::spawn_blocking(winget_upgrade_available)
         .await
         .unwrap_or(false);
