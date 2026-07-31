@@ -144,9 +144,18 @@
   --duration-slow:   180ms;
   --duration-enter:  220ms;
   --ease:            ease;
-  --ease-out:        ease-out;
-  --ease-out-quart:  cubic-bezier(0.25, 1, 0.5, 1);
+  /* The CSS builtin `ease-out` is too weak to read as intentional — the
+     canonical ease-out here is the quart curve, and the two names are aliases. */
+  --ease-out:        cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quart:  var(--ease-out);
   --ease-out-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-press:      cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-press:  120ms;
+  --duration-spin:   700ms;
+  /* Read by renderer.js — keep these as the single source of truth for the
+     view/tab crossfades so CSS and JS can never drift apart. */
+  --duration-view-fade: 150ms;
+  --duration-tab-fade:  110ms;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -253,7 +262,7 @@ body[data-view="onboard"] .shell-scroll {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  transition: opacity var(--duration-normal) var(--ease-out-quart), transform var(--duration-normal) var(--ease-out-quart);
+  transition: opacity var(--duration-view-fade) var(--ease-out), transform var(--duration-view-fade) var(--ease-out);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -374,7 +383,8 @@ body[data-view="onboard"] .top-actions-divider {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .window-control-btn:hover {
@@ -461,7 +471,7 @@ body[data-view="onboard"] .app-footer {
   font-weight: var(--weight-medium);
   text-decoration: none;
   box-shadow: inset 0 2px 3px -2px var(--border-strong);
-  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
 .footer-link span,
@@ -480,7 +490,7 @@ body[data-view="onboard"] .app-footer {
 
 .footer-link:active,
 .footer-quit-btn:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
   filter: brightness(0.88);
 }
 
@@ -684,7 +694,8 @@ body[data-view="onboard"] .app-footer {
   font-weight: var(--weight-medium);
   line-height: 20px;
   cursor: pointer;
-  transition: filter var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .auth-button-stack .btn-save {
@@ -959,28 +970,35 @@ body[data-view="onboard"] .app-footer {
   color: var(--accent-light);
 }
 
-body[data-refreshing="true"] .card {
+/* The refresh glow lives on a pseudo-element so the pulse animates `opacity`
+   (compositor) instead of `box-shadow` (a full repaint of every card, 900ms,
+   on loop). The shadow itself is painted once and never re-rasterized. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--level-ok) 18%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--level-ok) 8%, transparent);
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+body[data-refreshing="true"] .card::after {
   animation: refreshGlow 900ms var(--ease) infinite alternate;
 }
 
 @keyframes refreshGlow {
-  from {
-    box-shadow: var(--inner-light);
-  }
-  to {
-    box-shadow:
-      var(--inner-light),
-      0 0 22px color-mix(in srgb, var(--level-ok) 18%, transparent),
-      inset 0 0 18px color-mix(in srgb, var(--level-ok) 8%, transparent);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-refreshing="true"] .card {
+  body[data-refreshing="true"] .card::after {
     animation: none;
-    box-shadow:
-      var(--inner-light),
-      0 0 14px color-mix(in srgb, var(--level-ok) 12%, transparent);
+    opacity: 0.65;
   }
 }
 
@@ -1081,7 +1099,8 @@ body[data-refreshing="true"] .card {
   white-space: nowrap;
   flex-shrink: 0;
   cursor: pointer;
-  transition: background var(--duration-base) var(--ease), color var(--duration-base) var(--ease);
+  transition: background var(--duration-base) var(--ease), color var(--duration-base) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .notif-badge:hover {
@@ -1197,7 +1216,8 @@ body[data-refreshing="true"] .card {
   opacity: 0.6;
   flex-shrink: 0;
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease), opacity var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease), opacity var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .usage-alert-dismiss:hover,
@@ -1274,7 +1294,7 @@ body[data-refreshing="true"] .card {
   margin-top: var(--space-5);
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease);
+    border-color var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
 .update-banner-download:hover {
@@ -1328,6 +1348,8 @@ body[data-refreshing="true"] .card {
   font-weight: var(--weight-medium);
   cursor: pointer;
   text-align: left;
+  transition: background var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .reauth-button:hover {
@@ -1375,7 +1397,8 @@ body[data-refreshing="true"] .card {
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .back-btn:hover {
@@ -1490,7 +1513,7 @@ body[data-refreshing="true"] .card {
   font-weight: var(--weight-medium);
   cursor: pointer;
   box-shadow: inset 0 2px 3px -2px var(--border-strong);
-  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
 .btn-secondary:hover {
@@ -1499,7 +1522,7 @@ body[data-refreshing="true"] .card {
 }
 
 .btn-secondary:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
   filter: brightness(0.88);
 }
 
@@ -1701,7 +1724,8 @@ body[data-refreshing="true"] .card {
   background: transparent;
   color: var(--subtle-foreground);
   cursor: pointer;
-  transition: color var(--duration-fast) var(--ease);
+  transition: color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .floating-action-btn:hover {
@@ -1872,6 +1896,8 @@ body[data-refreshing="true"] .card {
   color: var(--subtle-foreground);
   cursor: pointer;
   -webkit-app-region: no-drag;
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .floating-expand-btn:hover {
@@ -1948,7 +1974,7 @@ button:focus-visible {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
 .btn-primary:hover {
@@ -1956,7 +1982,7 @@ button:focus-visible {
 }
 
 .btn-primary:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
   filter: brightness(0.92);
 }
 
@@ -1979,7 +2005,8 @@ button:focus-visible {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted-foreground);
-  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease), transform 80ms var(--ease);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .icon-button:hover {
@@ -1988,14 +2015,36 @@ button:focus-visible {
   filter: none;
 }
 
-.icon-button:active {
-  transform: scale(0.87);
-}
-
 .icon-button svg {
   width: var(--space-7);
   height: var(--space-7);
   fill: currentColor;
+}
+
+/* ── Press feedback ─────────────────────────────────────────
+   One press gesture for the whole app: the surface scales down so the
+   click is acknowledged before anything else happens. Small targets get
+   a deeper scale — at 28px, 0.97 is under a pixel and reads as nothing. */
+.window-control-btn:active,
+.icon-button:active,
+.floating-action-btn:active,
+.usage-alert-dismiss:active,
+.offline-banner-dismiss:active,
+.update-banner-dismiss:active {
+  transform: scale(0.94);
+}
+
+.auth-button-stack .btn-save:active,
+.auth-button-stack .btn-cancel:active,
+.back-btn:active,
+.notif-badge:active,
+.reauth-button:active,
+.update-banner-download:active,
+.settings-tab:active,
+.settings-test-btn:active,
+.settings-style-card:active,
+.floating-expand-btn:active {
+  transform: scale(0.97);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2033,7 +2082,18 @@ button:focus-visible {
   height: 16px;
   border-radius: 50%;
   background: var(--foreground);
-  transition: transform var(--duration-slow) var(--ease), background var(--duration-slow) var(--ease);
+  transition: transform var(--duration-normal) var(--ease-out),
+    width var(--duration-press) var(--ease-press),
+    background var(--duration-slow) var(--ease);
+}
+
+/* Squash under the finger — the toggle answers the press before it flips. */
+.switch:active .switch-thumb {
+  width: 19px;
+}
+
+.switch:active input:checked + .switch-track .switch-thumb {
+  transform: translateX(10px);
 }
 
 .switch input:checked + .switch-track {
@@ -2168,7 +2228,8 @@ button:focus-visible {
   font-weight: var(--weight-medium);
   flex-shrink: 0;
   cursor: pointer;
-  transition: color var(--duration-fast) var(--ease);
+  transition: color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 .settings-test-btn:hover {
@@ -2421,7 +2482,7 @@ body[data-entering] #monthTokens {
 .usage-alert-banner[data-leaving],
 .offline-banner[data-leaving],
 .update-banner[data-leaving] {
-  animation: bannerLeave 160ms ease-in both;
+  animation: bannerLeave 160ms var(--ease-out) both;
 }
 
 .data-updated {
@@ -2434,8 +2495,12 @@ body[data-entering] #monthTokens {
   to { transform: rotate(360deg); }
 }
 
+/* `linear infinite`: a spinner reports "still working", so it must not ease
+   to a crawl mid-refresh, and it must not stop before the work does. The JS
+   holds `data-refreshing` until the current turn lands back on 0deg, so the
+   icon never snaps mid-rotation. */
 body[data-refreshing="true"] #refreshButton svg {
-  animation: iconSpin 650ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: iconSpin var(--duration-spin) linear infinite;
   transform-origin: center;
 }
 
@@ -2492,6 +2557,20 @@ body[data-refreshing="true"] #refreshButton svg {
   }
 }
 
+/* A touch screen fires :hover on tap and holds it until the next tap, so the
+   brightness lift sticks to whatever was last pressed. The press scale already
+   carries the feedback there — drop the lift rather than let it linger. */
+@media (hover: none) {
+  button:hover,
+  .footer-link:hover,
+  .footer-quit-btn:hover,
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .auth-button-stack .btn-save:hover {
+    filter: none;
+  }
+}
+
 /* ── Settings tabs ─────────────────────────────────────── */
 .settings-tabs {
   display: flex;
@@ -2512,7 +2591,8 @@ body[data-refreshing="true"] #refreshButton svg {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease,
+    transform var(--duration-press) var(--ease-press);
 }
 
 .settings-tab--active {
@@ -2525,10 +2605,13 @@ body[data-refreshing="true"] #refreshButton svg {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  transition: opacity 120ms ease;
+  transition: opacity var(--duration-tab-fade) var(--ease-out);
 }
 
 .settings-tabs-card {
+  /* Anchors the outgoing panel during the tab crossfade — switchSettingsTab
+     parks it out of flow so the incoming panel can come up underneath it. */
+  position: relative;
   padding: var(--space-8) var(--space-6);
   gap: var(--space-none);
 }
@@ -2577,7 +2660,7 @@ body[data-refreshing="true"] #refreshButton svg {
   padding: var(--space-4) var(--space-3) var(--space-3);
   cursor: pointer;
   text-align: left;
-  transition: border-color 120ms ease;
+  transition: border-color 120ms ease, transform var(--duration-press) var(--ease-press);
 }
 
 .settings-style-card[data-active="true"] {

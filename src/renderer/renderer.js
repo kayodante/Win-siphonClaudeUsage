@@ -131,11 +131,20 @@ let updateDownloadUrl = null;
 let updateChecksumUrl = null;
 let updateWingetUpgradeAvailable = false;
 let isEntering = false;
-let lastEnterTime = 0;
+let bootPlayed = false;
 const animatingElements = new Map();
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function cubicEaseOut(t) { return 1 - (1 - t) ** 3; }
+
+// Durations live in styles.css. Reading them back here keeps a CSS transition
+// and the JS timeout that waits on it from silently drifting apart.
+function cssMs(name, fallback) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const value = parseFloat(raw);
+  if (!Number.isFinite(value)) return fallback;
+  return raw.endsWith('ms') ? value : value * 1000;
+}
 
 function showBanner(el) {
   if (!el.hidden && !el.hasAttribute('data-leaving')) return;
@@ -794,6 +803,23 @@ function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.setAttribute('aria-pressed', String(enabled));
 }
 
+// A refresh that finishes mid-rotation used to yank the animation off the icon,
+// snapping it back to 0deg. Hold the flag until the current turn completes so
+// the spin always lands where it started.
+function stopRefreshSpin() {
+  const svg = elements.refreshButton.querySelector('svg');
+  const spin = svg?.getAnimations?.()[0];
+  const period = Number(spin?.effect?.getTiming?.().duration);
+  if (!spin || reducedMotion() || !Number.isFinite(period) || period <= 0) {
+    delete document.body.dataset.refreshing;
+    return;
+  }
+  const elapsed = Number(spin.currentTime) || 0;
+  setTimeout(() => {
+    delete document.body.dataset.refreshing;
+  }, period - (elapsed % period));
+}
+
 async function refreshNow() {
   document.body.dataset.refreshing = 'true';
   elements.refreshButton.disabled = true;
@@ -804,7 +830,7 @@ async function refreshNow() {
     elements.errorText.textContent = t('error.loadState', currentLanguage());
   } finally {
     elements.refreshButton.disabled = false;
-    delete document.body.dataset.refreshing;
+    stopRefreshSpin();
   }
 }
 
@@ -877,7 +903,7 @@ function renderMeter(meter, percent) {
 function switchSettingsTab(name) {
   if (name === currentSettingsTab || _tabTransitioning) return;
   _tabTransitioning = true;
-  const FADE_MS = 120;
+  const FADE_MS = cssMs('--duration-tab-fade', 110);
   const panels = {
     system: elements.settingsTabSystemPanel,
     notification: elements.settingsTabNotificationPanel,
@@ -895,21 +921,30 @@ function switchSettingsTab(name) {
   tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
   tabs[name].setAttribute('aria-selected', 'true');
   currentSettingsTab = name;
+
+  // Overlap the crossfade instead of running it twice. Parking the outgoing
+  // panel out of flow (the card is position:relative) lets the incoming one
+  // take its place at once, so a tab switch costs one fade, not two.
+  const width = outgoing.getBoundingClientRect().width;
+  outgoing.style.position = 'absolute';
+  outgoing.style.width = `${width}px`;
+  outgoing.style.pointerEvents = 'none';
   outgoing.style.opacity = '0';
+
+  incoming.hidden = false;
+  incoming.style.opacity = '0';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { incoming.style.opacity = '1'; });
+  });
+
   setTimeout(() => {
     outgoing.hidden = true;
+    outgoing.style.position = '';
+    outgoing.style.width = '';
+    outgoing.style.pointerEvents = '';
     outgoing.style.opacity = '';
-    incoming.hidden = false;
-    incoming.style.opacity = '0';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        incoming.style.opacity = '1';
-        setTimeout(() => {
-          incoming.style.opacity = '';
-          _tabTransitioning = false;
-        }, FADE_MS);
-      });
-    });
+    incoming.style.opacity = '';
+    _tabTransitioning = false;
   }, FADE_MS);
 }
 
@@ -978,7 +1013,7 @@ function renderActiveView() {
       incoming.style.transform = '';
       _transitioning = false;
     }));
-  }, 150);
+  }, cssMs('--duration-view-fade', 150));
 }
 
 function currentLanguage() {
@@ -1030,15 +1065,20 @@ function updateSliderFill(slider) {
 
 
 
+// The entrance choreography runs once, on the first time the window is shown.
+// This is a tray app opened dozens of times a day for a single number, and that
+// number is the last thing the sequence delivers (~1s in). Paying it every open
+// turns the app's whole reason for existing into a wait; paying it once keeps
+// the first impression. Later opens render the values immediately, and
+// `flashUpdate` still marks anything that actually changed.
+const ENTER_SEQUENCE_MS = 900;
+
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    const now = Date.now();
-    if (now - lastEnterTime < 2000) return;
-    lastEnterTime = now;
-    isEntering = true;
-    document.body.dataset.entering = '1';
-    setTimeout(() => {
-      delete document.body.dataset.entering;
-    }, 900);
-  }
+  if (document.hidden || bootPlayed) return;
+  bootPlayed = true;
+  isEntering = true;
+  document.body.dataset.entering = '1';
+  setTimeout(() => {
+    delete document.body.dataset.entering;
+  }, ENTER_SEQUENCE_MS);
 });
