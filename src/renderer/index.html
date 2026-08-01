@@ -39,7 +39,7 @@
       </header>
 
       <div class="shell-scroll">
-      <section id="onboardView" class="view onboard">
+      <section id="onboardView" class="view onboard" aria-labelledby="onboardingHeading">
         <div class="onboard-center">
           <img class="onboard-logo" src="../assets/Logo.png" alt="Siphon" />
 
@@ -47,7 +47,7 @@
             <span class="feature-chip feature-chip-roadmap" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M5 7h8v2H7v2h5a4 4 0 0 1 0 8H5v-2h7a2 2 0 0 0 0-4H5V7Zm11 0h3v2h-3V7Zm0 5h3v2h-3v-2Zm0 5h3v2h-3v-2Z"/></svg>
             </span>
-            <span class="copy-strong" data-i18n="onboarding.copy.sessionStrong">Live session quota</span>
+            <span class="copy-strong" id="onboardingHeading" role="heading" aria-level="1" data-i18n="onboarding.copy.sessionStrong">Live session quota</span>
             <span class="copy-muted" data-i18n="onboarding.copy.sessionMuted">from your Claude AI plan.</span>
             <span class="copy-strong" data-i18n="onboarding.copy.costStrong">Token usage</span>
             <span class="feature-chip feature-chip-currency" aria-hidden="true">
@@ -73,9 +73,9 @@
           </p>
 
           <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
-            <p class="auth-title" data-i18n="onboarding.authTitle">Código de autenticação</p>
+            <p class="auth-title" id="onboardCodeLabel" data-i18n="onboarding.authTitle">Código de autenticação</p>
             <div class="auth-form-fields">
-              <textarea id="onboardCodeInput" rows="2" spellcheck="false" data-i18n-placeholder="onboarding.pasteLabel" placeholder="Cole a URL de redirecionamento completa ou o código"></textarea>
+              <textarea id="onboardCodeInput" rows="2" spellcheck="false" aria-labelledby="onboardCodeLabel" data-i18n-placeholder="onboarding.pasteLabel" placeholder="Cole a URL de redirecionamento completa ou o código"></textarea>
               <div class="auth-button-stack">
                 <button type="submit" class="btn-save" data-i18n="onboarding.submit">Salvar</button>
                 <button type="button" class="btn-cancel" id="onboardCancelButton" data-i18n="onboarding.cancel">Cancelar</button>
@@ -85,7 +85,7 @@
         </div>
       </section>
 
-        <div id="highUsageBanner" class="usage-alert-banner" data-level="warn" hidden>
+        <div id="highUsageBanner" class="usage-alert-banner" data-level="warn" role="status" aria-live="polite" aria-atomic="true" hidden>
           <!-- Carbon: WarningAlt -->
           <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
           <div class="usage-alert-text">
@@ -97,12 +97,12 @@
           </button>
         </div>
 
-        <div id="updateBanner" class="update-banner" hidden>
+        <div id="updateBanner" class="update-banner" role="region" aria-labelledby="updateBannerTitle updateBannerVersion" hidden>
           <div class="update-banner-header">
             <!-- Carbon: WarningAlt -->
             <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
             <div class="update-banner-text">
-              <span class="update-banner-title" data-i18n="update.title">Update available</span>
+              <span class="update-banner-title" id="updateBannerTitle" data-i18n="update.title">Update available</span>
               <span class="update-banner-body" id="updateBannerVersion"></span>
               <button class="update-banner-download" id="updateBannerDownload" data-i18n="update.download">Download</button>
             </div>
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <div id="criticalBanner" class="usage-alert-banner" data-level="critical" hidden>
+        <div id="criticalBanner" class="usage-alert-banner" data-level="critical" role="alert" aria-live="assertive" aria-atomic="true" hidden>
           <!-- Carbon: WarningAlt -->
           <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
           <div class="usage-alert-text">
@@ -124,7 +124,7 @@
           </button>
         </div>
 
-        <div id="offlineBanner" class="offline-banner" hidden>
+        <div id="offlineBanner" class="offline-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
           <!-- Carbon: WarningAlt -->
           <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
           <div class="offline-banner-text">
@@ -136,13 +136,13 @@
           </button>
         </div>
 
-      <section id="mainView" class="view" hidden>
-        <section class="card quota-panel">
+      <section id="mainView" class="view" aria-labelledby="sessionHeading" hidden>
+        <section class="card quota-panel" aria-labelledby="sessionHeading">
           <div class="card-eyebrow card-eyebrow-row">
             <span class="card-eyebrow-left">
               <!-- Carbon: Lightning -->
               <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
-              <span data-i18n="home.session">Current Session</span>
+              <span id="sessionHeading" role="heading" aria-level="1" data-i18n="home.session">Current Session</span>
             </span>
             <button type="button" class="notif-badge" id="notificationState" data-tone="accent">
               <span id="notificationStateText" data-i18n="home.notif.on">Notify reset</span>
@@ -176,11 +176,11 @@
           </div>
         </section>
 
-        <section class="card quota-panel">
+        <section class="card quota-panel" aria-labelledby="weeklyHeading">
           <div class="card-eyebrow">
             <!-- Carbon: ArrayDateTime -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20,14c-3.3137,0-6,2.6863-6,6s2.6863,6,6,6,6-2.6863,6-6-2.6863-6-6-6ZM21.5859,23l-2.5859-2.5854v-4.4143h2v3.5857l2,2-1.4141,1.4141ZM8,9h3v2.0001h2v-2.0001h6v2.0001h2v-2.0001h3v4h2v-4c0-1.1-.9-2-2-2h-3v-2h-2v2h-6v-2h-2v2h-3c-1.1,0-2,.9-2,2v14c0,1.1.9,2,2,2h4v-2h-4v-14ZM4,24h-2v4c0,1.1.9,2,2,2h4v-2h-4v-4ZM28,28h-4v2h4c1.1,0,2-.9,2-2v-4h-2v4ZM4,4h4v-2h-4c-1.1,0-2,.9-2,2v4h2v-4ZM28,2h-4v2h4v4h2v-4c0-1.1-.9-2-2-2Z"/></svg>
-            <span data-i18n="home.weekly">Weekly Limit</span>
+            <span id="weeklyHeading" role="heading" aria-level="2" data-i18n="home.weekly">Weekly Limit</span>
           </div>
           <div class="quota-headline">
             <span class="quota-value-group">
@@ -194,11 +194,11 @@
           </div>
         </section>
 
-        <section class="card quota-panel quota-panel--extra" id="extraUsageCard" hidden>
+        <section class="card quota-panel quota-panel--extra" id="extraUsageCard" aria-labelledby="extraUsageHeading" hidden>
           <div class="card-eyebrow">
             <!-- Carbon: Wallet -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,6H6A2,2,0,0,0,4,8V24a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V8A2,2,0,0,0,26,6Zm0,2v3H6V8ZM6,24V13H26V24Z"/><path d="M21 18H24V20H21z"/></svg>
-            <span data-i18n="home.extraUsage">Extra usage</span>
+            <span id="extraUsageHeading" role="heading" aria-level="2" data-i18n="home.extraUsage">Extra usage</span>
           </div>
           <div class="quota-headline quota-headline--extra">
             <span class="quota-credits">
@@ -210,8 +210,8 @@
         </section>
 
         <section class="grid">
-          <article class="card cost-card">
-            <span class="card-eyebrow" data-i18n="home.today">Today</span>
+          <article class="card cost-card" aria-labelledby="todayHeading">
+            <span class="card-eyebrow" id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
             <span class="cost-estimate-row">
               <span data-i18n="home.costEstimate">Usage estimate</span>
               <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
@@ -222,8 +222,8 @@
             <span class="stat-value" id="todayCost">--</span>
             <span class="cost-tokens" id="todayTokens"></span>
           </article>
-          <article class="card cost-card">
-            <span class="card-eyebrow" data-i18n="home.month">This Month</span>
+          <article class="card cost-card" aria-labelledby="monthHeading">
+            <span class="card-eyebrow" id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
             <span class="cost-estimate-row">
               <span data-i18n="home.costEstimate">Usage estimate</span>
               <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
@@ -236,18 +236,18 @@
           </article>
         </section>
 
-        <p id="errorText" class="error"></p>
+        <p id="errorText" class="error" role="alert" aria-live="assertive" aria-atomic="true"></p>
         <button id="reauthButton" class="reauth-button" hidden></button>
       </section>
 
-      <section id="settingsView" class="view settings-stack" hidden>
+      <section id="settingsView" class="view settings-stack" aria-labelledby="settingsTitle" hidden>
         <div class="settings-back">
           <button class="back-btn" id="backButton">
             <!-- Carbon: ArrowLeft -->
             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 26L4 16 14 6l1.41 1.41L6.83 16l8.58 8.59z"/><path d="M5 15h23v2H5z"/></svg>
             <span data-i18n="settings.back">Back</span>
           </button>
-          <span class="settings-title" data-i18n="settings.title">Settings</span>
+          <span class="settings-title" id="settingsTitle" role="heading" aria-level="1" tabindex="-1" data-i18n="settings.title">Settings</span>
         </div>
 
         <div class="account-card">
@@ -274,16 +274,16 @@
         <div class="settings-card settings-tabs-card">
 
         <!-- Tab bar -->
-        <div class="settings-tabs" role="tablist">
-          <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" aria-controls="settingsTabSystemPanel" data-i18n="settings.tabs.system">System</button>
-          <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" aria-controls="settingsTabNotificationPanel" data-i18n="settings.tabs.notification">Notification</button>
-          <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" aria-controls="settingsTabWidgetPanel" data-i18n="settings.tabs.widget">Widget</button>
+        <div class="settings-tabs" id="settingsTabs" role="tablist" aria-orientation="horizontal">
+          <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" aria-controls="settingsTabSystemPanel" tabindex="0" data-i18n="settings.tabs.system">System</button>
+          <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" aria-controls="settingsTabNotificationPanel" tabindex="-1" data-i18n="settings.tabs.notification">Notification</button>
+          <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" aria-controls="settingsTabWidgetPanel" tabindex="-1" data-i18n="settings.tabs.widget">Widget</button>
         </div>
 
         <!-- System panel -->
         <div id="settingsTabSystemPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabSystem">
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.language">Language</span>
+            <label class="settings-row-label" for="settingsLanguage" data-i18n="settings.language">Language</label>
             <select id="settingsLanguage" class="settings-select">
               <option value="en" data-i18n="settings.languageEN">English</option>
               <option value="pt-BR" data-i18n="settings.languagePT">Português</option>
@@ -292,7 +292,7 @@
           </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.quotaMode">Percentage display</span>
+            <label class="settings-row-label" for="settingsQuotaMode" data-i18n="settings.quotaMode">Percentage display</label>
             <select id="settingsQuotaMode" class="settings-select">
               <option value="used" data-i18n="settings.quotaModeUsed">Used</option>
               <option value="remaining" data-i18n="settings.quotaModeRemaining">Remaining</option>
@@ -311,7 +311,7 @@
           </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.refreshInterval">Refresh interval</span>
+            <label class="settings-row-label" for="settingsRefreshInterval" data-i18n="settings.refreshInterval">Refresh interval</label>
             <select id="settingsRefreshInterval" class="settings-select">
               <option value="30" data-i18n="settings.refresh30s">30 seconds</option>
               <option value="60" data-i18n="settings.refresh1m">1 minute</option>
@@ -320,38 +320,38 @@
             </select>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.launchWithClaudeCode">Open with Claude Code</span>
+            <span class="settings-row-label" id="settingsLaunchWithClaudeCodeLabel" data-i18n="settings.launchWithClaudeCode">Open with Claude Code</span>
             <label class="switch" for="settingsLaunchWithClaudeCodeToggle">
-              <input id="settingsLaunchWithClaudeCodeToggle" type="checkbox" />
+              <input id="settingsLaunchWithClaudeCodeToggle" type="checkbox" aria-labelledby="settingsLaunchWithClaudeCodeLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
+            <span class="settings-row-label" id="settingsStartupLabel" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
             <label class="switch" for="settingsStartupToggle">
-              <input id="settingsStartupToggle" type="checkbox" />
+              <input id="settingsStartupToggle" type="checkbox" aria-labelledby="settingsStartupLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.startupShowWindow">Show window after login</span>
+            <span class="settings-row-label" id="settingsStartupShowWindowLabel" data-i18n="settings.startupShowWindow">Show window after login</span>
             <label class="switch" for="settingsStartupShowWindowToggle">
-              <input id="settingsStartupShowWindowToggle" type="checkbox" />
+              <input id="settingsStartupShowWindowToggle" type="checkbox" aria-labelledby="settingsStartupShowWindowLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.updatesAutoCheck">Check for updates automatically</span>
+            <span class="settings-row-label" id="settingsUpdatesAutoCheckLabel" data-i18n="settings.updatesAutoCheck">Check for updates automatically</span>
             <label class="switch" for="settingsUpdatesAutoCheckToggle">
-              <input id="settingsUpdatesAutoCheckToggle" type="checkbox" />
+              <input id="settingsUpdatesAutoCheckToggle" type="checkbox" aria-labelledby="settingsUpdatesAutoCheckLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.updatesAutoDownload">Download updates in the background</span>
+            <span class="settings-row-label" id="settingsUpdatesAutoDownloadLabel" data-i18n="settings.updatesAutoDownload">Download updates in the background</span>
             <label class="switch" for="settingsUpdatesAutoDownloadToggle">
-              <input id="settingsUpdatesAutoDownloadToggle" type="checkbox" />
+              <input id="settingsUpdatesAutoDownloadToggle" type="checkbox" aria-labelledby="settingsUpdatesAutoDownloadLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
@@ -359,18 +359,18 @@
 
         <!-- Notification panel -->
         <div id="settingsTabNotificationPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabNotification" hidden>
-          <p class="settings-section-eyebrow" data-i18n="settings.section.reset">Notify on session reset</p>
+          <p class="settings-section-eyebrow" id="settingsResetSectionHeading" role="heading" aria-level="2" data-i18n="settings.section.reset">Notify on session reset</p>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.notifReset">Notify</span>
+            <span class="settings-row-label" id="settingsNotificationsLabel" data-i18n="settings.notifReset">Notify</span>
             <label class="switch" for="settingsNotificationsToggle">
-              <input id="settingsNotificationsToggle" type="checkbox" />
+              <input id="settingsNotificationsToggle" type="checkbox" aria-labelledby="settingsResetSectionHeading settingsNotificationsLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.sound">Play sound</span>
+            <span class="settings-row-label" id="settingsSoundLabel" data-i18n="settings.sound">Play sound</span>
             <label class="switch" for="settingsSoundToggle">
-              <input id="settingsSoundToggle" type="checkbox" />
+              <input id="settingsSoundToggle" type="checkbox" aria-labelledby="settingsResetSectionHeading settingsSoundLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
@@ -383,22 +383,22 @@
             </button>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
-            <input type="range" id="settingsSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+            <span class="settings-row-label" id="settingsSoundVolumeLabel" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" aria-labelledby="settingsResetSectionHeading settingsSoundVolumeLabel" />
           </div>
           <div class="settings-divider"></div>
-          <p class="settings-section-eyebrow" data-i18n="settings.section.limit">Notify on 70/90%</p>
+          <p class="settings-section-eyebrow" id="settingsLimitSectionHeading" role="heading" aria-level="2" data-i18n="settings.section.limit">Notify on 70/90%</p>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.limitAlert">Notify</span>
+            <span class="settings-row-label" id="settingsLimitAlertLabel" data-i18n="settings.limitAlert">Notify</span>
             <label class="switch" for="settingsLimitAlertToggle">
-              <input id="settingsLimitAlertToggle" type="checkbox" />
+              <input id="settingsLimitAlertToggle" type="checkbox" aria-labelledby="settingsLimitSectionHeading settingsLimitAlertLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.limitSound">Play sound</span>
+            <span class="settings-row-label" id="settingsLimitSoundLabel" data-i18n="settings.limitSound">Play sound</span>
             <label class="switch" for="settingsLimitSoundToggle">
-              <input id="settingsLimitSoundToggle" type="checkbox" />
+              <input id="settingsLimitSoundToggle" type="checkbox" aria-labelledby="settingsLimitSectionHeading settingsLimitSoundLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
@@ -411,22 +411,22 @@
             </button>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
-            <input type="range" id="settingsLimitSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+            <span class="settings-row-label" id="settingsLimitSoundVolumeLabel" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsLimitSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" aria-labelledby="settingsLimitSectionHeading settingsLimitSoundVolumeLabel" />
           </div>
           <div class="settings-divider"></div>
-          <p class="settings-section-eyebrow" data-i18n="settings.section.expire">Notify when session expires</p>
+          <p class="settings-section-eyebrow" id="settingsExpireSectionHeading" role="heading" aria-level="2" data-i18n="settings.section.expire">Notify when session expires</p>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.expireAlert">Notify</span>
+            <span class="settings-row-label" id="settingsExpireAlertLabel" data-i18n="settings.expireAlert">Notify</span>
             <label class="switch" for="settingsExpireAlertToggle">
-              <input id="settingsExpireAlertToggle" type="checkbox" />
+              <input id="settingsExpireAlertToggle" type="checkbox" aria-labelledby="settingsExpireSectionHeading settingsExpireAlertLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.expireSound">Play sound</span>
+            <span class="settings-row-label" id="settingsExpireSoundLabel" data-i18n="settings.expireSound">Play sound</span>
             <label class="switch" for="settingsExpireSoundToggle">
-              <input id="settingsExpireSoundToggle" type="checkbox" />
+              <input id="settingsExpireSoundToggle" type="checkbox" aria-labelledby="settingsExpireSectionHeading settingsExpireSoundLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
@@ -439,25 +439,25 @@
             </button>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.soundVolume">Volume</span>
-            <input type="range" id="settingsExpireSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" />
+            <span class="settings-row-label" id="settingsExpireSoundVolumeLabel" data-i18n="settings.soundVolume">Volume</span>
+            <input type="range" id="settingsExpireSoundVolume" min="0" max="1" step="0.05" value="1" class="settings-volume-slider" aria-labelledby="settingsExpireSectionHeading settingsExpireSoundVolumeLabel" />
           </div>
         </div>
 
         <!-- Widget panel -->
         <div id="settingsTabWidgetPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabWidget" hidden>
           <div class="settings-row">
-            <span class="settings-row-label" data-i18n="settings.floating">Floating widget</span>
+            <span class="settings-row-label" id="settingsFloatingLabel" data-i18n="settings.floating">Floating widget</span>
             <label class="switch" for="settingsFloatingToggle">
-              <input id="settingsFloatingToggle" type="checkbox" />
+              <input id="settingsFloatingToggle" type="checkbox" aria-labelledby="settingsFloatingLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-divider"></div>
           <div class="settings-style-group">
-          <p class="settings-section-heading" data-i18n="settings.widget.style">Style</p>
-          <div class="settings-style-picker">
-            <button class="settings-style-card" id="settingsStyleClassic" data-active="true">
+          <p class="settings-section-heading" id="settingsWidgetStyleHeading" role="heading" aria-level="2" data-i18n="settings.widget.style">Style</p>
+          <div class="settings-style-picker" id="settingsStylePicker" role="radiogroup" aria-labelledby="settingsWidgetStyleHeading">
+            <button class="settings-style-card" id="settingsStyleClassic" role="radio" aria-checked="true" tabindex="0" data-active="true">
               <span class="settings-style-label" data-i18n="settings.widget.styleClassic">Classic</span>
               <div class="settings-style-preview--classic">
                 <div class="ssp-row">
@@ -471,7 +471,7 @@
                 <div class="ssp-bar ssp-bar--h10"></div>
               </div>
             </button>
-            <button class="settings-style-card" id="settingsStyleMini" data-active="false">
+            <button class="settings-style-card" id="settingsStyleMini" role="radio" aria-checked="false" tabindex="-1" data-active="false">
               <span class="settings-style-label" data-i18n="settings.widget.styleMini">Pill</span>
               <div class="settings-style-preview--mini">
                 <div class="ssp-bar ssp-bar--flex ssp-bar--h9"></div>
@@ -516,6 +516,9 @@
       </div>
       </footer>
     </main>
+
+    <span id="politeAnnouncer" role="status" aria-live="polite" aria-atomic="true"></span>
+    <span id="assertiveAnnouncer" role="alert" aria-live="assertive" aria-atomic="true"></span>
 
     <script src="./siphonBridge.js"></script>
     <script type="module" src="./renderer.js"></script>

@@ -668,7 +668,7 @@ body[data-view="onboard"] .app-footer {
 }
 
 .auth-form-fields textarea::placeholder {
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
 }
 
 .auth-button-stack {
@@ -838,7 +838,7 @@ body[data-view="onboard"] .app-footer {
 .quota-credits-sep,
 .quota-credits-limit {
   font-size: var(--text-xl);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
 }
 
 .quota-meta {
@@ -894,7 +894,7 @@ body[data-view="onboard"] .app-footer {
 }
 
 .quota-pace[data-status="depleted"] {
-  color: var(--level-critical);
+  color: var(--destructive);
 }
 
 .quota-pace-stack {
@@ -922,8 +922,8 @@ body[data-view="onboard"] .app-footer {
 }
 
 .peak-badge .cost-info-btn {
-  width: var(--space-6);
-  height: var(--space-6);
+  width: var(--space-9);
+  height: var(--space-9);
 }
 
 .peak-badge .cost-info-btn svg {
@@ -1034,8 +1034,8 @@ body[data-refreshing="true"] .card::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--space-6);
-  height: var(--space-6);
+  width: var(--space-9);
+  height: var(--space-9);
   padding: 0;
   background: transparent;
   border: none;
@@ -1046,7 +1046,7 @@ body[data-refreshing="true"] .card::after {
 }
 
 .cost-info-btn:hover {
-  color: var(--muted-foreground);
+  color: var(--foreground);
 }
 
 .cost-info-btn svg {
@@ -1206,8 +1206,8 @@ body[data-refreshing="true"] .card::after {
 .usage-alert-dismiss,
 .offline-banner-dismiss,
 .update-banner-dismiss {
-  width: var(--space-8);
-  height: var(--space-8);
+  width: var(--space-9);
+  height: var(--space-9);
   padding: 0;
   border: none;
   border-radius: var(--radius-xs);
@@ -1626,7 +1626,7 @@ body[data-refreshing="true"] .card::after {
   justify-content: center;
   width: var(--space-9);
   height: var(--space-9);
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   text-decoration: none;
   transition: color var(--duration-fast) var(--ease);
   flex-shrink: 0;
@@ -2004,7 +2004,7 @@ button:focus-visible {
   padding: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
     transform var(--duration-press) var(--ease-press);
 }
@@ -2055,7 +2055,7 @@ button:focus-visible {
   position: relative;
   display: inline-block;
   width: 32px;
-  height: 19px;
+  height: var(--space-9);
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -2068,7 +2068,8 @@ button:focus-visible {
 
 .switch-track {
   position: absolute;
-  inset: 0;
+  inset: 2.5px 0 auto;
+  height: 19px;
   background: var(--muted-foreground);
   border-radius: var(--radius-pill);
   transition: background var(--duration-slow) var(--ease);
@@ -2338,7 +2339,7 @@ textarea:focus {
 }
 
 .code-form label {
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   font-size: var(--text-sm);
 }
 
@@ -2548,12 +2549,95 @@ body[data-refreshing="true"] #refreshButton svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  :root {
+    /* Renderer timers read these two values. Zero keeps view and tab state
+       changes immediate without relying on a near-zero global animation. */
+    --duration-view-fade: 0ms;
+    --duration-tab-fade: 0ms;
+  }
+
+  .view,
+  .quota-percent,
+  .card::after,
+  .cost-info-btn,
+  .notif-badge,
+  .notif-icon-wrap svg,
+  .usage-alert-dismiss,
+  .offline-banner-dismiss,
+  .update-banner-dismiss,
+  .update-banner-download,
+  .reauth-button,
+  .back-btn,
+  .btn-secondary,
+  .floating-action-btn,
+  .floating-expand-btn,
+  .floating-expand-btn svg,
+  button,
+  .switch-track,
+  .switch-thumb,
+  .meter-segment,
+  .settings-test-btn,
+  textarea,
+  .settings-tab,
+  .settings-tab-panel,
+  .settings-style-card {
+    transition: none;
+  }
+
+  body[data-entering],
+  body[data-entering] #sessionPercent,
+  body[data-entering] #sessionPace,
+  body[data-entering] #sessionMeter .meter-segment,
+  body[data-entering] #sessionMeter .meter-segment.active,
+  body[data-entering] #weeklyPercent,
+  body[data-entering] #weeklyMeter .meter-segment,
+  body[data-entering] #weeklyMeter .meter-segment.active,
+  body[data-entering] #todayCost,
+  body[data-entering] #monthCost,
+  body[data-entering] #todayTokens,
+  body[data-entering] #monthTokens,
+  .usage-alert-banner[data-entering],
+  .offline-banner[data-entering],
+  .update-banner[data-entering],
+  .usage-alert-banner[data-leaving],
+  .offline-banner[data-leaving],
+  .update-banner[data-leaving],
+  .data-updated,
+  body[data-refreshing="true"] #refreshButton svg,
+  .notif-badge.notif-pop,
+  #sessionPercent[data-just-reset] {
+    animation: none;
+  }
+
+  .window-control-btn:active,
+  .icon-button:active,
+  .floating-action-btn:active,
+  .usage-alert-dismiss:active,
+  .offline-banner-dismiss:active,
+  .update-banner-dismiss:active,
+  .footer-link:active,
+  .footer-quit-btn:active,
+  .btn-primary:active,
+  .btn-secondary:active,
+  .auth-button-stack .btn-save:active,
+  .auth-button-stack .btn-cancel:active,
+  .back-btn:active,
+  .notif-badge:active,
+  .reauth-button:active,
+  .update-banner-download:active,
+  .settings-tab:active,
+  .settings-test-btn:active,
+  .settings-style-card:active,
+  .floating-expand-btn:active {
+    transform: none;
+  }
+
+  .switch:active .switch-thumb {
+    width: 16px;
+  }
+
+  .switch:active input:checked + .switch-track .switch-thumb {
+    transform: translateX(13px);
   }
 }
 
@@ -2587,7 +2671,7 @@ body[data-refreshing="true"] #refreshButton svg {
   border: 1px solid transparent;
   border-radius: calc(var(--radius-xs));
   background: transparent;
-  color: var(--muted-foreground);
+  color: var(--subtle-foreground);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   cursor: pointer;

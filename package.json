@@ -1,6 +1,6 @@
 {
   "name": "siphon-windows",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
   "type": "module",
   "repository": {

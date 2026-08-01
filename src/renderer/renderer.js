@@ -83,14 +83,17 @@ const elements = {
   settingsUpdatesAutoCheckToggle: document.querySelector('#settingsUpdatesAutoCheckToggle'),
   settingsUpdatesAutoDownloadToggle: document.querySelector('#settingsUpdatesAutoDownloadToggle'),
   settingsLaunchWithClaudeCodeToggle: document.querySelector('#settingsLaunchWithClaudeCodeToggle'),
+  settingsTabs: document.querySelector('#settingsTabs'),
   settingsTabSystem: document.querySelector('#settingsTabSystem'),
   settingsTabNotification: document.querySelector('#settingsTabNotification'),
   settingsTabWidget: document.querySelector('#settingsTabWidget'),
   settingsTabSystemPanel: document.querySelector('#settingsTabSystemPanel'),
   settingsTabNotificationPanel: document.querySelector('#settingsTabNotificationPanel'),
   settingsTabWidgetPanel: document.querySelector('#settingsTabWidgetPanel'),
+  settingsStylePicker: document.querySelector('#settingsStylePicker'),
   settingsStyleClassic: document.querySelector('#settingsStyleClassic'),
   settingsStyleMini: document.querySelector('#settingsStyleMini'),
+  settingsTitle: document.querySelector('#settingsTitle'),
   errorText: document.querySelector('#errorText'),
   reauthButton: document.querySelector('#reauthButton'),
   appVersionText: document.querySelector('#appVersionText'),
@@ -104,7 +107,9 @@ const elements = {
   updateBanner: document.querySelector('#updateBanner'),
   updateBannerVersion: document.querySelector('#updateBannerVersion'),
   updateBannerDownload: document.querySelector('#updateBannerDownload'),
-  updateBannerDismiss: document.querySelector('#updateBannerDismiss')
+  updateBannerDismiss: document.querySelector('#updateBannerDismiss'),
+  politeAnnouncer: document.querySelector('#politeAnnouncer'),
+  assertiveAnnouncer: document.querySelector('#assertiveAnnouncer')
 };
 
 let appInfo = {
@@ -121,11 +126,13 @@ let highUsageDismissed = false;
 let criticalDismissed = false;
 let currentSettingsTab = 'system';
 let _tabTransitioning = false;
+let _tabTransitionTimer = null;
 let prevSessionPercent = null;
 let prevRenderedSessionPct = null;
 let prevRenderedWeeklyPct = null;
 let updateUrl = null;
 let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
+let lastDownloadAnnouncementBucket = -1;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
@@ -133,6 +140,17 @@ let updateWingetUpgradeAvailable = false;
 let isEntering = false;
 let bootPlayed = false;
 const animatingElements = new Map();
+
+for (const announcer of [elements.politeAnnouncer, elements.assertiveAnnouncer]) {
+  Object.assign(announcer.style, {
+    position: 'fixed',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
+    clipPath: 'inset(50%)',
+    whiteSpace: 'nowrap'
+  });
+}
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function cubicEaseOut(t) { return 1 - (1 - t) ** 3; }
@@ -144,6 +162,28 @@ function cssMs(name, fallback) {
   const value = parseFloat(raw);
   if (!Number.isFinite(value)) return fallback;
   return raw.endsWith('ms') ? value : value * 1000;
+}
+
+const lastAnnouncements = new WeakMap();
+
+function announce(element, message) {
+  const text = String(message ?? '').trim();
+  if (!text || lastAnnouncements.get(element) === text) return;
+  lastAnnouncements.set(element, text);
+  element.textContent = '';
+  requestAnimationFrame(() => { element.textContent = text; });
+}
+
+function setErrorText(message) {
+  const text = String(message ?? '');
+  if (elements.errorText.textContent === text) return;
+  elements.errorText.textContent = text;
+  if (text && elements.mainView.hidden) {
+    announce(elements.assertiveAnnouncer, text);
+  } else if (!text) {
+    lastAnnouncements.delete(elements.assertiveAnnouncer);
+    elements.assertiveAnnouncer.textContent = '';
+  }
 }
 
 function showBanner(el) {
@@ -180,6 +220,7 @@ function setDownloadUI(state, percent) {
   const btn = elements.updateBannerDownload;
   const dismiss = elements.updateBannerDismiss;
   const lang = currentState?.preferences?.language ?? 'en';
+  const previousState = downloadState;
   downloadState = state;
   btn.dataset.state = state;
   if (state === 'winget') {
@@ -190,10 +231,18 @@ function setDownloadUI(state, percent) {
     btn.textContent = t('update.updating', lang);
     btn.disabled = true;
     dismiss.hidden = true;
+    if (previousState !== 'updating') announce(elements.politeAnnouncer, btn.textContent);
   } else if (state === 'downloading') {
-    btn.textContent = `${percent}%`;
+    const progress = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    btn.textContent = `${progress}%`;
     btn.disabled = true;
     dismiss.hidden = true;
+    if (previousState !== 'downloading') lastDownloadAnnouncementBucket = -1;
+    const bucket = Math.floor(progress / 25) * 25;
+    if (bucket > lastDownloadAnnouncementBucket) {
+      lastDownloadAnnouncementBucket = bucket;
+      announce(elements.politeAnnouncer, `${t('update.title', lang)} ${bucket}%`);
+    }
   } else if (state === 'ready') {
     btn.textContent = t('update.restart', lang);
     btn.disabled = false;
@@ -206,6 +255,7 @@ function setDownloadUI(state, percent) {
   // The installer is already on disk — ask for the restart, not the download.
   if (state === 'ready') {
     elements.updateBannerVersion.textContent = t('update.readyToApply', lang);
+    if (previousState !== 'ready') announce(elements.politeAnnouncer, elements.updateBannerVersion.textContent);
   } else if (updateVersion) {
     elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version: updateVersion });
   }
@@ -218,7 +268,7 @@ function handleToggleError(logMsg, error, event, errorKey) {
     event.target.checked = !event.target.checked;
   }
   if (errorKey && elements.errorText) {
-    elements.errorText.textContent = t(errorKey, currentLanguage());
+    setErrorText(t(errorKey, currentLanguage()));
   }
 }
 function triggerResetFlash() {
@@ -267,6 +317,25 @@ elements.settingsButton.addEventListener('click', () => window.siphon.showSettin
 elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
 elements.settingsTabNotification.addEventListener('click', () => switchSettingsTab('notification'));
 elements.settingsTabWidget.addEventListener('click', () => switchSettingsTab('widget'));
+elements.settingsTabs.addEventListener('keydown', event => {
+  const tabs = [
+    ['system', elements.settingsTabSystem],
+    ['notification', elements.settingsTabNotification],
+    ['widget', elements.settingsTabWidget]
+  ];
+  const currentIndex = tabs.findIndex(([, tab]) => tab === event.target);
+  if (currentIndex < 0) return;
+
+  let nextIndex;
+  if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+  else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+  else if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = tabs.length - 1;
+  else return;
+
+  event.preventDefault();
+  switchSettingsTab(tabs[nextIndex][0], { focus: true });
+});
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
@@ -376,7 +445,7 @@ elements.settingsRefreshInterval.addEventListener('change', async event => {
   } catch (error) {
     logSafeError('Failed to save refresh preference:', error);
     event.target.value = previousValue;
-    elements.errorText.textContent = t('error.saveRefresh', currentLanguage());
+    setErrorText(t('error.saveRefresh', currentLanguage()));
   }
 });
 elements.settingsFloatingToggle.addEventListener('change', async event => {
@@ -399,6 +468,22 @@ elements.settingsStyleMini.addEventListener('click', async () => {
   } catch (error) {
     logSafeError('Failed to save widget style preference:', error);
   }
+});
+elements.settingsStylePicker.addEventListener('keydown', event => {
+  const options = [elements.settingsStyleClassic, elements.settingsStyleMini];
+  const currentIndex = options.indexOf(event.target);
+  if (currentIndex < 0) return;
+
+  let nextIndex;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length;
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length;
+  else if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = options.length - 1;
+  else return;
+
+  event.preventDefault();
+  options[nextIndex].focus();
+  options[nextIndex].click();
 });
 elements.settingsStartupToggle.addEventListener('change', async event => {
   try {
@@ -442,7 +527,7 @@ elements.settingsLanguage.addEventListener('change', async event => {
   } catch (error) {
     logSafeError('Failed to save language preference:', error);
     event.target.value = previousLanguage;
-    elements.errorText.textContent = t('error.saveLanguage', previousLanguage);
+    setErrorText(t('error.saveLanguage', previousLanguage));
   }
 });
 elements.settingsQuotaMode.addEventListener('change', async event => {
@@ -504,7 +589,10 @@ window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, winge
   const lang = currentState?.preferences?.language ?? 'en';
   elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version });
   if (updateWingetUpgradeAvailable) setDownloadUI('winget', 0);
-  if (!updateDismissed) showBanner(elements.updateBanner);
+  if (!updateDismissed) {
+    showBanner(elements.updateBanner);
+    announce(elements.politeAnnouncer, `${t('update.title', lang)} ${elements.updateBannerVersion.textContent}`);
+  }
 });
 
 window.siphon.onUpdateProgress(({ percent }) => {
@@ -518,8 +606,10 @@ window.siphon.onUpdateDownloaded(() => {
 
 window.siphon.onUpdateError(({ message } = {}) => {
   const lang = currentState?.preferences?.language ?? 'en';
-  elements.updateBannerVersion.textContent = tFormat('update.error', lang, { message: message || t('update.errorUnknown', lang) });
   setDownloadUI('idle', 0);
+  const errorText = tFormat('update.error', lang, { message: message || t('update.errorUnknown', lang) });
+  elements.updateBannerVersion.textContent = errorText;
+  announce(elements.assertiveAnnouncer, errorText);
 });
 
 elements.notificationState.addEventListener('click', async () => {
@@ -559,7 +649,7 @@ try {
 } catch (error) {
   logSafeError('Renderer bootstrap failed:', error);
   if (elements.errorText) {
-    elements.errorText.textContent = t('error.loadState', 'en');
+    setErrorText(t('error.loadState', 'en'));
   }
 }
 
@@ -755,6 +845,10 @@ function renderSettingsControls(state, lang) {
   elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
   elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
   elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
+  elements.settingsStyleClassic.setAttribute('aria-checked', String(floatingStyle === 'classic'));
+  elements.settingsStyleMini.setAttribute('aria-checked', String(floatingStyle === 'mini'));
+  elements.settingsStyleClassic.tabIndex = floatingStyle === 'classic' ? 0 : -1;
+  elements.settingsStyleMini.tabIndex = floatingStyle === 'mini' ? 0 : -1;
   elements.settingsStartupToggle.checked = startupOpenAtLogin;
   elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
   elements.settingsStartupShowWindowToggle.checked = state.preferences?.startup?.showWindowOnLogin ?? false;
@@ -778,11 +872,11 @@ function renderBannersAndErrors(state, sessionPercent, lang) {
   else hideBanner(elements.offlineBanner);
   elements.reauthButton.hidden = !state.needsReauth;
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
-  elements.errorText.textContent = [
+  setErrorText([
     state.localError ? t(state.localError, lang) : null,
     state.quotaError && !state.needsReauth ? t(state.quotaError, lang) : null,
     state.authError
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).join(' '));
 }
 
 function updateLastUpdatedLine() {
@@ -829,7 +923,7 @@ async function refreshNow() {
     await window.siphon.refresh();
   } catch (error) {
     logSafeError('Manual refresh failed:', error);
-    elements.errorText.textContent = t('error.loadState', currentLanguage());
+    setErrorText(t('error.loadState', currentLanguage()));
   } finally {
     elements.refreshButton.disabled = false;
     stopRefreshSpin();
@@ -902,10 +996,7 @@ function renderMeter(meter, percent) {
 }
 
 
-function switchSettingsTab(name) {
-  if (name === currentSettingsTab || _tabTransitioning) return;
-  _tabTransitioning = true;
-  const FADE_MS = cssMs('--duration-tab-fade', 110);
+function switchSettingsTab(name, { focus = false } = {}) {
   const panels = {
     system: elements.settingsTabSystemPanel,
     notification: elements.settingsTabNotificationPanel,
@@ -916,12 +1007,33 @@ function switchSettingsTab(name) {
     notification: elements.settingsTabNotification,
     widget: elements.settingsTabWidget
   };
+  if (!panels[name]) return;
+  if (name === currentSettingsTab) {
+    if (focus) tabs[name].focus();
+    return;
+  }
+  if (_tabTransitioning) {
+    clearTimeout(_tabTransitionTimer);
+    for (const [panelName, panel] of Object.entries(panels)) {
+      panel.hidden = panelName !== currentSettingsTab;
+      panel.style.position = '';
+      panel.style.width = '';
+      panel.style.pointerEvents = '';
+      panel.style.opacity = '';
+    }
+    _tabTransitioning = false;
+  }
+  _tabTransitioning = true;
+  const FADE_MS = cssMs('--duration-tab-fade', 110);
   const outgoing = panels[currentSettingsTab];
   const incoming = panels[name];
   tabs[currentSettingsTab].classList.remove('settings-tab--active');
   tabs[name].classList.add('settings-tab--active');
   tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
   tabs[name].setAttribute('aria-selected', 'true');
+  tabs[currentSettingsTab].tabIndex = -1;
+  tabs[name].tabIndex = 0;
+  if (focus) tabs[name].focus();
   currentSettingsTab = name;
 
   // Overlap the crossfade instead of running it twice. Parking the outgoing
@@ -939,7 +1051,7 @@ function switchSettingsTab(name) {
     requestAnimationFrame(() => { incoming.style.opacity = '1'; });
   });
 
-  setTimeout(() => {
+  _tabTransitionTimer = setTimeout(() => {
     outgoing.hidden = true;
     outgoing.style.position = '';
     outgoing.style.width = '';
@@ -947,6 +1059,7 @@ function switchSettingsTab(name) {
     outgoing.style.opacity = '';
     incoming.style.opacity = '';
     _tabTransitioning = false;
+    _tabTransitionTimer = null;
   }, FADE_MS);
 }
 
@@ -979,9 +1092,32 @@ function showView(view) {
 }
 
 let _transitioning = false;
+let renderedView = null;
+let settingsReturnFocus = null;
+
+function focusAfterViewChange(activeView, previousView) {
+  let target = null;
+  if (activeView === 'settings') {
+    const activeElement = document.activeElement;
+    settingsReturnFocus = activeElement && activeElement !== document.body
+      ? activeElement
+      : elements.settingsButton;
+    target = elements.settingsTitle;
+  } else if (previousView === 'settings') {
+    target = settingsReturnFocus?.isConnected ? settingsReturnFocus : elements.settingsButton;
+    settingsReturnFocus = null;
+  }
+  if (!target) return;
+  requestAnimationFrame(() => {
+    if (document.body.dataset.view === activeView) target.focus({ preventScroll: true });
+  });
+}
 
 function renderActiveView() {
   const activeView = resolveView(currentState, requestedView);
+  const previousView = renderedView;
+  const viewChanged = activeView !== previousView;
+  renderedView = activeView;
   document.body.dataset.view = activeView;
 
   const viewMap = { onboard: elements.onboardView, main: elements.mainView, settings: elements.settingsView };
@@ -993,6 +1129,7 @@ function renderActiveView() {
     elements.mainView.hidden = activeView !== 'main';
     elements.settingsView.hidden = activeView !== 'settings';
     if (activeView === 'settings' && currentState) renderSettings(currentState);
+    if (viewChanged) focusAfterViewChange(activeView, previousView);
     return;
   }
 
@@ -1014,6 +1151,7 @@ function renderActiveView() {
       incoming.style.opacity = '';
       incoming.style.transform = '';
       _transitioning = false;
+      if (viewChanged) focusAfterViewChange(activeView, previousView);
     }));
   }, cssMs('--duration-view-fade', 150));
 }
@@ -1027,7 +1165,8 @@ function applyTranslations(lang) {
   document.documentElement.lang = lang;
 
   document.querySelectorAll('[data-i18n]').forEach(element => {
-    element.textContent = t(element.dataset.i18n, lang);
+    const translated = t(element.dataset.i18n, lang);
+    if (element.textContent !== translated) element.textContent = translated;
   });
   document.querySelectorAll('[data-i18n-title]').forEach(element => {
     element.title = t(element.dataset.i18nTitle, lang);

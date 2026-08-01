@@ -72,6 +72,7 @@ function render(state) {
   document.body.dataset.style = state?.preferences?.floating?.style ?? 'classic';
   currentLang = languageOf(state);
   currentExpanded = Boolean(state.preferences?.floating?.expanded);
+  document.documentElement.lang = currentLang;
   applyStaticLabels();
 
   const session = hydrateSlot(state.quota?.session);
@@ -81,6 +82,7 @@ function render(state) {
   const suffix = t(`quota.suffix.${mode}`, currentLang);
 
   document.body.dataset.expanded = String(currentExpanded);
+  elements.expandButton.setAttribute('aria-expanded', String(currentExpanded));
   elements.expandedPanel.hidden = !currentExpanded;
   // Classic widget splits the number and suffix into separate spans so the
   // suffix can be styled independently (--text-md); the mini pill shows the
