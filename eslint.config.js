@@ -27,8 +27,8 @@ export default [
     rules: correctnessRules
   },
   {
-    // Renderer — browser context (window.siphon bridge, DOM, rAF).
-    files: ['src/renderer/**/*.js'],
+    // Browser modules — Tauri renderer and static website enhancement.
+    files: ['src/renderer/**/*.js', 'docs/website/**/*.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
