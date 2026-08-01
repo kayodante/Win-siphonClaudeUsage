@@ -169,6 +169,7 @@ summary:focus-visible,
   min-height: 48px;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 13px 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -182,6 +183,25 @@ summary:focus-visible,
     background-color 160ms ease,
     border-color 160ms ease,
     color 160ms ease;
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .button:hover {
@@ -1381,6 +1401,22 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .button {
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .button:hover,
+  .button:active {
+    transform: none;
+  }
+
+  .button:active {
+    filter: brightness(0.94);
+  }
+
   .demo-state-stage > figure {
     transition: none;
     transform: none;
@@ -1388,13 +1424,5 @@ h3 {
 
   html {
     scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
   }
 }

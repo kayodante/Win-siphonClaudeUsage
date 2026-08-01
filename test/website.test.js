@@ -10,6 +10,7 @@ import { ESLint } from 'eslint';
 import {
   DEMO_INTERVAL_MS,
   DEMO_STATE_IDS,
+  initMobileMenu,
   initProductDemo,
   nextDemoIndex,
   shouldDemoAutoplay
@@ -127,6 +128,37 @@ test('hero image offers smaller AVIF and WebP sources without removing the PNG f
   }
 });
 
+test('social preview images use absolute HTTPS URLs', () => {
+  for (const attribute of ['property="og:image"', 'name="twitter:image"']) {
+    const match = websiteHtml.match(new RegExp(`<meta ${attribute} content="([^"]+)">`));
+    assert.ok(match, `missing ${attribute}`);
+    const imageUrl = new URL(match[1]);
+    assert.equal(imageUrl.protocol, 'https:');
+    assert.match(imageUrl.pathname, /\/Hero\.png$/);
+  }
+  assert.match(websiteHtml, /<meta name="twitter:image:alt" content="[^"]+">/);
+});
+
+test('download calls to action use the approved decorative icon', () => {
+  const downloadLinks = [...websiteHtml.matchAll(/<a class="button[^"]*"[^>]*\sdownload>([\s\S]*?)<\/a>/g)];
+  assert.equal(downloadLinks.length, 3);
+  assert.ok(statSync(new URL('../docs/website/download.svg', import.meta.url)).size > 0);
+
+  for (const [, contents] of downloadLinks) {
+    assert.match(contents, /<img class="button-icon" src="download\.svg" alt="" width="16" height="16" aria-hidden="true">/);
+    assert.match(contents, /Download Siphon/);
+  }
+});
+
+test('new-tab GitHub navigation announces the context change', () => {
+  const link = websiteHtml.match(/<a href="https:\/\/github\.com\/kayodante\/Win-siphonClaudeUsage" target="_blank" rel="([^"]+)">([\s\S]*?)<\/a>/);
+  assert.ok(link, 'missing new-tab GitHub navigation link');
+  assert.ok(link[1].split(/\s+/).includes('noopener'));
+  assert.ok(link[1].split(/\s+/).includes('noreferrer'));
+  assert.match(link[2], /GitHub/);
+  assert.match(link[2], /class="visually-hidden">\(opens in a new tab\)<\/span>/);
+});
+
 test('compact download button keeps a 44px minimum touch target', () => {
   const rule = websiteCss.match(/\.button-compact\s*\{([^}]+)\}/);
   assert.ok(rule, 'missing .button-compact rule');
@@ -197,6 +229,11 @@ test('feature demo CSS is namespaced and motion-safe', () => {
   assert.match(websiteCss, /\.demo-state-stage\s*>\s*figure/);
   assert.match(websiteCss, /\[data-demo-panel\]\[data-active="true"\]/);
   assert.match(websiteCss, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*\.demo-state-stage/);
+
+  const reducedMotionCss = websiteCss.slice(websiteCss.indexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.doesNotMatch(reducedMotionCss, /0\.01ms|!important/);
+  assert.doesNotMatch(reducedMotionCss, /\*\s*,\s*\*::before/);
+  assert.match(reducedMotionCss, /\.button:hover,\s*\.button:active\s*\{\s*transform:\s*none;/);
 });
 
 test('feature state controls retain a 44px touch target', () => {
@@ -298,6 +335,107 @@ function createDemoFixture({ controlCount = 5, panelCount = 5, legacyMotion = fa
   fixture.panels = panels;
   return fixture;
 }
+
+function createMobileMenuFixture({ targetExists = true } = {}) {
+  const menuListeners = new Map();
+  const documentListeners = new Map();
+  const removedMenuListeners = [];
+  const removedDocumentListeners = [];
+  const focusCalls = [];
+  const summary = { focus() { focusCalls.push({ target: 'summary' }); } };
+  const destination = {
+    focus(options) { focusCalls.push({ target: 'destination', options }); }
+  };
+  const documentRef = {
+    getElementById(id) { return targetExists && id === 'features' ? destination : null; },
+    addEventListener(type, listener) { documentListeners.set(type, listener); },
+    removeEventListener(type, listener) {
+      removedDocumentListeners.push({ type, listener });
+      if (documentListeners.get(type) === listener) documentListeners.delete(type);
+    }
+  };
+  const menu = {
+    open: true,
+    ownerDocument: documentRef,
+    querySelector(selector) { return selector === 'summary' ? summary : null; },
+    addEventListener(type, listener) { menuListeners.set(type, listener); },
+    removeEventListener(type, listener) {
+      removedMenuListeners.push({ type, listener });
+      if (menuListeners.get(type) === listener) menuListeners.delete(type);
+    }
+  };
+  const internalLink = {
+    getAttribute(name) { return name === 'href' ? '#features' : null; },
+    closest(selector) { return selector === 'a[href^="#"]' ? this : null; }
+  };
+
+  return {
+    menu,
+    menuListeners,
+    documentListeners,
+    removedMenuListeners,
+    removedDocumentListeners,
+    focusCalls,
+    internalLink
+  };
+}
+
+test('mobile menu closes on internal navigation and moves focus to the destination', () => {
+  const fixture = createMobileMenuFixture();
+  initMobileMenu(fixture.menu);
+  const event = {
+    target: fixture.internalLink,
+    button: 0,
+    defaultPrevented: false,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false
+  };
+
+  fixture.menuListeners.get('click')(event);
+
+  assert.equal(fixture.menu.open, false);
+  assert.deepEqual(fixture.focusCalls, [{ target: 'destination', options: { preventScroll: true } }]);
+});
+
+test('mobile menu closes on Escape and returns focus to its summary', () => {
+  const fixture = createMobileMenuFixture();
+  initMobileMenu(fixture.menu);
+  let prevented = false;
+
+  fixture.documentListeners.get('keydown')({
+    key: 'Escape',
+    preventDefault() { prevented = true; }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(fixture.menu.open, false);
+  assert.deepEqual(fixture.focusCalls, [{ target: 'summary' }]);
+});
+
+test('mobile menu ignores modified navigation and cleans up its listeners', () => {
+  const fixture = createMobileMenuFixture();
+  const controller = initMobileMenu(fixture.menu);
+  const clickListener = fixture.menuListeners.get('click');
+  const keyListener = fixture.documentListeners.get('keydown');
+
+  clickListener({
+    target: fixture.internalLink,
+    button: 0,
+    defaultPrevented: false,
+    altKey: false,
+    ctrlKey: true,
+    metaKey: false,
+    shiftKey: false
+  });
+  assert.equal(fixture.menu.open, true);
+  assert.deepEqual(fixture.focusCalls, []);
+
+  controller.disconnect();
+  assert.deepEqual(fixture.removedMenuListeners, [{ type: 'click', listener: clickListener }]);
+  assert.deepEqual(fixture.removedDocumentListeners, [{ type: 'keydown', listener: keyListener }]);
+});
 
 test('product demo ignores empty or mismatched collections and wraps public state indexes', async () => {
   for (const options of [{ controlCount: 0, panelCount: 0 }, { controlCount: 2, panelCount: 1 }]) {

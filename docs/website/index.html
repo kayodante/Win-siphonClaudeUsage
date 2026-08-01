@@ -8,12 +8,13 @@
     <meta property="og:title" content="Siphon | Claude Code quota, in view.">
     <meta property="og:description" content="A native Windows tray app for Claude Code quota, reset alerts, and local usage.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="../../src/assets/Hero.png">
+    <meta property="og:image" content="https://raw.githubusercontent.com/kayodante/Win-siphonClaudeUsage/main/src/assets/Hero.png">
     <meta property="og:image:alt" content="Siphon showing Claude Code session and weekly usage on Windows">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Siphon | Claude Code quota, in view.">
     <meta name="twitter:description" content="A native Windows tray app for Claude Code quota, reset alerts, and local usage.">
-    <meta name="twitter:image" content="../../src/assets/Hero.png">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/kayodante/Win-siphonClaudeUsage/main/src/assets/Hero.png">
+    <meta name="twitter:image:alt" content="Siphon showing Claude Code session and weekly usage on Windows">
     <link rel="icon" type="image/svg+xml" href="../../src/assets/favicon.svg">
     <link rel="preload" href="../../src/assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles.css">
@@ -25,9 +26,9 @@
         "name": "Siphon",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows 10, Windows 11",
-        "softwareVersion": "1.8.6",
+        "softwareVersion": "1.8.7",
         "description": "A native Windows tray app for Claude Code quota, reset alerts, and local usage.",
-        "downloadUrl": "https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.6/Siphon.Setup.1.8.6.exe",
+        "downloadUrl": "https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.7/Siphon.Setup.1.8.7.exe",
         "isAccessibleForFree": true,
         "license": "https://opensource.org/license/mit",
         "codeRepository": "https://github.com/kayodante/Win-siphonClaudeUsage"
@@ -45,14 +46,15 @@
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#features">Features</a>
         <a href="#privacy">Privacy</a>
-        <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in a new tab)</span></a>
       </nav>
 
-      <a class="button button-compact" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.6/Siphon.Setup.1.8.6.exe" download>
+      <a class="button button-compact button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.7/Siphon.Setup.1.8.7.exe" download>
+        <img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">
         Download Siphon
       </a>
 
-      <details class="mobile-menu">
+      <details class="mobile-menu" data-mobile-menu>
         <summary>Menu</summary>
         <nav aria-label="Mobile navigation">
           <a href="#features">Features</a>
@@ -68,7 +70,7 @@
           <h1 id="hero-title">Keep your quota<br>in view.</h1>
           <p class="hero-copy">Track your Claude Code session, weekly quota, and reset time without leaving your flow.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.6/Siphon.Setup.1.8.6.exe" download>Download Siphon</a>
+            <a class="button button-primary button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.7/Siphon.Setup.1.8.7.exe" download><img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">Download Siphon</a>
             <a class="button button-secondary" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">View releases</a>
           </div>
         </div>
@@ -90,7 +92,7 @@
         <p><strong>Free and open source</strong><span>MIT licensed</span></p>
       </aside>
 
-      <section class="features-section section-grid" id="features" aria-labelledby="features-title">
+      <section class="features-section section-grid" id="features" tabindex="-1" aria-labelledby="features-title">
         <header class="section-heading">
           <h2 id="features-title">Know the limit before it breaks your flow.</h2>
           <p>Read the signal, respond at the right moment, and keep Claude Code usage within reach.</p>
@@ -144,7 +146,7 @@
         </div>
       </section>
 
-      <section class="privacy-section section-grid" id="privacy" aria-labelledby="privacy-title">
+      <section class="privacy-section section-grid" id="privacy" tabindex="-1" aria-labelledby="privacy-title">
         <header class="privacy-heading">
           <p class="chapter-index">06 · Trust</p>
           <h2 id="privacy-title">Your usage stays yours.</h2>
@@ -186,7 +188,7 @@
 
         <aside class="install-action" aria-label="Download options">
           <p>Ready for Windows 10 and 11.</p>
-          <a class="button button-primary" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.6/Siphon.Setup.1.8.6.exe" download>Download Siphon</a>
+          <a class="button button-primary button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.7/Siphon.Setup.1.8.7.exe" download><img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">Download Siphon</a>
           <div class="winget-command">
             <span>winget</span>
             <code>winget install win-siphon</code>

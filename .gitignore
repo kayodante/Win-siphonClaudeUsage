@@ -1,9 +1,22 @@
-# Dependencies
-node_modules/
-
-# Build output
+.agents/
+.claude/
+.code-review-graph/
+.codex/
+.fallow/
+.impeccable/
+.lore/
+.nyc_output/
+.playwright-cli/
+.playwright-mcp/
+.superpowers/
+coverage/
 dist/
+docs/superpowers/
+graphify-out/
+node_modules/
 out/
+output/
+
 /Siphon Setup *.exe
 /*.exe
 
@@ -18,24 +31,6 @@ npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Tooling / local
-.impeccable/
-.claude/
-.code-review-graph/
-.agents/
-.codex/
-.fallow/
-.jules/
-.superpowers/
-coverage/
-graphify-out/
-docs/superpowers/
-.graphifyignore
-.code-review-graphignore
-.nyc_output/
-
-.lore/
-
 # Docs (local only)
 AGENTS.md
 ARCHITECTURE.md
@@ -45,8 +40,10 @@ PRODUCT.md
 ROADMAP.md
 lore.md
 skills-lock.json
-.mcp.json
+.code-review-graphignore
 .github/code-review-graph.instruction.md
+.graphifyignore
+.mcp.json
 
 # Secrets / credentials
 .env

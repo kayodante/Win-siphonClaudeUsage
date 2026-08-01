@@ -155,6 +155,66 @@ export function initProductDemo(root, { intervalMs = DEMO_INTERVAL_MS } = {}) {
   return { selectState, stop, disconnect };
 }
 
+export function initMobileMenu(menu) {
+  if (!menu) return { disconnect() {} };
+
+  const documentRef = menu.ownerDocument;
+  const summary = menu.querySelector('summary');
+  let disconnected = false;
+
+  function focusSummary() {
+    summary?.focus?.();
+  }
+
+  function onClick(event) {
+    if (
+      event.defaultPrevented
+      || (event.button ?? 0) !== 0
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.shiftKey
+    ) {
+      return;
+    }
+
+    const link = event.target?.closest?.('a[href^="#"]');
+    const href = link?.getAttribute?.('href');
+    if (!href || href.length < 2) return;
+
+    menu.open = false;
+    const destination = documentRef?.getElementById?.(href.slice(1));
+
+    if (typeof destination?.focus === 'function') {
+      destination.focus({ preventScroll: true });
+    } else {
+      focusSummary();
+    }
+  }
+
+  function onKeyDown(event) {
+    if (event.key !== 'Escape' || !menu.open) return;
+
+    event.preventDefault();
+    menu.open = false;
+    focusSummary();
+  }
+
+  menu.addEventListener('click', onClick);
+  documentRef?.addEventListener?.('keydown', onKeyDown);
+
+  return {
+    disconnect() {
+      if (disconnected) return;
+
+      disconnected = true;
+      menu.removeEventListener('click', onClick);
+      documentRef?.removeEventListener?.('keydown', onKeyDown);
+    }
+  };
+}
+
 if (typeof document !== 'undefined') {
   initProductDemo(document.querySelector('[data-product-demo]'));
+  initMobileMenu(document.querySelector('[data-mobile-menu]'));
 }
