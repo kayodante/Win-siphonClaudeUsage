@@ -14,12 +14,12 @@ import {
   initProductDemo,
   nextDemoIndex,
   shouldDemoAutoplay
-} from '../docs/website/product-demo.js';
+} from '../docs/product-demo.js';
 
-const websiteHtml = readFileSync(new URL('../docs/website/index.html', import.meta.url), 'utf8');
-const websiteCss = readFileSync(new URL('../docs/website/styles.css', import.meta.url), 'utf8');
+const websiteHtml = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
+const websiteCss = readFileSync(new URL('../docs/styles.css', import.meta.url), 'utf8');
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
-const websiteDirectory = fileURLToPath(new URL('../docs/website/', import.meta.url));
+const websiteDirectory = fileURLToPath(new URL('../docs/', import.meta.url));
 const syntaxCheckerUrl = new URL('../scripts/check-syntax.js', import.meta.url).href;
 
 async function createSyntaxCheckerSandbox(t) {
@@ -118,13 +118,13 @@ test('tertiary website text meets WCAG AA contrast on every surface where it app
 
 test('hero image offers smaller AVIF and WebP sources without removing the PNG fallback', () => {
   assert.match(websiteHtml, /<picture class="hero-picture">/);
-  assert.match(websiteHtml, /Hero-400\.avif 400w,\s*\.\.\/\.\.\/src\/assets\/Hero-720\.avif 720w/);
-  assert.match(websiteHtml, /Hero-400\.webp 400w,\s*\.\.\/\.\.\/src\/assets\/Hero-720\.webp 720w/);
-  assert.match(websiteHtml, /<img src="\.\.\/\.\.\/src\/assets\/Hero\.png"/);
+  assert.match(websiteHtml, /assets\/Hero-400\.avif 400w,\s*assets\/Hero-720\.avif 720w/);
+  assert.match(websiteHtml, /assets\/Hero-400\.webp 400w,\s*assets\/Hero-720\.webp 720w/);
+  assert.match(websiteHtml, /<img src="assets\/Hero\.png"/);
 
-  const pngSize = statSync(new URL('../src/assets/Hero.png', import.meta.url)).size;
+  const pngSize = statSync(new URL('../docs/assets/Hero.png', import.meta.url)).size;
   for (const file of ['Hero-400.avif', 'Hero-720.avif', 'Hero-400.webp', 'Hero-720.webp']) {
-    assert.ok(statSync(new URL(`../src/assets/${file}`, import.meta.url)).size < pngSize);
+    assert.ok(statSync(new URL(`../docs/assets/${file}`, import.meta.url)).size < pngSize);
   }
 });
 
@@ -142,7 +142,7 @@ test('social preview images use absolute HTTPS URLs', () => {
 test('download calls to action use the approved decorative icon', () => {
   const downloadLinks = [...websiteHtml.matchAll(/<a class="button[^"]*"[^>]*\sdownload>([\s\S]*?)<\/a>/g)];
   assert.equal(downloadLinks.length, 3);
-  assert.ok(statSync(new URL('../docs/website/download.svg', import.meta.url)).size > 0);
+  assert.ok(statSync(new URL('../docs/download.svg', import.meta.url)).size > 0);
 
   for (const [, contents] of downloadLinks) {
     assert.match(contents, /<img class="button-icon" src="download\.svg" alt="" width="16" height="16" aria-hidden="true">/);
@@ -193,8 +193,8 @@ const productImages = [
 
 test('feature narrative references every approved real-product image', () => {
   for (const file of productImages) {
-    assert.match(websiteHtml, new RegExp(`src="\\.\\.\\/\\.\\.\\/src\\/assets\\/${file.replace('.', '\\.')}`));
-    assert.ok(statSync(new URL(`../src/assets/${file}`, import.meta.url)).size > 0);
+    assert.match(websiteHtml, new RegExp(`src="assets\\/${file.replace('.', '\\.')}`));
+    assert.ok(statSync(new URL(`../docs/assets/${file}`, import.meta.url)).size > 0);
   }
 });
 
@@ -270,7 +270,7 @@ test('product demo autoplays only when imagery is ready, visible, active, and un
 });
 
 test('product demo remains within the static-site runtime boundary', () => {
-  const productDemoSource = readFileSync(new URL('../docs/website/product-demo.js', import.meta.url), 'utf8');
+  const productDemoSource = readFileSync(new URL('../docs/product-demo.js', import.meta.url), 'utf8');
   assert.doesNotMatch(productDemoSource, /window\.siphon|renderer\.js|siphonBridge|fetch\s*\(/);
   assert.match(websiteHtml, /<script type="module" src="product-demo\.js"><\/script>/);
 });

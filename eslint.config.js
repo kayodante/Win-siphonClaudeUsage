@@ -28,7 +28,7 @@ export default [
   },
   {
     // Browser modules — Tauri renderer and static website enhancement.
-    files: ['src/renderer/**/*.js', 'docs/website/**/*.js'],
+    files: ['src/renderer/**/*.js', 'docs/**/*.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',

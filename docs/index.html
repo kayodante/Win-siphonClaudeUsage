@@ -15,8 +15,8 @@
     <meta name="twitter:description" content="A native Windows tray app for Claude Code quota, reset alerts, and local usage.">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/kayodante/Win-siphonClaudeUsage/main/src/assets/Hero.png">
     <meta name="twitter:image:alt" content="Siphon showing Claude Code session and weekly usage on Windows">
-    <link rel="icon" type="image/svg+xml" href="../src/assets/favicon.svg">
-    <link rel="preload" href="../src/assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <title>Siphon | Claude Code quota, in view.</title>
     <script type="application/ld+json">
@@ -40,7 +40,7 @@
 
     <header class="site-header">
       <a class="brand" href="#top" aria-label="Siphon home">
-        <img src="../src/assets/Logo.png" alt="" width="103" height="24">
+        <img src="assets/Logo.png" alt="" width="103" height="24">
       </a>
 
       <nav class="site-nav" aria-label="Primary navigation">
@@ -78,9 +78,9 @@
         <figure class="hero-visual">
           <div class="hero-image-shell">
             <picture class="hero-picture">
-              <source type="image/avif" srcset="../src/assets/Hero-400.avif 400w, ../src/assets/Hero-720.avif 720w" sizes="(max-width: 767px) calc(100vw - 56px), min(46vw, 660px)">
-              <source type="image/webp" srcset="../src/assets/Hero-400.webp 400w, ../src/assets/Hero-720.webp 720w" sizes="(max-width: 767px) calc(100vw - 56px), min(46vw, 660px)">
-              <img src="../src/assets/Hero.png" alt="Siphon showing session quota, weekly limits, local usage, and floating widgets on Windows" width="720" height="857" fetchpriority="high" decoding="async">
+              <source type="image/avif" srcset="assets/Hero-400.avif 400w, assets/Hero-720.avif 720w" sizes="(max-width: 767px) calc(100vw - 56px), min(46vw, 660px)">
+              <source type="image/webp" srcset="assets/Hero-400.webp 400w, assets/Hero-720.webp 720w" sizes="(max-width: 767px) calc(100vw - 56px), min(46vw, 660px)">
+              <img src="assets/Hero.png" alt="Siphon showing session quota, weekly limits, local usage, and floating widgets on Windows" width="720" height="857" fetchpriority="high" decoding="async">
             </picture>
           </div>
         </figure>
@@ -116,11 +116,11 @@
               </div>
             </div>
             <div class="demo-state-stage">
-              <figure data-demo-panel="ok" data-active="true" aria-hidden="false"><img src="../src/assets/home-Ok.png" width="173" height="400" alt="Siphon at an OK quota state with session usage at 25 percent" loading="lazy" decoding="async"></figure>
-              <figure data-demo-panel="warn" data-active="false" aria-hidden="true"><img src="../src/assets/home-Warn.png" width="173" height="400" alt="Siphon warning state with session usage at 70 percent" loading="lazy" decoding="async"></figure>
-              <figure data-demo-panel="high" data-active="false" aria-hidden="true"><img src="../src/assets/home-High.png" width="173" height="400" alt="Siphon high state showing usage likely to run out" loading="lazy" decoding="async"></figure>
-              <figure data-demo-panel="critical" data-active="false" aria-hidden="true"><img src="../src/assets/home-Critical.png" width="173" height="400" alt="Siphon critical state with session and weekly quota under pressure" loading="lazy" decoding="async"></figure>
-              <figure data-demo-panel="depleted" data-active="false" aria-hidden="true"><img src="../src/assets/home-Depleted.png" width="173" height="400" alt="Siphon depleted state with the current session at 100 percent" loading="lazy" decoding="async"></figure>
+              <figure data-demo-panel="ok" data-active="true" aria-hidden="false"><img src="assets/home-Ok.png" width="173" height="400" alt="Siphon at an OK quota state with session usage at 25 percent" loading="lazy" decoding="async"></figure>
+              <figure data-demo-panel="warn" data-active="false" aria-hidden="true"><img src="assets/home-Warn.png" width="173" height="400" alt="Siphon warning state with session usage at 70 percent" loading="lazy" decoding="async"></figure>
+              <figure data-demo-panel="high" data-active="false" aria-hidden="true"><img src="assets/home-High.png" width="173" height="400" alt="Siphon high state showing usage likely to run out" loading="lazy" decoding="async"></figure>
+              <figure data-demo-panel="critical" data-active="false" aria-hidden="true"><img src="assets/home-Critical.png" width="173" height="400" alt="Siphon critical state with session and weekly quota under pressure" loading="lazy" decoding="async"></figure>
+              <figure data-demo-panel="depleted" data-active="false" aria-hidden="true"><img src="assets/home-Depleted.png" width="173" height="400" alt="Siphon depleted state with the current session at 100 percent" loading="lazy" decoding="async"></figure>
             </div>
           </article>
           <article class="feature-chapter feature-chapter-alerts app-demo">
@@ -130,10 +130,10 @@
           </article>
           <article class="feature-chapter feature-chapter-presence app-demo">
             <div class="chapter-copy"><p class="chapter-index">03 · Glance</p><h3>Keep it within reach.</h3><p>The tray icon carries session and weekly pressure at once. Pin a classic widget, expand its details, or keep only the pill.</p></div>
-            <figure class="widget-shot widget-shot-classic"><img src="../src/assets/floating_widget_classic.png" width="330" height="158" alt="Compact classic Siphon floating widget" loading="lazy" decoding="async"></figure>
-            <figure class="widget-shot widget-shot-expanded"><img src="../src/assets/floating_widget_classic-open.png" width="330" height="291" alt="Expanded classic Siphon widget with weekly, daily, and monthly usage" loading="lazy" decoding="async"></figure>
-            <figure class="widget-shot widget-shot-pill"><img src="../src/assets/floating_widget_pill.png" width="107" height="48" alt="Siphon pill widget showing a depleted session" loading="lazy" decoding="async"></figure>
-            <div class="tray-spectrum" aria-label="Examples of session and weekly tray states"><img src="../src/assets/tray-icon/tray-ok-ok@2x.png" alt="Both quotas OK" width="36" height="36"><img src="../src/assets/tray-icon/tray-ok-warn@2x.png" alt="Session OK and weekly warning" width="36" height="36"><img src="../src/assets/tray-icon/tray-warn-high@2x.png" alt="Session warning and weekly high" width="36" height="36"><img src="../src/assets/tray-icon/tray-high-critical@2x.png" alt="Session high and weekly critical" width="36" height="36"></div>
+            <figure class="widget-shot widget-shot-classic"><img src="assets/floating_widget_classic.png" width="330" height="158" alt="Compact classic Siphon floating widget" loading="lazy" decoding="async"></figure>
+            <figure class="widget-shot widget-shot-expanded"><img src="assets/floating_widget_classic-open.png" width="330" height="291" alt="Expanded classic Siphon widget with weekly, daily, and monthly usage" loading="lazy" decoding="async"></figure>
+            <figure class="widget-shot widget-shot-pill"><img src="assets/floating_widget_pill.png" width="107" height="48" alt="Siphon pill widget showing a depleted session" loading="lazy" decoding="async"></figure>
+            <div class="tray-spectrum" aria-label="Examples of session and weekly tray states"><img src="assets/tray-icon/tray-ok-ok@2x.png" alt="Both quotas OK" width="36" height="36"><img src="assets/tray-icon/tray-ok-warn@2x.png" alt="Session OK and weekly warning" width="36" height="36"><img src="assets/tray-icon/tray-warn-high@2x.png" alt="Session warning and weekly high" width="36" height="36"><img src="assets/tray-icon/tray-high-critical@2x.png" alt="Session high and weekly critical" width="36" height="36"></div>
           </article>
           <article class="feature-chapter feature-chapter-usage app-demo">
             <div class="chapter-copy"><p class="chapter-index">04 · Account</p><h3>Understand your usage.</h3><p>Daily and monthly estimates come from Claude Code usage and pricing files on your machine.</p></div>
@@ -200,7 +200,7 @@
 
     <footer class="site-footer section-grid">
       <a class="brand" href="#top" aria-label="Back to top">
-        <img src="../src/assets/Logo.png" alt="" width="103" height="24">
+        <img src="assets/Logo.png" alt="" width="103" height="24">
       </a>
       <p>Claude Code quota, always within reach.</p>
       <div class="footer-links">

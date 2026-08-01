@@ -54,7 +54,7 @@ export function syncVersion(root = defaultRoot) {
     }
   }
 
-  const websiteFile = 'docs/website/index.html';
+  const websiteFile = 'docs/index.html';
   const websitePath = join(root, websiteFile);
   const before = readFileSync(websitePath, 'utf8');
   if (!/"softwareVersion":\s*"[^"]*"/.test(before) ||
