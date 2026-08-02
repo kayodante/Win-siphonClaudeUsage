@@ -1,5 +1,12 @@
 export const DEMO_STATE_IDS = Object.freeze(['ok', 'warn', 'high', 'critical', 'depleted']);
 export const DEMO_INTERVAL_MS = 2000;
+export const DEMO_SIGNAL_STATES = Object.freeze({
+  ok: Object.freeze({ percentage: 25, pace: 'On track' }),
+  warn: Object.freeze({ percentage: 50, pace: 'High pace' }),
+  high: Object.freeze({ percentage: 83, pace: 'Likely to run out' }),
+  critical: Object.freeze({ percentage: 90, pace: 'Critical' }),
+  depleted: Object.freeze({ percentage: 100, pace: 'Session full' })
+});
 
 export function nextDemoIndex(currentIndex, total = DEMO_STATE_IDS.length) {
   return (currentIndex + 1) % total;
@@ -23,6 +30,9 @@ export function initProductDemo(root, { intervalMs = DEMO_INTERVAL_MS } = {}) {
   const documentRef = root.ownerDocument;
   const controls = [...root.querySelectorAll('[data-demo-state]')];
   const panels = [...root.querySelectorAll('[data-demo-panel]')];
+  const signal = typeof root.querySelector === 'function' ? root.querySelector('[data-demo-signal]') : null;
+  const signalPace = signal?.querySelector('[data-demo-pace]');
+  const signalValue = signal?.querySelector('[data-demo-value]');
   if (!controls.length || controls.length !== panels.length) {
     return { selectState() {}, stop() {}, disconnect() {} };
   }
@@ -72,6 +82,15 @@ export function initProductDemo(root, { intervalMs = DEMO_INTERVAL_MS } = {}) {
       panel.setAttribute('aria-hidden', String(!active));
     });
     root.dataset.state = stateId;
+    const signalState = DEMO_SIGNAL_STATES[stateId];
+    if (signal && signalPace && signalValue && signalState) {
+      signalPace.textContent = signalState.pace;
+      signalValue.textContent = `${signalState.percentage}% used`;
+      signal.setAttribute(
+        'aria-label',
+        `Example session signal: ${signalState.percentage} percent used, ${signalState.pace.toLowerCase()}`
+      );
+    }
     if (manual) flags.manuallyPaused = true;
     syncTimer();
   }

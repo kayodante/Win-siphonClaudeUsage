@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 import {
   DEMO_INTERVAL_MS,
+  DEMO_SIGNAL_STATES,
   DEMO_STATE_IDS,
   initMobileMenu,
   initProductDemo,
@@ -139,6 +140,11 @@ test('social preview images use absolute HTTPS URLs', () => {
   assert.match(websiteHtml, /<meta name="twitter:image:alt" content="[^"]+">/);
 });
 
+test('privacy policy link resolves inside the published website directory', () => {
+  assert.match(websiteHtml, /href="privacy-policy\.md"/);
+  assert.ok(statSync(new URL('../docs/privacy-policy.md', import.meta.url)).size > 0);
+});
+
 test('download calls to action use the approved decorative icon', () => {
   const downloadLinks = [...websiteHtml.matchAll(/<a class="button[^"]*"[^>]*\sdownload>([\s\S]*?)<\/a>/g)];
   assert.equal(downloadLinks.length, 3);
@@ -244,6 +250,13 @@ test('feature state controls retain a 44px touch target', () => {
 
 test('product demo cycles through five states every two seconds', () => {
   assert.deepEqual(DEMO_STATE_IDS, ['ok', 'warn', 'high', 'critical', 'depleted']);
+  assert.deepEqual(DEMO_SIGNAL_STATES, {
+    ok: { percentage: 25, pace: 'On track' },
+    warn: { percentage: 50, pace: 'High pace' },
+    high: { percentage: 83, pace: 'Likely to run out' },
+    critical: { percentage: 90, pace: 'Critical' },
+    depleted: { percentage: 100, pace: 'Session full' }
+  });
   assert.equal(DEMO_INTERVAL_MS, 2000);
   assert.equal(nextDemoIndex(0), 1);
   assert.equal(nextDemoIndex(4), 0);
@@ -287,6 +300,17 @@ function createDemoFixture({ controlCount = 5, panelCount = 5, legacyMotion = fa
   });
   const controls = Array.from({ length: controlCount }, (_, index) => createElement(DEMO_STATE_IDS[index]));
   const panels = Array.from({ length: panelCount }, () => createElement());
+  const signalPace = { textContent: '' };
+  const signalValue = { textContent: '' };
+  const signal = {
+    attributes: new Map(),
+    querySelector(selector) {
+      if (selector === '[data-demo-pace]') return signalPace;
+      if (selector === '[data-demo-value]') return signalValue;
+      return null;
+    },
+    setAttribute(name, value) { this.attributes.set(name, value); }
+  };
   const timers = [];
   const clearedTimers = [];
   const motionListeners = [];
@@ -327,12 +351,16 @@ function createDemoFixture({ controlCount = 5, panelCount = 5, legacyMotion = fa
     querySelectorAll(selector) {
       return selector === '[data-demo-state]' ? controls : panels;
     },
+    querySelector(selector) { return selector === '[data-demo-signal]' ? signal : null; },
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type) { listeners.delete(type); },
     contains() { return false; }
   };
   fixture.controls = controls;
   fixture.panels = panels;
+  fixture.signal = signal;
+  fixture.signalPace = signalPace;
+  fixture.signalValue = signalValue;
   return fixture;
 }
 
@@ -451,6 +479,12 @@ test('product demo ignores empty or mismatched collections and wraps public stat
   demo.selectState(99);
   assert.equal(fixture.root.dataset.state, 'depleted');
   assert.equal(fixture.panels.filter(panel => panel.dataset.active === 'true').length, 1);
+  assert.equal(fixture.signalPace.textContent, 'Session full');
+  assert.equal(fixture.signalValue.textContent, '100% used');
+  assert.equal(
+    fixture.signal.attributes.get('aria-label'),
+    'Example session signal: 100 percent used, session full'
+  );
 });
 
 test('product demo observes legacy reduced-motion changes and removes its listener', async () => {
