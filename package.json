@@ -35,5 +35,8 @@
     "eslint": "^9.0.0",
     "fallow": "^2.102.0",
     "globals": "^16.0.0"
+  },
+  "dependencies": {
+    "lore-map": "^0.1.5"
   }
 }
