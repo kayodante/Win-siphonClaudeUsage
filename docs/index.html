@@ -67,7 +67,7 @@
     </header>
 
     <main id="main-content" tabindex="-1">
-      <section class="hero section-grid" id="top" aria-labelledby="hero-title">
+      <section class="hero section-grid" id="top" aria-labelledby="hero-title" data-asciify-hero>
         <div class="hero-intro">
           <h1 id="hero-title">Keep your quota<br>in view.</h1>
           <p class="hero-copy">Track your Claude Code session, weekly quota, and reset time without leaving your flow.</p>
@@ -82,6 +82,8 @@
             <video src="assets/Home_Depleted.mp4" width="322" height="698" autoplay loop muted playsinline aria-label="Siphon showing a depleted Claude Code session quota on Windows"></video>
           </div>
         </figure>
+
+        <canvas class="hero-asciify" data-asciify-output aria-hidden="true"></canvas>
       </section>
 
       <aside class="platform-strip section-grid" aria-label="Product facts">
@@ -213,5 +215,6 @@
       </div>
     </footer>
     <script type="module" src="product-demo.js"></script>
+    <script type="module" src="hero-asciify.js"></script>
   </body>
 </html>

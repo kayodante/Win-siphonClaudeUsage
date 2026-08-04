@@ -308,9 +308,27 @@ summary:focus-visible,
 }
 
 .hero {
+  isolation: isolate;
   min-height: calc(100dvh - 72px);
   align-items: center;
+  overflow: clip;
   padding-block: clamp(40px, 6vh, 72px);
+}
+
+.hero-asciify {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hero-asciify {
+    display: block;
+  }
 }
 
 .hero-intro {
