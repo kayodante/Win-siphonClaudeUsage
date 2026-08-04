@@ -117,16 +117,15 @@ test('tertiary website text meets WCAG AA contrast on every surface where it app
   assert.ok(contrastRatio(dim, cssToken('--surface-raised')) >= 4.5);
 });
 
-test('hero image offers smaller AVIF and WebP sources without removing the PNG fallback', () => {
-  assert.match(websiteHtml, /<picture class="hero-picture">/);
-  assert.match(websiteHtml, /assets\/Hero-400\.avif 400w,\s*assets\/Hero-720\.avif 720w/);
-  assert.match(websiteHtml, /assets\/Hero-400\.webp 400w,\s*assets\/Hero-720\.webp 720w/);
-  assert.match(websiteHtml, /<img src="assets\/Hero\.png"/);
-
-  const pngSize = statSync(new URL('../docs/assets/Hero.png', import.meta.url)).size;
-  for (const file of ['Hero-400.avif', 'Hero-720.avif', 'Hero-400.webp', 'Hero-720.webp']) {
-    assert.ok(statSync(new URL(`../docs/assets/${file}`, import.meta.url)).size < pngSize);
+test('hero video is muted, looped, and autoplays without sound', () => {
+  const hero = websiteHtml.match(/<video class="hero-video"([^>]*)>/);
+  assert.ok(hero, 'missing hero video');
+  for (const attribute of ['autoplay', 'loop', 'muted', 'playsinline']) {
+    assert.ok(hero[1].includes(attribute), `hero video missing ${attribute}`);
   }
+  assert.match(hero[1], /aria-label="[^"]+"/);
+
+  assert.ok(statSync(new URL('../docs/assets/Home_Depleted.mp4', import.meta.url)).size > 0);
 });
 
 test('social preview images use absolute HTTPS URLs', () => {
@@ -215,22 +214,17 @@ test('feature narrative exposes five states and all six chapters', () => {
   ]) assert.match(websiteHtml, new RegExp(heading));
 });
 
-test('usage supplements stay inside their corresponding definition values', () => {
-  const instrument = websiteHtml.match(/<dl class="usage-instrument">([\s\S]*?)<\/dl>/);
-  assert.ok(instrument, 'missing usage instrument');
-
-  const readings = [...instrument[1].matchAll(/<div>([\s\S]*?)<\/div>/g)];
-  assert.equal(readings.length, 2);
-  for (const [, reading] of readings) {
-    assert.match(reading, /<dt>[^<]+<\/dt><dd>[^<]+(?:<br>)?<span>[^<]+<\/span><\/dd>/);
-    assert.doesNotMatch(reading, /<\/dd>\s*<span>/);
-  }
+test('usage chapter shows a real-product screenshot', () => {
+  const shot = websiteHtml.match(/<figure class="usage-shot"><img src="assets\/([^"]+)"[^>]*alt="([^"]+)"[^>]*><\/figure>/);
+  assert.ok(shot, 'missing usage screenshot');
+  assert.ok(shot[2].length > 0, 'usage screenshot missing alt text');
+  assert.ok(statSync(new URL(`../docs/assets/${shot[1]}`, import.meta.url)).size > 0);
 });
 
 test('feature demo CSS is namespaced and motion-safe', () => {
   assert.match(websiteCss, /\.app-demo\s+\[data-demo-state\]/);
   assert.match(websiteCss, /\.app-demo\s+\.demo-meter/);
-  assert.match(websiteHtml, /class="demo-pace">On track/);
+  assert.match(websiteHtml, /class="demo-pace" data-demo-pace>On track/);
   assert.match(websiteHtml, /class="demo-peak">Peak hours/);
   assert.match(websiteCss, /\.demo-state-stage\s*>\s*figure/);
   assert.match(websiteCss, /\[data-demo-panel\]\[data-active="true"\]/);
