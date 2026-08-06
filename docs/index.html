@@ -77,7 +77,7 @@
           </div>
         </div>
 
-        <video class="hero-video" src="assets/Home_Depleted.mp4" width="322" height="698" autoplay loop muted playsinline aria-label="Siphon showing a depleted Claude Code session quota on Windows"></video>
+        <video class="hero-video" data-hero-video src="assets/Home_Depleted.mp4" width="322" height="698" autoplay loop muted playsinline aria-label="Siphon showing a depleted Claude Code session quota on Windows"></video>
 
         <canvas class="hero-asciify" data-asciify-output aria-hidden="true"></canvas>
       </section>
@@ -105,6 +105,7 @@
                 <button type="button" data-demo-state="high" aria-controls="demo-panel-high" aria-pressed="false">High</button>
                 <button type="button" data-demo-state="critical" aria-controls="demo-panel-critical" aria-pressed="false">Critical</button>
                 <button type="button" data-demo-state="depleted" aria-controls="demo-panel-depleted" aria-pressed="false">Depleted</button>
+                <button class="demo-autoplay-toggle" type="button" data-demo-toggle aria-pressed="false" aria-label="Pause the quota state preview">Pause</button>
               </div>
               <div class="demo-signal-excerpt" data-demo-signal role="img" aria-label="Example session signal: 25 percent used, on track">
                 <div class="demo-signal-meta">
@@ -159,7 +160,7 @@
             </div>
             <p class="trust-boundary-note" aria-hidden="true"><span>Siphon server</span><strong>Not in the path</strong></p>
           </div>
-          <a class="text-link" href="privacy-policy.md">Read the privacy policy</a>
+          <a class="text-link" href="privacy-policy.html">Read the privacy policy</a>
         </header>
 
         <ol class="privacy-list">
@@ -203,7 +204,8 @@
           <a class="button button-primary button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.8.7/Siphon.Setup.1.8.7.exe" download><img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">Download Siphon</a>
           <div class="winget-command">
             <span>winget</span>
-            <code>winget install win-siphon</code>
+            <code id="winget-command-text">winget install win-siphon</code>
+            <button class="copy-button" type="button" data-copy-target="winget-command-text" data-copy-label="Copy" data-copied-label="Copied" aria-label="Copy the winget install command">Copy</button>
           </div>
           <a class="text-link" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">Portable and previous releases</a>
         </aside>

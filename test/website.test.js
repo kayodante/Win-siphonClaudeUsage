@@ -11,6 +11,8 @@ import {
   DEMO_INTERVAL_MS,
   DEMO_SIGNAL_STATES,
   DEMO_STATE_IDS,
+  initCopyButtons,
+  initHeroVideo,
   initMobileMenu,
   initProductDemo,
   nextDemoIndex,
@@ -120,12 +122,21 @@ test('tertiary website text meets WCAG AA contrast on every surface where it app
 test('hero video is muted, looped, and autoplays without sound', () => {
   const hero = websiteHtml.match(/<video class="hero-video"([^>]*)>/);
   assert.ok(hero, 'missing hero video');
-  for (const attribute of ['autoplay', 'loop', 'muted', 'playsinline']) {
+  for (const attribute of ['autoplay', 'loop', 'muted', 'playsinline', 'data-hero-video']) {
     assert.ok(hero[1].includes(attribute), `hero video missing ${attribute}`);
   }
   assert.match(hero[1], /aria-label="[^"]+"/);
 
   assert.ok(statSync(new URL('../docs/assets/Home_Depleted.mp4', import.meta.url)).size > 0);
+});
+
+test('variable web fonts declare their weight range (regression: faux bold at every weight step)', () => {
+  const variableFaces = [...websiteCss.matchAll(/@font-face\s*\{([^}]*Variable\.woff2[^}]*)\}/g)];
+  assert.equal(variableFaces.length, 2, 'expected the Geist and Geist Mono variable faces');
+
+  for (const [, body] of variableFaces) {
+    assert.match(body, /font-weight:\s*100\s+900;/);
+  }
 });
 
 test('social preview images use absolute HTTPS URLs', () => {
@@ -139,9 +150,19 @@ test('social preview images use absolute HTTPS URLs', () => {
   assert.match(websiteHtml, /<meta name="twitter:image:alt" content="[^"]+">/);
 });
 
-test('privacy policy link resolves inside the published website directory', () => {
-  assert.match(websiteHtml, /href="privacy-policy\.md"/);
-  assert.ok(statSync(new URL('../docs/privacy-policy.md', import.meta.url)).size > 0);
+test('privacy policy link resolves to a rendered page, not a raw Markdown download', () => {
+  assert.match(websiteHtml, /href="privacy-policy\.html"/);
+  assert.doesNotMatch(websiteHtml, /href="privacy-policy\.md"/);
+
+  const policyHtml = readFileSync(new URL('../docs/privacy-policy.html', import.meta.url), 'utf8');
+  assert.match(policyHtml, /<link rel="stylesheet" href="styles\.css">/);
+  assert.match(policyHtml, /<title>Privacy Policy \| Siphon<\/title>/);
+
+  for (const claim of [
+    'does not collect, transmit, or sell personal data',
+    'api.anthropic.com/api/oauth/usage',
+    'No analytics, no crash reporting, no telemetry'
+  ]) assert.ok(policyHtml.includes(claim), `privacy page missing: ${claim}`);
 });
 
 test('download calls to action use the approved decorative icon', () => {
@@ -242,7 +263,37 @@ test('feature state controls retain a 44px touch target', () => {
   assert.match(rule[1], /min-height:\s*44px/);
 });
 
-test('product demo cycles through five states every two seconds', () => {
+test('quota meter fills without relayout and the pace pill keeps a fixed track', () => {
+  const fill = websiteCss.match(/\.app-demo\s+\.demo-meter\s*>\s*span\s*\{([^}]+)\}/);
+  assert.ok(fill, 'missing meter fill rule');
+  assert.match(fill[1], /clip-path:\s*inset\(0 calc\(100% - var\(--demo-signal-progress\)\) 0 0\)/);
+  assert.doesNotMatch(fill[1], /transition:[^;]*\bwidth\b/);
+
+  for (const property of ['--demo-signal-color', '--demo-signal-progress']) {
+    assert.match(websiteCss, new RegExp(`@property ${property} \\{`), `${property} must be registered to interpolate`);
+  }
+
+  const pace = websiteCss.match(/\.demo-pace\s*\{([^}]+)\}/);
+  assert.ok(pace);
+  assert.match(pace[1], /min-width:\s*\d+ch/);
+});
+
+test('ordered install steps expose their ordinals', () => {
+  assert.match(websiteCss, /\.install-steps\s*\{[^}]*counter-reset:\s*install-step/);
+  assert.match(websiteCss, /\.install-steps li::before\s*\{[^}]*counter\(install-step, decimal-leading-zero\)/);
+});
+
+test('hover affordances are gated away from touch pointers', () => {
+  const gated = websiteCss.match(/@media \(hover: hover\) and \(pointer: fine\) \{([\s\S]*?)\n\}/g);
+  assert.ok(gated, 'missing pointer-gated hover block');
+  const gatedCss = gated.join('\n');
+
+  for (const selector of ['.button:hover', '.site-nav a:hover', '.app-demo [data-demo-state]:hover']) {
+    assert.ok(gatedCss.includes(selector), `${selector} must sit behind a fine-pointer query`);
+  }
+});
+
+test('product demo cycles through five states without outrunning the reader', () => {
   assert.deepEqual(DEMO_STATE_IDS, ['ok', 'warn', 'high', 'critical', 'depleted']);
   assert.deepEqual(DEMO_SIGNAL_STATES, {
     ok: { percentage: 25, pace: 'On track' },
@@ -251,7 +302,7 @@ test('product demo cycles through five states every two seconds', () => {
     critical: { percentage: 90, pace: 'Critical' },
     depleted: { percentage: 100, pace: 'Session full' }
   });
-  assert.equal(DEMO_INTERVAL_MS, 2000);
+  assert.equal(DEMO_INTERVAL_MS, 3400);
   assert.equal(nextDemoIndex(0), 1);
   assert.equal(nextDemoIndex(4), 0);
 });
@@ -339,13 +390,25 @@ function createDemoFixture({ controlCount = 5, panelCount = 5, legacyMotion = fa
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type) { listeners.delete(type); }
   };
+  const toggle = {
+    textContent: '',
+    attributes: new Map(),
+    setAttribute(name, value) { this.attributes.set(name, value); },
+    addEventListener(type, listener) { this.listeners ??= new Map(); this.listeners.set(type, listener); },
+    removeEventListener(type) { this.listeners?.delete(type); }
+  };
+  fixture.toggle = toggle;
   fixture.root = {
     dataset: {},
     ownerDocument: documentRef,
     querySelectorAll(selector) {
       return selector === '[data-demo-state]' ? controls : panels;
     },
-    querySelector(selector) { return selector === '[data-demo-signal]' ? signal : null; },
+    querySelector(selector) {
+      if (selector === '[data-demo-signal]') return signal;
+      if (selector === '[data-demo-toggle]') return toggle;
+      return null;
+    },
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type) { listeners.delete(type); },
     contains() { return false; }
@@ -479,6 +542,106 @@ test('product demo ignores empty or mismatched collections and wraps public stat
     fixture.signal.attributes.get('aria-label'),
     'Example session signal: 100 percent used, session full'
   );
+});
+
+test('product demo offers a discoverable pause control (WCAG 2.2.2)', async () => {
+  assert.match(websiteHtml, /class="demo-autoplay-toggle" type="button" data-demo-toggle/);
+
+  const fixture = createDemoFixture();
+  initProductDemo(fixture.root);
+  fixture.observer([{ target: fixture.root, isIntersecting: true, intersectionRatio: 1 }]);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.equal(fixture.toggle.textContent, 'Pause');
+  assert.equal(fixture.toggle.attributes.get('aria-pressed'), 'false');
+  assert.equal(fixture.timers.length, 1);
+
+  fixture.toggle.listeners.get('click')();
+  assert.equal(fixture.toggle.textContent, 'Play');
+  assert.equal(fixture.toggle.attributes.get('aria-pressed'), 'true');
+  assert.equal(fixture.clearedTimers.length > 0, true);
+  assert.equal(fixture.timers.length, 1, 'pausing must not schedule another advance');
+
+  fixture.toggle.listeners.get('click')();
+  assert.equal(fixture.toggle.textContent, 'Pause');
+  assert.equal(fixture.timers.length, 2, 'resuming must rearm the rotation');
+});
+
+test('selecting a state by hand pauses the rotation and says so on the control', () => {
+  const fixture = createDemoFixture();
+  initProductDemo(fixture.root);
+
+  fixture.controls[2].listeners.get('click')({ currentTarget: fixture.controls[2] });
+
+  assert.equal(fixture.root.dataset.state, 'high');
+  assert.equal(fixture.toggle.textContent, 'Play');
+  assert.equal(fixture.toggle.attributes.get('aria-pressed'), 'true');
+});
+
+test('copy button writes the command to the clipboard and reverts its label', async () => {
+  assert.match(websiteHtml, /<code id="winget-command-text">winget install win-siphon<\/code>/);
+  assert.match(websiteHtml, /data-copy-target="winget-command-text"/);
+
+  const written = [];
+  const timers = [];
+  const button = {
+    dataset: { copyTarget: 'winget-command-text', copyLabel: 'Copy', copiedLabel: 'Copied' },
+    textContent: 'Copy',
+    addEventListener(type, listener) { this.listeners ??= new Map(); this.listeners.set(type, listener); },
+    removeEventListener(type) { this.listeners?.delete(type); }
+  };
+  const documentRef = {
+    defaultView: {
+      navigator: { clipboard: { async writeText(text) { written.push(text); } } },
+      setTimeout(callback) { timers.push(callback); return timers.length; },
+      clearTimeout() {}
+    },
+    querySelectorAll() { return [button]; },
+    getElementById(id) {
+      return id === 'winget-command-text' ? { textContent: '  winget install win-siphon  ' } : null;
+    }
+  };
+
+  initCopyButtons(documentRef);
+  await button.listeners.get('click')({ currentTarget: button });
+
+  assert.deepEqual(written, ['winget install win-siphon']);
+  assert.equal(button.textContent, 'Copied');
+  assert.equal(button.dataset.copied, 'true');
+
+  timers[0]();
+  assert.equal(button.textContent, 'Copy');
+  assert.equal(button.dataset.copied, undefined);
+});
+
+test('hero video stops looping under reduced motion and resumes when the preference clears', () => {
+  const calls = [];
+  const listeners = new Map();
+  const mediaQuery = {
+    matches: true,
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); }
+  };
+  const video = {
+    pause() { calls.push('pause'); },
+    play() { calls.push('play'); return { catch() {} }; },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); }
+  };
+
+  const controller = initHeroVideo(video, { matchMedia: () => mediaQuery });
+  assert.deepEqual(calls, ['pause']);
+
+  listeners.get('play')();
+  assert.deepEqual(calls, ['pause', 'pause'], 'autoplay must be re-paused, not left running');
+
+  mediaQuery.matches = false;
+  listeners.get('change')();
+  assert.deepEqual(calls, ['pause', 'pause', 'play']);
+
+  controller.disconnect();
+  assert.equal(listeners.has('change'), false);
 });
 
 test('product demo observes legacy reduced-motion changes and removes its listener', async () => {

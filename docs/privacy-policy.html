@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="How Siphon handles your data: what it stores locally, what it reads, and the only two endpoints it talks to.">
+    <meta name="theme-color" content="#080a08">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <title>Privacy Policy | Siphon</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Siphon home">
+        <img src="assets/Logo.png" alt="" width="103" height="24">
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#privacy">Privacy</a>
+        <a href="index.html#install">Install</a>
+        <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in a new tab)</span></a>
+      </nav>
+
+      <details class="mobile-menu" data-mobile-menu>
+        <summary>Menu</summary>
+        <nav aria-label="Mobile navigation">
+          <a href="index.html#features">Features</a>
+          <a href="index.html#privacy">Privacy</a>
+          <a href="index.html#install">Install</a>
+          <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in a new tab)</span></a>
+        </nav>
+      </details>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <section class="section-grid" aria-labelledby="policy-title">
+        <article class="policy">
+          <p class="chapter-index">Privacy</p>
+          <h1 id="policy-title">Privacy Policy</h1>
+          <p>Siphon is a local Windows tray application. It does not collect, transmit, or sell personal data.</p>
+
+          <h2>Data stored locally</h2>
+          <p>All data written by Siphon stays on your machine under <code>%APPDATA%\Siphon\</code>:</p>
+          <div class="policy-table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">File</th><th scope="col">Contents</th><th scope="col">Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>credentials.json</code></td><td>Anthropic OAuth access and refresh tokens</td><td>Authenticate usage API calls</td></tr>
+                <tr><td><code>preferences.json</code></td><td>Language, notification toggle, widget position, autostart and refresh interval</td><td>User preferences</td></tr>
+                <tr><td><code>reset-notification.json</code></td><td>Pending session-reset timestamp</td><td>Schedule Windows toast</td></tr>
+                <tr><td><code>local-usage-cache.json</code></td><td>Aggregated Claude Code JSONL usage metadata</td><td>Avoid re-reading unchanged session files</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Files are written with mode <code>0600</code> (owner read/write only) where supported.</p>
+
+          <h2>Data read from your machine</h2>
+          <p>Siphon reads Claude Code's local usage files:</p>
+          <ul>
+            <li><code>~/.claude/readout-cost-cache.json</code></li>
+            <li><code>~/.claude/readout-pricing.json</code></li>
+            <li><code>~/.claude/projects/**/*.jsonl</code></li>
+          </ul>
+          <p>These files are never uploaded or shared.</p>
+
+          <h2>External network requests</h2>
+          <p>Siphon makes two types of outbound requests, both to Anthropic:</p>
+          <div class="policy-table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Endpoint</th><th scope="col">Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>https://claude.ai/</code> (OAuth PKCE flow)</td><td>Sign in — opens in your browser</td></tr>
+                <tr><td><code>https://api.anthropic.com/api/oauth/usage</code></td><td>Fetch session and weekly quota data</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>No data is sent to any other third party. No analytics, no crash reporting, no telemetry.</p>
+
+          <h2>Credentials</h2>
+          <p>OAuth tokens are stored locally and refreshed automatically. Siphon reuses the same OAuth client ID as Claude Code and never has access to your Anthropic account password.</p>
+
+          <h2>Changes</h2>
+          <p>This policy may be updated alongside new app versions. Changes are noted in the release changelog.</p>
+
+          <h2>Contact</h2>
+          <p>Questions or concerns: <a href="https://github.com/kayodante/Win-siphonClaudeUsage/issues">open an issue on GitHub</a>.</p>
+
+          <a class="text-link" href="index.html">Back to Siphon</a>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer section-grid">
+      <a class="brand" href="index.html" aria-label="Siphon home">
+        <img src="assets/Logo.png" alt="" width="103" height="24">
+      </a>
+      <p>Claude Code quota, always within reach.</p>
+      <div class="footer-links">
+        <a href="https://github.com/kayodante/Win-siphonClaudeUsage">GitHub</a>
+        <a href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">Releases</a>
+        <a href="index.html#install">Install</a>
+        <a href="index.html#privacy">Privacy</a>
+      </div>
+    </footer>
+    <script type="module" src="product-demo.js"></script>
+  </body>
+</html>
