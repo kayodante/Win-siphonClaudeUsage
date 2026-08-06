@@ -108,7 +108,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  scroll-padding-top: calc(var(--header-height) + var(--frame-gap) * 2);
 }
 
 body {
@@ -189,7 +189,10 @@ summary:focus-visible,
     ),
     var(--texture),
     linear-gradient(var(--frame-surface), var(--frame-surface));
-  background-clip: content-box, border-box, border-box;
+  /* Guides are *sized* off the content box so they land on the 12 column
+     boundaries, but *painted* on the padding box so they run the full inner
+     height of every frame instead of stopping at each section's padding. */
+  background-clip: padding-box, border-box, border-box;
   background-origin: content-box, border-box, border-box;
 }
 
@@ -216,11 +219,14 @@ summary:focus-visible,
   pointer-events: none;
 }
 
+/* Offset and margin both track --frame-gap so the space above the header and
+   the space below it match every other gap between frames. */
 .site-header {
   position: sticky;
   z-index: 20;
-  top: var(--space-2);
+  top: var(--frame-gap);
   min-height: var(--header-height);
+  margin-top: var(--frame-gap);
   align-items: center;
   --frame-surface: oklch(7% 0 0 / 0.98);
 }
@@ -527,8 +533,9 @@ h3 {
 .feature-chapter {
   display: grid;
   min-height: clamp(424px, 35vw, 496px);
+  /* No column gap: the chapter columns have to coincide with the frame's
+     guide lines. Separation comes from leaving column 5 empty. */
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  column-gap: clamp(32px, 4vw, 56px);
   row-gap: var(--space-6);
   align-items: center;
   align-content: center;
@@ -617,11 +624,11 @@ h3 {
 
 .demo-state-stage {
   position: relative;
-  grid-column: 6 / -1;
-  width: min(100%, 420px);
-  aspect-ratio: 341 / 256;
+  grid-column: 9 / -1;
+  /* Must match the panel screenshots exactly, or object-fit letterboxes them
+     inside the box and the visible edge stops landing on the column guide. */
+  aspect-ratio: 361 / 419;
   align-self: center;
-  justify-self: end;
 }
 
 /* Blur fuses the two near-identical screenshots into one morph instead of
@@ -886,14 +893,19 @@ h3 {
   font-size: var(--text-ui);
 }
 
+/* Two rows of two cells, each item flush to a column boundary. No overlap and
+   no offsets — the widgets read as specimens on the grid, not as a pile. */
 .feature-chapter-presence {
-  position: relative;
-  min-height: 600px;
+  row-gap: var(--space-8);
+  align-items: end;
+}
+
+.feature-chapter-presence .chapter-copy {
+  grid-row: 1 / span 2;
+  align-self: start;
 }
 
 .widget-shot {
-  grid-column: 5 / -1;
-  grid-row: 1;
   margin: 0;
 }
 
@@ -904,26 +916,25 @@ h3 {
 }
 
 .widget-shot-classic {
-  z-index: 2;
-  width: min(45%, 330px);
-  align-self: start;
+  grid-column: 6 / span 3;
+  grid-row: 1;
+  width: min(100%, 330px);
   justify-self: start;
-  transform: translateY(48px);
 }
 
 .widget-shot-expanded {
-  z-index: 1;
-  width: min(50%, 330px);
-  justify-self: center;
-  transform: translate(48px, 24px);
+  grid-column: 10 / -1;
+  grid-row: 1;
+  width: min(100%, 330px);
+  justify-self: start;
 }
 
 .widget-shot-pill {
-  z-index: 3;
-  width: min(18%, 107px);
-  align-self: end;
-  justify-self: end;
-  transform: translate(-16px, -56px);
+  grid-column: 6 / span 3;
+  grid-row: 2;
+  width: 107px;
+  align-self: start;
+  justify-self: start;
 }
 
 .tray-spectrum {
@@ -937,28 +948,27 @@ h3 {
   gap: var(--space-5);
 }
 
+/* 1:1 with the @2x source — any other size gives a pixel-art icon uneven
+   pixel doubling. */
 .tray-spectrum img {
-  width: 36px;
-  height: 36px;
+  width: 33px;
+  height: 33px;
   object-fit: contain;
   image-rendering: pixelated;
 }
 
 .feature-chapter-presence .tray-spectrum {
-  z-index: 4;
-  grid-column: 5 / -1;
-  grid-row: 1;
-  align-self: end;
+  grid-column: 10 / -1;
+  grid-row: 2;
+  align-self: start;
   justify-self: start;
-  margin: 0 0 var(--space-8) var(--space-6);
+  margin: 0;
 }
 
 .usage-shot {
-  grid-column: 6 / -1;
-  width: min(100%, 542px);
+  grid-column: 8 / -1;
   margin: 0;
   align-self: center;
-  justify-self: end;
 }
 
 .usage-shot img {
@@ -967,12 +977,10 @@ h3 {
 }
 
 .settings-excerpt {
-  grid-column: 6 / -1;
-  width: min(100%, 420px);
+  grid-column: 9 / -1;
   border-top: 1px solid var(--line);
   background: var(--surface-raised);
   align-self: center;
-  justify-self: end;
 }
 
 .settings-demo-row {
@@ -1445,6 +1453,11 @@ h3 {
   justify-content: flex-end;
 }
 
+/* Last link sits flush with the frame's content edge like everything else. */
+.footer-links a:last-child {
+  padding-right: 0;
+}
+
 @media (max-width: 1100px) {
   .site-header,
   .section-grid {
@@ -1509,21 +1522,44 @@ h3 {
     grid-column: 1 / span 3;
   }
 
+  /* Column 4 becomes the gutter, so every media block starts on the same
+     guide line the copy column stops at. */
   .demo-state-stage,
   .threshold-sequence,
   .usage-shot,
   .settings-excerpt,
-  .chapter-note {
-    grid-column: 4 / -1;
+  .chapter-note,
+  .widget-shot-classic,
+  .widget-shot-expanded,
+  .widget-shot-pill,
+  .feature-chapter-presence .tray-spectrum {
+    grid-column: 5 / -1;
   }
 
-  .widget-shot,
+  /* Four media columns cannot hold two widgets side by side without either
+     touching or shrinking past legibility, so the specimens stack. */
+  .feature-chapter-presence .chapter-copy {
+    grid-row: 1 / span 4;
+  }
+
+  .widget-shot-classic {
+    grid-row: 1;
+  }
+
+  .widget-shot-expanded {
+    grid-row: 2;
+  }
+
+  .widget-shot-pill {
+    grid-row: 3;
+  }
+
   .feature-chapter-presence .tray-spectrum {
-    grid-column: 4 / -1;
+    grid-row: 4;
   }
 
   .feature-chapter-presence {
-    min-height: 560px;
+    row-gap: var(--space-6);
   }
 
   .privacy-heading {
@@ -1761,33 +1797,17 @@ h3 {
     padding-block: var(--space-4);
   }
 
-  .feature-chapter-presence {
-    min-height: 0;
-    grid-template-rows: auto minmax(340px, auto) auto;
-  }
-
-  .widget-shot {
-    grid-row: 2;
-  }
-
-  .widget-shot-classic {
-    width: min(68%, 260px);
-    transform: translateY(20px);
-  }
-
+  .widget-shot-classic,
   .widget-shot-expanded {
-    width: min(64%, 260px);
-    transform: translate(32px, 92px);
+    width: min(100%, 300px);
   }
 
-  .widget-shot-pill {
-    width: min(36%, 107px);
-    transform: translate(-4px, -28px);
-  }
-
+  .widget-shot-classic,
+  .widget-shot-expanded,
+  .widget-shot-pill,
   .feature-chapter-presence .tray-spectrum {
-    grid-row: 3;
-    margin: 0;
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .tray-spectrum {
@@ -1796,10 +1816,6 @@ h3 {
     gap: clamp(12px, 5vw, 20px);
   }
 
-  .tray-spectrum img {
-    width: 32px;
-    height: 32px;
-  }
 
   .privacy-heading {
     position: static;
