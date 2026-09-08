@@ -53,7 +53,15 @@ fn main() {
     let launch_hidden = std::env::args().any(|a| a == STARTUP_HIDDEN_ARG);
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // A second launch normally means the user asked for the app, so
+            // show it. A `--hidden` relaunch does not: that is autostart or the
+            // Claude Code SessionStart hook only making sure Siphon is running,
+            // and popping the window on top of whatever the user is doing (plus
+            // resetting the view to `main`) is exactly what they did not ask for.
+            if argv.iter().any(|a| a == STARTUP_HIDDEN_ARG) {
+                return;
+            }
             windows_ctl::show_main(app);
         }))
         .plugin(tauri_plugin_notification::init())

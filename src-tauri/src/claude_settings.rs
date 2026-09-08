@@ -6,20 +6,21 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
+use crate::STARTUP_HIDDEN_ARG;
+
 pub struct ClaudeSettings {
     exe_path: String,
     settings_path: PathBuf,
 }
 
-/// True for `... Start-Process '<dir>\siphon*.exe'` at any install location.
-/// Only recognizes the shape this module writes, so a user's own hook that
-/// merely mentions Siphon (writing a state file, say) is left alone.
+/// True for a hook whose first single-quoted argument is a `siphon*.exe` at any
+/// install location — the shape this module writes plus every older variant of
+/// it (the nested `powershell -Command "Start-Process '...'"`). Requiring that
+/// quoted
+/// target to be an executable leaves a user's own hook that merely mentions
+/// Siphon (writing a state file, say) alone.
 fn launches_siphon(cmd: &str) -> bool {
-    let lower = cmd.to_lowercase();
-    if !lower.contains("start-process") {
-        return false;
-    }
-    lower
+    cmd.to_lowercase()
         .split('\'')
         .nth(1)
         .and_then(|target| target.rsplit(['\\', '/']).next())
@@ -46,7 +47,20 @@ impl ClaudeSettings {
             "matcher": "startup|resume",
             "hooks": [{
                 "type": "command",
-                "command": format!("powershell -NoProfile -Command \"Start-Process '{}'\"", self.exe_path),
+                // `Start-Process` still detaches Siphon from the hook process
+                // (see 1.4.5) but now runs inside the `shell: powershell` Claude
+                // Code already spawns for us, instead of a *second*, nested
+                // `powershell -NoProfile -Command` — that extra console process
+                // is the window that flashes at every session start.
+                //
+                // `--hidden` marks this as an automated relaunch: it keeps a
+                // cold start from popping the window over the user's work, and
+                // the single-instance handler in main.rs reads it to leave an
+                // already-running Siphon alone instead of pulling it to front.
+                "command": format!(
+                    "Start-Process '{}' -ArgumentList '{STARTUP_HIDDEN_ARG}'",
+                    self.exe_path
+                ),
                 "shell": "powershell",
                 "async": true
             }]
@@ -211,6 +225,7 @@ mod tests {
                 {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'C:\\old\\Programs\\Siphon\\Siphon.exe'\""}]},
                 {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'K:\\repo\\target\\debug\\siphon.exe'\""}]},
                 {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Start-Process 'K:\\repo\\nsis\\Siphon.Portable.1.7.3.exe'\""}]},
+                {"matcher":"startup|resume","hooks":[{"type":"command","command":"Start-Process 'K:\\repo\\target\\release\\siphon.exe' -ArgumentList '--hidden'","shell":"powershell"}]},
                 {"matcher":"startup","hooks":[{"type":"command","command":"powershell -NoProfile -Command \"Set-Content -Path 'K:\\other\\state.json'\""}]}
             ]}}"#,
         )
@@ -226,7 +241,17 @@ mod tests {
         // the foreign state-file hook plus exactly one Siphon launcher
         assert_eq!(entries.len(), 2);
         assert!(entries[0].to_string().contains("state.json"));
-        assert!(entries[1].to_string().contains("C:\\\\apps\\\\siphon.exe"));
+        let cmd = entries[1]
+            .pointer("/hooks/0/command")
+            .and_then(|v| v.as_str())
+            .unwrap();
+        // No nested `powershell -NoProfile -Command` around Start-Process —
+        // that second console process is what flashes at every session start.
+        assert!(!cmd.contains("powershell"));
+        assert_eq!(
+            cmd,
+            "Start-Process 'C:\\apps\\siphon.exe' -ArgumentList '--hidden'"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
