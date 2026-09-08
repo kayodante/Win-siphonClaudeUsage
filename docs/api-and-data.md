@@ -354,10 +354,19 @@ with defaults on load so old files remain valid.
   "language": "en",
   "notifications": {
     "sessionReset": true,
-    "sound": false
+    "sound": false,
+    "soundVolume": 1.0,
+    "expireSound": false,
+    "expireSoundVolume": 1.0,
+    "expireAlert": false,
+    "limitSound": false,
+    "limitSoundVolume": 1.0,
+    "limitAlert": false
   },
   "floating": {
     "enabled": false,
+    "expanded": false,
+    "style": "classic",
     "x": null,
     "y": null
   },
@@ -383,7 +392,9 @@ with defaults on load so old files remain valid.
   },
   "window": {
     "x": null,
-    "y": null
+    "y": null,
+    "width": null,
+    "height": null
   },
   "claudePath": null
 }

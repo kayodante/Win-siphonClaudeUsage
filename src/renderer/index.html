@@ -498,7 +498,27 @@
       <footer class="app-footer">
       <div class="footer-card">
         <div class="footer-updated-row">
-          <span id="lastUpdatedDot" class="dmx-wrap" aria-hidden="true"></span>
+          <!-- 4x4 pulse. Static markup + CSS keyframes: the zone classes encode
+               what dotMatrix.js used to compute per frame in a rAF loop. Row-major;
+               corners sit out, the four centre dots lead, the eight inner dots trail. -->
+          <span id="lastUpdatedDot" class="dmx-wrap" aria-hidden="true">
+            <span class="dmx-dot dmx-inactive"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot dmx-inactive"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot" data-zone="c"></span>
+            <span class="dmx-dot" data-zone="c"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot" data-zone="c"></span>
+            <span class="dmx-dot" data-zone="c"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot dmx-inactive"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot" data-zone="i"></span>
+            <span class="dmx-dot dmx-inactive"></span>
+          </span>
           <span id="lastUpdated">--</span>
         </div>
         <div class="footer-buttons">

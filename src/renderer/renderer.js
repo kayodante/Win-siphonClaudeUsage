@@ -16,8 +16,6 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
-import { initDotMatrix } from './dotMatrix.js';
-
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
@@ -186,26 +184,32 @@ function setErrorText(message) {
   }
 }
 
+// Enter is CSS-only now (@starting-style fires the moment `hidden` clears), so
+// JS just has to get out of the way. Exit still needs JS: the element has to
+// stay in the DOM while it fades, so `hidden` is set on a timeout instead.
+// A cancelled CSS animation never fires `animationend`, so the old
+// `{ once: true }` listener bound on every show could dangle when a banner
+// was hidden mid-enter; a transition retargets from wherever it actually is,
+// so a hide landing mid-enter now fades from the current value instead of
+// snapping to full opacity first.
+const bannerLeaveTimers = new WeakMap();
+
 function showBanner(el) {
   if (!el.hidden && !el.hasAttribute('data-leaving')) return;
+  clearTimeout(bannerLeaveTimers.get(el));
   el.removeAttribute('data-leaving');
   el.hidden = false;
-  if (reducedMotion()) return;
-  requestAnimationFrame(() => {
-    el.setAttribute('data-entering', '');
-    el.addEventListener('animationend', () => el.removeAttribute('data-entering'), { once: true });
-  });
 }
 
 function hideBanner(el) {
   if (el.hidden || el.hasAttribute('data-leaving')) return;
-  el.removeAttribute('data-entering');
   if (reducedMotion()) { el.hidden = true; return; }
   el.setAttribute('data-leaving', '');
-  el.addEventListener('animationend', () => {
+  clearTimeout(bannerLeaveTimers.get(el));
+  bannerLeaveTimers.set(el, setTimeout(() => {
     el.hidden = true;
     el.removeAttribute('data-leaving');
-  }, { once: true });
+  }, cssMs('--duration-banner-leave', 160)));
 }
 
 function flashUpdate(el) {
@@ -628,8 +632,6 @@ elements.notificationState.addEventListener('click', async () => {
     handleToggleError('Failed to toggle notifications:', error, null, 'error.saveNotification');
   }
 });
-
-initDotMatrix();
 
 try {
   appInfo = await window.siphon.getAppInfo();
@@ -1134,25 +1136,43 @@ function renderActiveView() {
   }
 
   _transitioning = true;
+
+  // Overlap the crossfade instead of running it twice. Parking the outgoing
+  // view out of flow (.shell-scroll is position:relative) lets the incoming one
+  // take its place at once, so opening a view costs one fade, not two — the
+  // same trick switchSettingsTab uses for the settings panels.
+  const width = outgoing.getBoundingClientRect().width;
+  outgoing.style.position = 'absolute';
+  outgoing.style.top = '0';
+  outgoing.style.left = '0';
+  outgoing.style.width = `${width}px`;
+  outgoing.style.pointerEvents = 'none';
   outgoing.style.opacity = '0';
   outgoing.style.transform = 'translateY(-6px)';
 
+  incoming.hidden = false;
+  incoming.style.opacity = '0';
+  incoming.style.transform = 'translateY(6px)';
+  if (activeView === 'settings' && currentState) renderSettings(currentState);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    incoming.style.opacity = '';
+    incoming.style.transform = '';
+  }));
+
   setTimeout(() => {
     outgoing.hidden = true;
+    outgoing.style.position = '';
+    outgoing.style.top = '';
+    outgoing.style.left = '';
+    outgoing.style.width = '';
+    outgoing.style.pointerEvents = '';
     outgoing.style.opacity = '';
     outgoing.style.transform = '';
-
-    incoming.hidden = false;
-    incoming.style.opacity = '0';
-    incoming.style.transform = 'translateY(6px)';
-    if (activeView === 'settings' && currentState) renderSettings(currentState);
-
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      incoming.style.opacity = '';
-      incoming.style.transform = '';
-      _transitioning = false;
-      if (viewChanged) focusAfterViewChange(activeView, previousView);
-    }));
+    incoming.style.opacity = '';
+    incoming.style.transform = '';
+    _transitioning = false;
+    if (viewChanged) focusAfterViewChange(activeView, previousView);
   }, cssMs('--duration-view-fade', 150));
 }
 

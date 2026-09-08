@@ -25,6 +25,8 @@ The Windows-specific addition is a **reset notification**: when your five-hour s
 
 This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
 
+**[Visit the website →](https://kayodante.github.io/Win-siphonClaudeUsage/)**
+
 ## Features
 
 * **Session quota** | Progress bar for your current 5-hour session with a reset countdown
@@ -128,8 +130,9 @@ split so the business logic is testable on any host:
   updater. Its full binary build is not part of the Linux CI job because it needs
   the Windows WebView2/NSIS toolchain.
 
-Renderer/shared JS tests live in `test/` (covering `src/shared/` and
-`src/renderer/viewState.js`). `scripts/pack-release.ps1` repackages the Tauri
+JS tests live in `test/`, covering `src/shared/`, `src/renderer/viewState.js`,
+the renderer and floating-widget markup contracts, and the static site under
+`docs/`. `scripts/pack-release.ps1` repackages the Tauri
 NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
 `.sha256`) and copies the raw build binary alongside it as
 `Siphon.Portable.<version>.exe`, with its own `.sha256`.
@@ -141,7 +144,9 @@ NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
 - **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI (via the `windows` crate) before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
 - **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
 
-See [docs/privacy-policy.md](docs/privacy-policy.md) for full details.
+See [docs/privacy-policy.md](docs/privacy-policy.md) for full details — the same
+policy, rendered, is served on the website as `privacy-policy.html`. Keep the
+two in step when either changes.
 
 ## Credits
 

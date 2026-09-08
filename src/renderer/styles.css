@@ -156,6 +156,10 @@
      view/tab crossfades so CSS and JS can never drift apart. */
   --duration-view-fade: 150ms;
   --duration-tab-fade:  110ms;
+  /* Read by renderer.js — --duration-banner-leave drives the timeout that
+     removes a banner after its [data-leaving] transition finishes. */
+  --duration-banner-enter: 220ms;
+  --duration-banner-leave: 160ms;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -240,6 +244,9 @@ h3 {
 }
 
 .shell-scroll {
+  /* Anchors the outgoing view during the view crossfade — renderActiveView
+     parks it out of flow so the incoming view can come up in its place. */
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -1078,6 +1085,49 @@ body[data-refreshing="true"] .card::after {
   opacity: 0 !important;
 }
 
+/* Used to be a JS rAF loop computing a double-beat sine pulse every frame.
+   Sampled into keyframes it's compositor-driven instead, and — unlike the
+   old loop, which had no reduced-motion gate — opt-in: dots sit at their
+   resting opacity until motion is explicitly allowed. */
+.dmx-dot[data-zone="c"] {
+  opacity: 0.35;
+}
+
+.dmx-dot[data-zone="i"] {
+  opacity: 0.16;
+}
+
+@keyframes dmxPulseCenter {
+  0%   { opacity: 0.35; }
+  12%  { opacity: 1; }
+  38%  { opacity: 1; }
+  50%  { opacity: 0.35; }
+  62%  { opacity: 0.87; }
+  75%  { opacity: 0.35; }
+  100% { opacity: 0.35; }
+}
+
+@keyframes dmxPulseInner {
+  0%   { opacity: 0.16; }
+  12%  { opacity: 0.71; }
+  25%  { opacity: 0.6; }
+  38%  { opacity: 0.47; }
+  50%  { opacity: 0.16; }
+  62%  { opacity: 0.4; }
+  75%  { opacity: 0.16; }
+  100% { opacity: 0.16; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dmx-dot[data-zone="c"] {
+    animation: dmxPulseCenter 1400ms linear infinite;
+  }
+
+  .dmx-dot[data-zone="i"] {
+    animation: dmxPulseInner 1400ms linear infinite;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    NOTIFICATION BADGE
 ═══════════════════════════════════════════════════════════ */
@@ -1174,6 +1224,34 @@ body[data-refreshing="true"] .card::after {
   padding: var(--space-4) var(--space-6);
   border: 1px solid;
   border-radius: var(--radius-lg);
+  transform-origin: top center;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transition: opacity var(--duration-banner-enter) var(--ease-out-quart),
+    transform var(--duration-banner-enter) var(--ease-out-quart);
+}
+
+/* @starting-style is the "from" of the old bannerEnter keyframe — it only
+   applies on first render, so a banner re-triggered while entering retargets
+   from its current value instead of restarting from zero. */
+@starting-style {
+  .usage-alert-banner,
+  .offline-banner,
+  .update-banner {
+    opacity: 0;
+    transform: translateY(-5px) scaleY(0.88);
+  }
+}
+
+/* The exit is deliberately faster than the enter — a banner going away
+   shouldn't linger. renderer.js sets [data-leaving] and removes the node
+   after --duration-banner-leave. */
+.usage-alert-banner[data-leaving],
+.offline-banner[data-leaving],
+.update-banner[data-leaving] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: var(--duration-banner-leave);
 }
 
 .usage-alert-text,
@@ -2083,18 +2161,19 @@ button:focus-visible {
   height: 16px;
   border-radius: 50%;
   background: var(--foreground);
+  transform-origin: left center;
   transition: transform var(--duration-normal) var(--ease-out),
-    width var(--duration-press) var(--ease-press),
     background var(--duration-slow) var(--ease);
 }
 
-/* Squash under the finger — the toggle answers the press before it flips. */
+/* Squash under the finger — the toggle answers the press before it flips.
+   Scaled instead of resized (19/16 = 1.1875) so it's a compositor-only transform. */
 .switch:active .switch-thumb {
-  width: 19px;
+  transform: scaleX(1.1875);
 }
 
 .switch:active input:checked + .switch-track .switch-thumb {
-  transform: translateX(10px);
+  transform: translateX(10px) scaleX(1.1875);
 }
 
 .switch input:checked + .switch-track {
@@ -2121,7 +2200,8 @@ button:focus-visible {
 ═══════════════════════════════════════════════════════════ */
 
 /* Typed custom properties enable OKLCH-space interpolation during level transitions.
-   --seg-* inherits so the meter sets it once; segments inherit and transition. */
+   --seg-* inherits and transitions on .meter itself, so all 40 segments inherit an
+   already-interpolated value instead of each running its own copy of the transition. */
 @property --seg-l { syntax: '<percentage>'; inherits: true; initial-value: 84.59%; }
 @property --seg-c { syntax: '<number>'; inherits: true; initial-value: 0.2026; }
 @property --seg-h { syntax: '<number>'; inherits: true; initial-value: 156.3; }
@@ -2136,6 +2216,9 @@ button:focus-visible {
   --seg-l: 84.59%;
   --seg-c: 0.2026;
   --seg-h: 156.3;
+  transition: --seg-l 900ms var(--ease-out-quart),
+    --seg-c 900ms var(--ease-out-quart),
+    --seg-h 900ms var(--ease-out-quart);
 }
 
 .meter-segment {
@@ -2143,10 +2226,7 @@ button:focus-visible {
   height: var(--space-4);
   border-radius: var(--space-0);
   background: var(--level-ok-soft);
-  transition: background-color 250ms var(--ease-out-quart),
-    --seg-l 900ms var(--ease-out-quart),
-    --seg-c 900ms var(--ease-out-quart),
-    --seg-h 900ms var(--ease-out-quart);
+  transition: background-color 250ms var(--ease-out-quart);
 }
 
 .meter-segment.active {
@@ -2445,45 +2525,10 @@ body[data-entering] #monthTokens {
   animation: subtleFadeUp 160ms var(--ease-out) 380ms both;
 }
 
-@keyframes bannerEnter {
-  from {
-    opacity: 0;
-    transform: translateY(-5px) scaleY(0.88);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
-
-@keyframes bannerLeave {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 @keyframes dataUpdate {
   0%   { opacity: 0.4;  filter: brightness(1.5); }
   55%  { opacity: 1;    filter: brightness(1.07); }
   100% { opacity: 1;    filter: brightness(1); }
-}
-
-.usage-alert-banner[data-entering],
-.offline-banner[data-entering],
-.update-banner[data-entering] {
-  transform-origin: top center;
-  animation: bannerEnter 220ms var(--ease-out-quart) both;
-}
-
-.usage-alert-banner[data-leaving],
-.offline-banner[data-leaving],
-.update-banner[data-leaving] {
-  animation: bannerLeave 160ms var(--ease-out) both;
 }
 
 .data-updated {
@@ -2562,6 +2607,9 @@ body[data-refreshing="true"] #refreshButton svg {
   .cost-info-btn,
   .notif-badge,
   .notif-icon-wrap svg,
+  .usage-alert-banner,
+  .offline-banner,
+  .update-banner,
   .usage-alert-dismiss,
   .offline-banner-dismiss,
   .update-banner-dismiss,
@@ -2596,12 +2644,6 @@ body[data-refreshing="true"] #refreshButton svg {
   body[data-entering] #monthCost,
   body[data-entering] #todayTokens,
   body[data-entering] #monthTokens,
-  .usage-alert-banner[data-entering],
-  .offline-banner[data-entering],
-  .update-banner[data-entering],
-  .usage-alert-banner[data-leaving],
-  .offline-banner[data-leaving],
-  .update-banner[data-leaving],
   .data-updated,
   body[data-refreshing="true"] #refreshButton svg,
   .notif-badge.notif-pop,
@@ -2633,7 +2675,7 @@ body[data-refreshing="true"] #refreshButton svg {
   }
 
   .switch:active .switch-thumb {
-    width: 16px;
+    transform: none;
   }
 
   .switch:active input:checked + .switch-track .switch-thumb {
