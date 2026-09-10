@@ -156,7 +156,7 @@ mod dpapi {
             CryptProtectData(&input, None, None, None, None, 0, &mut output)
                 .map_err(|e| e.to_string())?;
             let out = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
-            let _ = LocalFree(HLOCAL(output.pbData as *mut _));
+            let _ = LocalFree(Some(HLOCAL(output.pbData as *mut _)));
             Ok(out)
         }
     }
@@ -171,7 +171,7 @@ mod dpapi {
             CryptUnprotectData(&input, None, None, None, None, 0, &mut output)
                 .map_err(|e| e.to_string())?;
             let out = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
-            let _ = LocalFree(HLOCAL(output.pbData as *mut _));
+            let _ = LocalFree(Some(HLOCAL(output.pbData as *mut _)));
             Ok(out)
         }
     }
@@ -181,3 +181,22 @@ mod dpapi {
 #[cfg(not(windows))]
 #[allow(unused_imports)]
 use siphon_core::token::PlaintextCipher as _PlaintextCipher;
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::dpapi::DpapiCipher;
+    use super::*;
+
+    #[test]
+    fn dpapi_protect_unprotect_roundtrip() {
+        let cipher = DpapiCipher;
+        let original_json = r#"{"access_token":"sk-ant-test","expires_at":"2026-09-10T15:00:00.000Z"}"#;
+
+        let encrypted = cipher.encrypt(original_json).expect("DPAPI encryption must succeed");
+        assert_eq!(encrypted[0], MARKER_DPAPI, "Marker must be MARKER_DPAPI");
+        assert_ne!(&encrypted[1..], original_json.as_bytes(), "Payload must be encrypted ciphertext");
+
+        let decrypted = cipher.decrypt(&encrypted).expect("DPAPI decryption must succeed");
+        assert_eq!(decrypted, original_json, "Decrypted text must match original payload");
+    }
+}
