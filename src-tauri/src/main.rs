@@ -203,6 +203,17 @@ fn main() {
                     }
                     let scale = window.scale_factor().unwrap_or(1.0);
                     let size = size.to_logical::<f64>(scale);
+                    // Same door the DPI-shrunk size used to sneak in through:
+                    // a mismatched scale factor between the monitor the window
+                    // was born on and the one `restore_main_position` resolved
+                    // the logical size against could produce a physical size
+                    // that converts back to a few dozen logical px. A real user
+                    // resize can never land here — the OS clamps drag-resizing
+                    // to minWidth/minHeight from tauri.conf.json, which match
+                    // windows_ctl::MIN_W/MIN_H below.
+                    if size.width < windows_ctl::MIN_W || size.height < windows_ctl::MIN_H {
+                        return;
+                    }
                     let schedule_flush = {
                         let mut p = MAIN_PENDING_SIZE.lock().unwrap();
                         let first = p.is_none();
