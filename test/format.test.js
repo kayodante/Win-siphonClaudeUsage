@@ -50,6 +50,17 @@ test('formatRelativeUpdated localizes Japanese output', () => {
   );
 });
 
+test('formatRelativeUpdated localizes Korean output', () => {
+  assert.equal(
+    formatRelativeUpdated(
+      new Date('2026-05-04T12:03:00Z'),
+      new Date('2026-05-04T12:05:00Z'),
+      'ko'
+    ),
+    '2분 전 업데이트됨'
+  );
+});
+
 test('clampPercent rounds and clamps to the 0-100 range', () => {
   assert.equal(clampPercent(54.4), 54);
   assert.equal(clampPercent(54.5), 55);
@@ -122,6 +133,11 @@ test('formatTokens localizes Japanese output', () => {
   assert.equal(formatTokens(1500, 'ja'), '1.5Kトークン');
 });
 
+test('formatTokens localizes Korean output', () => {
+  assert.equal(formatTokens(999, 'ko'), '999 토큰');
+  assert.equal(formatTokens(1500, 'ko'), '1.5K 토큰');
+});
+
 test('formatClockTime pads to HH:MM', () => {
   const date = new Date('2026-05-04T17:42:00');
   assert.equal(formatClockTime(date), '17:42');
@@ -174,6 +190,25 @@ test('formatTimeRemaining produces Japanese output', () => {
   );
 });
 
+test('formatTimeRemaining produces Korean output', () => {
+  assert.equal(
+    formatTimeRemaining(
+      new Date('2026-05-04T14:14:00Z'),
+      new Date('2026-05-04T12:00:00Z'),
+      'ko'
+    ),
+    '2시간 14분 남음'
+  );
+  assert.equal(
+    formatTimeRemaining(
+      new Date('2026-05-04T12:30:00Z'),
+      new Date('2026-05-04T12:00:00Z'),
+      'ko'
+    ),
+    '30분 남음'
+  );
+});
+
 test('formatDaysRemaining pluralizes correctly in PT', () => {
   assert.equal(
     formatDaysRemaining(
@@ -206,6 +241,17 @@ test('formatDaysRemaining localizes Japanese output', () => {
   );
 });
 
+test('formatDaysRemaining localizes Korean output', () => {
+  assert.equal(
+    formatDaysRemaining(
+      new Date('2026-05-08T00:00:00Z'),
+      new Date('2026-05-04T00:00:00Z'),
+      'ko'
+    ),
+    '4일 후 리셋'
+  );
+});
+
 test('formatWeekdayClock combines weekday and 24h time', () => {
   const date = new Date('2026-05-05T00:00:00');
   const result = formatWeekdayClock(date, 'pt-BR');
@@ -217,6 +263,12 @@ test('formatWeekdayClock uses Japanese weekday name', () => {
   const result = formatWeekdayClock(date, 'ja');
   assert.match(result, /^.+, \d{2}:\d{2}$/);
   assert.equal(/^[A-Z][a-z]+,/.test(result), false);
+});
+
+test('formatWeekdayClock uses Korean weekday name', () => {
+  const date = new Date('2026-05-05T00:00:00');
+  const result = formatWeekdayClock(date, 'ko');
+  assert.match(result, /^.+, \d{2}:\d{2}$/);
 });
 
 test('hydrateSlot returns null for falsy input', () => {

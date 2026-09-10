@@ -3,8 +3,8 @@ import test from 'node:test';
 
 import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../src/shared/i18n.js';
 
-test('SUPPORTED_LANGUAGES lists English, Brazilian Portuguese, and Japanese', () => {
-  assert.deepEqual(SUPPORTED_LANGUAGES, ['en', 'pt-BR', 'ja']);
+test('SUPPORTED_LANGUAGES lists English, Brazilian Portuguese, Japanese, and Korean', () => {
+  assert.deepEqual(SUPPORTED_LANGUAGES, ['en', 'pt-BR', 'ja', 'ko']);
 });
 
 test('known key in English returns English string', () => {
