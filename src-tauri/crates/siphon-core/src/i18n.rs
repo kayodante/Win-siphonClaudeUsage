@@ -9,6 +9,8 @@ pub fn t(key: &str, lang: &str) -> String {
         PT
     } else if lang == "ja" {
         JA
+    } else if lang == "ko" {
+        KO
     } else {
         EN
     };
@@ -109,6 +111,34 @@ const JA: &[(&str, &str)] = &[
     ("alert.critical.body", "セッションの90%に達しました。"),
 ];
 
+const KO: &[(&str, &str)] = &[
+    ("tray.session", "세션"),
+    ("tray.weekly", "주간"),
+    ("tray.sessionReset", "세션 리셋"),
+    ("tray.updated", "업데이트"),
+    ("tray.showApp", "앱 열기"),
+    ("tray.widget", "위젯 표시"),
+    ("tray.settings", "설정"),
+    ("tray.restart", "다시 시작"),
+    ("tray.quit", "종료"),
+    ("quota.suffix.used", "사용됨"),
+    ("quota.suffix.remaining", "남음"),
+    ("notification.resetTitle", "Claude 세션 리셋"),
+    (
+        "notification.resetBody",
+        "Claude 세션 한도가 초기화되어 다시 이용할 수 있습니다.",
+    ),
+    ("notification.expireTitle", "세션 만료됨"),
+    (
+        "notification.expireBody",
+        "Claude 세션 사용량 한도에 도달했습니다.",
+    ),
+    ("alert.highUsage.title", "사용량 높음"),
+    ("alert.highUsage.body", "세션의 70%에 도달했습니다."),
+    ("alert.critical.title", "사용량 위험"),
+    ("alert.critical.body", "세션의 90%에 도달했습니다."),
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,5 +170,22 @@ mod tests {
         assert_eq!(t("tray.weekly", "fr"), "Weekly");
         // Unknown key returns the key itself.
         assert_eq!(t("does.not.exist", "en"), "does.not.exist");
+    }
+
+    #[test]
+    fn tray_menu_actions_are_localized_ko() {
+        assert_eq!(t("tray.showApp", "ko"), "앱 열기");
+        assert_eq!(t("tray.widget", "ko"), "위젯 표시");
+        assert_eq!(t("tray.settings", "ko"), "설정");
+        assert_eq!(t("tray.restart", "ko"), "다시 시작");
+        assert_eq!(t("tray.quit", "ko"), "종료");
+    }
+
+    #[test]
+    fn toast_notifications_are_localized_ko() {
+        assert_eq!(t("notification.resetTitle", "ko"), "Claude 세션 리셋");
+        assert_eq!(t("notification.expireTitle", "ko"), "세션 만료됨");
+        assert_eq!(t("alert.highUsage.title", "ko"), "사용량 높음");
+        assert_eq!(t("alert.critical.title", "ko"), "사용량 위험");
     }
 }
