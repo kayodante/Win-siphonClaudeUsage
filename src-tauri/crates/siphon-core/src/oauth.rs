@@ -157,16 +157,20 @@ fn url_encode(s: &str) -> String {
     out
 }
 
-fn url_decode(s: &str) -> String {
+pub(crate) fn url_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
-                out.push(v);
-                i += 3;
-                continue;
+            // Check UTF-8 char boundaries before slicing. If the slice end falls
+            // mid-character, treat `%` as literal to avoid panicking on hostile input.
+            if s.is_char_boundary(i + 1) && s.is_char_boundary(i + 3) {
+                if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
+                    out.push(v);
+                    i += 3;
+                    continue;
+                }
             }
         }
         out.push(bytes[i]);
@@ -222,6 +226,51 @@ mod tests {
         );
         assert_eq!(extract_code("  RAWCODE  "), "RAWCODE");
         assert_eq!(extract_code("RAWCODE#stuff"), "RAWCODE");
+    }
+
+    #[test]
+    fn url_decode_percent_escapes() {
+        // Standard percent-encoded characters.
+        assert_eq!(url_decode("hello%20world"), "hello world");
+        assert_eq!(url_decode("a%2Fb%2Bc"), "a/b+c");
+        assert_eq!(url_decode("%2F%3F%40"), "/?@");
+    }
+
+    #[test]
+    fn url_decode_non_hex_is_literal() {
+        // Non-hex after `%` is treated as literal `%`.
+        assert_eq!(url_decode("%ZZ"), "%ZZ");
+        assert_eq!(url_decode("%1G"), "%1G");
+        assert_eq!(url_decode("prefix%XYsuffix"), "prefix%XYsuffix");
+    }
+
+    #[test]
+    fn url_decode_incomplete_percent_escapes() {
+        // Bare `%` at end of input or followed by only one char.
+        assert_eq!(url_decode("end%"), "end%");
+        assert_eq!(url_decode("only%2"), "only%2");
+        assert_eq!(url_decode("trailing%"), "trailing%");
+    }
+
+    #[test]
+    fn url_decode_multibyte_chars_after_percent() {
+        // Hostile input: `%` followed by multi-byte UTF-8 characters.
+        // The Euro sign (€) is U+20AC, encoded as E2 82 AC in UTF-8.
+        // "%€" has bytes [37, 226, 130, 172], where the slice end at
+        // i+3 falls mid-character. Must not panic.
+        assert_eq!(url_decode("%€"), "%€");
+        assert_eq!(url_decode("code=%€value"), "code=%€value");
+
+        // U+FFFD replacement character (EF BF BD, 3 bytes).
+        // This can occur when from_utf8_lossy processes invalid bytes.
+        assert_eq!(url_decode("%\u{FFFD}"), "%\u{FFFD}");
+    }
+
+    #[test]
+    fn url_decode_mixed_valid_and_hostile() {
+        // Ensure we don't panic even with mixed valid percent-escapes and hostile sequences.
+        assert_eq!(url_decode("%20%€%2F"), " %€/");
+        assert_eq!(url_decode("a%2Fb%€c%20d"), "a/b%€c d");
     }
 
     #[test]
