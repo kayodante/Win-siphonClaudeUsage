@@ -383,7 +383,7 @@ impl Controller {
     // ----- auth ------------------------------------------------------------
 
     pub async fn start_sign_in(&self) -> String {
-        let flow = oauth::prepare_flow();
+        let flow = oauth::prepare_flow(oauth::REDIRECT_URI);
         let url = flow.url.clone();
         {
             let mut state = self.state.lock().unwrap();
@@ -403,7 +403,12 @@ impl Controller {
         let code = oauth::extract_code(&raw_code);
         match self
             .http
-            .post_token(oauth::exchange_body(&code, &flow.verifier, &flow.state))
+            .post_token(oauth::exchange_body(
+                &code,
+                &flow.verifier,
+                &flow.state,
+                &flow.redirect_uri,
+            ))
             .await
         {
             Ok(creds) => {
