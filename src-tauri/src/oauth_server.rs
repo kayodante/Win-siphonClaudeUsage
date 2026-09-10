@@ -23,6 +23,13 @@ const WAIT_TIMEOUT: Duration = Duration::from_secs(300);
 /// hundred bytes; anything larger is not our callback and must not be buffered.
 const MAX_REQUEST_LINE: u64 = 8 * 1024;
 
+/// Cap on reading a single connection's request line. A local process that
+/// opens the port and never writes — a port-scanner, or endpoint-security
+/// software TCP-connect-probing a newly opened listening port — must not be
+/// able to occupy the loop and cost the real callback the rest of the sign-in
+/// window; it costs at most one `READ_TIMEOUT` before the loop moves on.
+const READ_TIMEOUT: Duration = Duration::from_secs(10);
+
 /// A bound-but-not-yet-serving listener. `port` is what goes into the redirect.
 pub struct Pending {
     listener: TcpListener,
@@ -62,11 +69,14 @@ async fn accept_loop(listener: TcpListener, expected_state: String) -> Option<Ca
         let (mut stream, _peer) = listener.accept().await.ok()?;
         let (reader, mut writer) = stream.split();
         let mut line = String::new();
-        if BufReader::new(reader.take(MAX_REQUEST_LINE))
-            .read_line(&mut line)
-            .await
-            .is_err()
-        {
+        let read = tokio::time::timeout(
+            READ_TIMEOUT,
+            BufReader::new(reader.take(MAX_REQUEST_LINE)).read_line(&mut line),
+        )
+        .await;
+        if !matches!(read, Ok(Ok(_))) {
+            // Either the read errored or READ_TIMEOUT elapsed — a stalled
+            // peer costs one READ_TIMEOUT, not the whole sign-in window.
             continue;
         }
         let outcome = oauth_callback::classify(&line, &expected_state);
