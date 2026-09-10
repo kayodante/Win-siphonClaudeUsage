@@ -21,6 +21,14 @@ test('session at 0% shows empty prompt in EN', () => {
   );
 });
 
+test('session at 0% shows empty prompt in KO', () => {
+  const slot = { percent: 0, resetsAt: new Date('2026-05-04T17:42:00Z') };
+  assert.equal(
+    buildSessionResetLine(slot, NOW, 'ko'),
+    '메시지를 보내 시작하세요'
+  );
+});
+
 test('session in progress shows remaining + clock in PT', () => {
   const slot = { percent: 25, resetsAt: new Date('2026-05-04T14:14:00Z') };
   const result = buildSessionResetLine(slot, NOW, 'pt-BR');
@@ -37,6 +45,12 @@ test('session at 100% shows full message + remaining time in EN', () => {
   const slot = { percent: 100, resetsAt: new Date('2026-05-04T14:14:00Z') };
   const result = buildSessionResetLine(slot, NOW, 'en');
   assert.match(result, /^Session full · Resets in \d+h \d+min, at \d{2}:\d{2}$/);
+});
+
+test('session at 100% shows full message + remaining time in KO', () => {
+  const slot = { percent: 100, resetsAt: new Date('2026-05-04T14:14:00Z') };
+  const result = buildSessionResetLine(slot, NOW, 'ko');
+  assert.match(result, /^세션 한도 도달 · \d+시간 \d+분 후인 \d{2}:\d{2}에 리셋$/);
 });
 
 test('session at 100% with < 1h left shows minutes only in PT', () => {
@@ -76,4 +90,10 @@ test('weekly at 100% shows limit reached in EN', () => {
   const slot = { percent: 100, resetsAt: new Date('2026-05-08T00:00:00Z') };
   const result = buildWeeklyResetLine(slot, NOW, 'en');
   assert.match(result, /^Limit reached · Resets /);
+});
+
+test('weekly at 100% shows limit reached in KO', () => {
+  const slot = { percent: 100, resetsAt: new Date('2026-05-08T00:00:00Z') };
+  const result = buildWeeklyResetLine(slot, NOW, 'ko');
+  assert.match(result, /^한도 도달 · /);
 });

@@ -1,6 +1,6 @@
 import { t, tFormat } from './i18n.js';
 
-const WEEKDAY_LOCALES = { en: 'en-US', 'pt-BR': 'pt-BR', ja: 'ja-JP' };
+const WEEKDAY_LOCALES = { en: 'en-US', 'pt-BR': 'pt-BR', ja: 'ja-JP', ko: 'ko-KR' };
 
 export function formatCurrency(value) {
   if (value == null || Number.isNaN(value)) return '--';
