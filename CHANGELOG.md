@@ -11,6 +11,22 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- Clicking a notification toast now reopens the Siphon window, instead of
+  doing nothing.
+
+### Changed
+
+- Toasts are built directly on `tauri-winrt-notification` rather than
+  `tauri-plugin-notification`, whose desktop backend offers no click
+  callback. Six crates dropped out of the dependency tree; the toasts look
+  and sound exactly as before.
+- Settings and IPC commands now return typed errors instead of silently
+  succeeding: a failed preference write, an invalid value, a failed Claude
+  Code hook sync, or a blocked external link now surfaces to the interface
+  instead of disappearing.
+
 ## [1.8.5] - 2026-07-31
 
 ### Fixed

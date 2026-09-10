@@ -34,12 +34,53 @@ pub fn position_is_sentinel(x: f64, y: f64) -> bool {
 /// rejected so the caller can fall back to its default placement. With no
 /// monitor information at all, accept the position rather than fight the OS.
 pub fn position_is_visible(monitors: &[MonitorRect], x: f64, y: f64, w: f64, h: f64) -> bool {
-    if monitors.is_empty() {
-        return true;
-    }
-    monitors.iter().any(|&(mx, my, mw, mh)| {
+    monitors.is_empty() || monitor_containing(monitors, x, y, w, h).is_some()
+}
+
+/// The monitor a `w`×`h` window at `x, y` is (mostly) on — the same predicate
+/// `position_is_visible` answers yes/no with, kept in one place so the caller
+/// can also ask *which* display it landed on and size the window to fit it.
+pub fn monitor_containing(
+    monitors: &[MonitorRect],
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> Option<MonitorRect> {
+    monitors.iter().copied().find(|&(mx, my, mw, mh)| {
         x >= mx && y >= my && x <= mx + mw - w * 0.5 && y <= my + mh - h * 0.5
     })
+}
+
+/// A `w`×`h` window shrunk to fit inside `monitor`, keeping `EDGE_MARGIN` free
+/// on both sides of each axis. Only ever shrinks.
+///
+/// Physical pixels, so this needs no scale factor: a size stored in logical px
+/// is DPI-independent, which means a window that fit a 1920×1080 panel at 100%
+/// is taller than the same panel at 150% — the screen lost logical height, the
+/// window did not. Without this, a size saved on a large monitor came back
+/// hanging off the bottom of a smaller one.
+pub fn fit_size(monitor: MonitorRect, w: f64, h: f64) -> (f64, f64) {
+    let (_, _, mw, mh) = monitor;
+    (
+        w.min(mw - EDGE_MARGIN * 2.0).max(1.0),
+        h.min(mh - EDGE_MARGIN * 2.0).max(1.0),
+    )
+}
+
+/// Gap kept between the window and the monitor edge, physical px.
+const EDGE_MARGIN: f64 = 16.0;
+
+/// Default placement for a `w`×`h` window: parked against the right edge of
+/// `monitor`, `EDGE_MARGIN` in from the top-right corner. Used when nothing is
+/// stored yet, or when the saved spot fell off an unplugged display.
+pub fn right_edge_position(monitor: MonitorRect, w: f64, h: f64) -> (f64, f64) {
+    let (mx, my, mw, mh) = monitor;
+    let x = (mx + mw - w - EDGE_MARGIN).max(mx);
+    // A window taller than the monitor is pulled up until its bottom edge sits
+    // on the monitor's, so the margin never pushes it past `position_is_visible`.
+    let y = (my + EDGE_MARGIN).min(my + mh - h).max(my);
+    (x, y)
 }
 
 #[cfg(test)]
@@ -84,5 +125,66 @@ mod tests {
     #[test]
     fn accepts_anything_when_no_monitors_are_known() {
         assert!(position_is_visible(&[], 9000.0, 9000.0, 328.0, 732.0));
+    }
+
+    #[test]
+    fn parks_at_the_right_edge_of_the_primary_monitor() {
+        assert_eq!(
+            right_edge_position(TWO[0], 328.0, 732.0),
+            (1920.0 - 328.0 - 16.0, 16.0)
+        );
+    }
+
+    #[test]
+    fn works_on_a_monitor_with_a_non_zero_origin() {
+        assert_eq!(
+            right_edge_position(TWO[1], 328.0, 732.0),
+            (1920.0 + 2560.0 - 328.0 - 16.0, 16.0)
+        );
+    }
+
+    #[test]
+    fn a_too_wide_window_clamps_to_the_monitor_origin() {
+        let (x, _) = right_edge_position(TWO[0], 3000.0, 732.0);
+        assert_eq!(x, TWO[0].0);
+    }
+
+    #[test]
+    fn names_the_monitor_a_window_sits_on() {
+        assert_eq!(
+            monitor_containing(&TWO, 3260.0, 368.0, 328.0, 732.0),
+            Some(TWO[1])
+        );
+        assert_eq!(
+            monitor_containing(&TWO, 100.0, 100.0, 328.0, 732.0),
+            Some(TWO[0])
+        );
+        assert_eq!(monitor_containing(&TWO, 5200.0, 368.0, 328.0, 732.0), None);
+    }
+
+    #[test]
+    fn shrinks_a_window_taller_than_its_monitor() {
+        // 316×851 logical saved on a big display, restored on a 1920×1080 panel
+        // at 150%: 1276 physical px of window against 1080 px of screen.
+        let (w, h) = fit_size(TWO[0], 474.0, 1276.0);
+        assert_eq!((w, h), (474.0, 1080.0 - 32.0));
+    }
+
+    #[test]
+    fn leaves_a_window_that_already_fits_alone() {
+        assert_eq!(fit_size(TWO[1], 328.0, 732.0), (328.0, 732.0));
+    }
+
+    #[test]
+    fn a_fitted_window_at_the_right_edge_is_visible() {
+        let (w, h) = fit_size(TWO[0], 474.0, 1276.0);
+        let (x, y) = right_edge_position(TWO[0], w, h);
+        assert!(position_is_visible(&TWO, x, y, w, h));
+    }
+
+    #[test]
+    fn the_result_is_always_visible_on_its_monitor() {
+        let (x, y) = right_edge_position(TWO[1], 328.0, 732.0);
+        assert!(position_is_visible(&TWO, x, y, 328.0, 732.0));
     }
 }

@@ -7,6 +7,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, State};
 
+use siphon_core::command_error::{CommandError, CommandResult};
 use siphon_core::security::is_safe_external_url;
 use siphon_core::state::AppState;
 
@@ -18,13 +19,14 @@ pub fn state_get(ctx: State<'_, AppContext>) -> AppState {
 }
 
 #[tauri::command]
-pub async fn refresh(ctx: State<'_, AppContext>) -> Result<(), ()> {
+// Infallible: Tauri requires a Result from any async command taking State<'_, _>.
+pub async fn refresh(ctx: State<'_, AppContext>) -> CommandResult {
     ctx.controller.clone().refresh_all().await;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> Result<String, ()> {
+pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> CommandResult<String> {
     let url = ctx.controller.start_sign_in().await;
     if is_safe_external_url(&url) {
         let _ = tauri_plugin_opener::OpenerExt::opener(&app).open_url(url.clone(), None::<&str>);
@@ -33,7 +35,7 @@ pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> Result<St
 }
 
 #[tauri::command]
-pub async fn auth_submit(ctx: State<'_, AppContext>, code: String) -> Result<(), ()> {
+pub async fn auth_submit(ctx: State<'_, AppContext>, code: String) -> CommandResult {
     ctx.controller.submit_code(code).await;
     Ok(())
 }
@@ -44,7 +46,7 @@ pub fn auth_cancel(ctx: State<'_, AppContext>) {
 }
 
 #[tauri::command]
-pub async fn auth_sign_out(ctx: State<'_, AppContext>) -> Result<(), ()> {
+pub async fn auth_sign_out(ctx: State<'_, AppContext>) -> CommandResult {
     ctx.controller.sign_out().await;
     Ok(())
 }
@@ -96,30 +98,40 @@ pub async fn prefs_set(
     app: AppHandle,
     ctx: State<'_, AppContext>,
     args: PrefSet,
-) -> Result<(), ()> {
+) -> CommandResult {
     let PrefSet { path, value } = args;
     if !ALLOWED_PREFS.contains(&path.as_str()) {
-        return Ok(());
+        return Err(CommandError::UnknownPreference(path));
     }
     // Value guards matching main.js registerPrefsIpc.
     if path == "refresh.intervalSeconds" {
         let n = value.as_u64().unwrap_or(0);
         if !crate::controller::ALLOWED_REFRESH_INTERVALS.contains(&n) {
-            return Ok(());
+            return Err(CommandError::InvalidPreferenceValue {
+                path,
+                value: value.to_string(),
+            });
         }
     }
     if path == "floating.style" {
         let s = value.as_str().unwrap_or("");
         if s != "classic" && s != "mini" {
-            return Ok(());
+            return Err(CommandError::InvalidPreferenceValue {
+                path,
+                value: value.to_string(),
+            });
         }
     }
     if path == "display.quotaMode" {
         let s = value.as_str().unwrap_or("");
         if s != "used" && s != "remaining" {
-            return Ok(());
+            return Err(CommandError::InvalidPreferenceValue {
+                path,
+                value: value.to_string(),
+            });
         }
     }
+    let mut claude_settings_err = None;
     if path == "integration.launchWithClaudeCode" {
         let enable = value.as_bool().unwrap_or(false);
         let res = if enable {
@@ -129,11 +141,20 @@ pub async fn prefs_set(
         };
         if let Err(e) = res {
             log::error!("claude settings sync failed: {e}");
+            claude_settings_err = Some(e.to_string());
         }
     }
+    // Write the preference first: the toggle must persist even if the Claude
+    // Code settings sync below fails.
     match ctx.prefs.set(&path, value) {
         Ok(change) => apply_pref_change(&app, &ctx, &change),
-        Err(e) => log::error!("[prefs:set] write failed: {e}"),
+        Err(e) => {
+            log::error!("[prefs:set] write failed: {e}");
+            return Err(CommandError::PrefWrite(e.to_string()));
+        }
+    }
+    if let Some(e) = claude_settings_err {
+        return Err(CommandError::ClaudeSettings(e));
     }
     Ok(())
 }
@@ -154,11 +175,14 @@ pub fn floating_open_main(app: AppHandle) {
 }
 
 #[tauri::command]
-pub async fn floating_close(app: AppHandle, ctx: State<'_, AppContext>) -> Result<(), ()> {
-    if let Ok(change) = ctx.prefs.set("floating.enabled", Value::Bool(false)) {
-        apply_pref_change(&app, &ctx, &change);
+pub async fn floating_close(app: AppHandle, ctx: State<'_, AppContext>) -> CommandResult {
+    match ctx.prefs.set("floating.enabled", Value::Bool(false)) {
+        Ok(change) => {
+            apply_pref_change(&app, &ctx, &change);
+            Ok(())
+        }
+        Err(e) => Err(CommandError::PrefWrite(e.to_string())),
     }
-    Ok(())
 }
 
 #[tauri::command]
@@ -166,11 +190,14 @@ pub async fn floating_set_expanded(
     app: AppHandle,
     ctx: State<'_, AppContext>,
     expanded: bool,
-) -> Result<(), ()> {
-    if let Ok(change) = ctx.prefs.set("floating.expanded", Value::Bool(expanded)) {
-        apply_pref_change(&app, &ctx, &change);
+) -> CommandResult {
+    match ctx.prefs.set("floating.expanded", Value::Bool(expanded)) {
+        Ok(change) => {
+            apply_pref_change(&app, &ctx, &change);
+            Ok(())
+        }
+        Err(e) => Err(CommandError::PrefWrite(e.to_string())),
     }
-    Ok(())
 }
 
 #[tauri::command]
@@ -204,17 +231,19 @@ pub fn app_quit(app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn shell_open_external(app: AppHandle, url: String) {
-    if is_safe_external_url(&url) {
-        let _ = tauri_plugin_opener::OpenerExt::opener(&app).open_url(url, None::<&str>);
+pub fn shell_open_external(app: AppHandle, url: String) -> CommandResult {
+    if !is_safe_external_url(&url) {
+        return Err(CommandError::UnsafeUrl(url));
     }
+    let _ = tauri_plugin_opener::OpenerExt::opener(&app).open_url(url, None::<&str>);
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn dialog_pick_folder(
     app: AppHandle,
     ctx: State<'_, AppContext>,
-) -> Result<Option<String>, ()> {
+) -> CommandResult<Option<String>> {
     use tauri_plugin_dialog::DialogExt;
     let start = ctx.prefs.claude_dir();
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -229,7 +258,7 @@ pub async fn dialog_pick_folder(
 
 // The update commands are Windows-specific; see `crate::updater_bin`.
 #[tauri::command]
-pub async fn update_download(app: AppHandle, payload: Value) -> Result<(), ()> {
+pub async fn update_download(app: AppHandle, payload: Value) -> CommandResult {
     crate::updater_bin::download(app, payload).await;
     Ok(())
 }

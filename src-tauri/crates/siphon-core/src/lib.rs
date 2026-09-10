@@ -10,6 +10,7 @@
 //! command handlers. It calls into the pure functions exposed here.
 
 pub mod alerts;
+pub mod command_error;
 pub mod diagnostics;
 pub mod format;
 pub mod geometry;

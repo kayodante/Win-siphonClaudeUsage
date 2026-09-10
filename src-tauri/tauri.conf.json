@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Siphon",
-  "version": "1.8.8",
+  "version": "1.9.1",
   "identifier": "com.kayodantes.siphon",
   "build": {
     "frontendDist": "../src"
@@ -15,8 +15,8 @@
         "title": "Siphon",
         "width": 320,
         "height": 700,
-        "minWidth": 310,
-        "minHeight": 600,
+        "minWidth": 300,
+        "minHeight": 700,
         "resizable": true,
         "decorations": false,
         "transparent": true,

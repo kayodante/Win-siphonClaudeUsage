@@ -1,6 +1,6 @@
 [package]
 name = "siphon"
-version = "1.8.8"
+version = "1.9.1"
 description = "Windows tray app for Claude Code usage and reset notifications."
 authors = ["Kayo Dante"]
 license = "MIT"
@@ -25,7 +25,6 @@ tauri-build = { version = "2", features = [] }
 siphon-core = { path = "crates/siphon-core" }
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
-tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
@@ -46,6 +45,7 @@ windows = { version = "0.58", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 window-vibrancy = "0.5"
+tauri-winrt-notification = "0.7"
 
 [profile.release]
 opt-level = "s"
