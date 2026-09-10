@@ -21,8 +21,28 @@ pub struct Tokens {
 
 /// Bundled fallback pricing (USD per million tokens) used when
 /// `readout-pricing.json` is absent. Keys match `pricing_key` output.
-/// Verified against platform.claude.com/docs (2026-07-28).
+/// Verified against platform.claude.com/docs/en/about-claude/pricing (2026-09-10).
+/// `cache_write` is the 5-minute write (1.25x input); `cache_read` is 0.1x input
+/// on every model except Fable/Mythos 5.1, which read at 0.025x.
 pub const BUNDLED_PRICING: &[(&str, Price)] = &[
+    (
+        "fable-5-1",
+        Price {
+            input: 10.0,
+            output: 50.0,
+            cache_read: 0.25,
+            cache_write: 12.50,
+        },
+    ),
+    (
+        "mythos-5-1",
+        Price {
+            input: 10.0,
+            output: 50.0,
+            cache_read: 0.25,
+            cache_write: 12.50,
+        },
+    ),
     (
         "fable-5",
         Price {
@@ -107,10 +127,10 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
     (
         "sonnet-5",
         Price {
-            input: 3.0,
-            output: 15.0,
-            cache_read: 0.30,
-            cache_write: 3.75,
+            input: 2.0,
+            output: 10.0,
+            cache_read: 0.20,
+            cache_write: 2.50,
         },
     ),
     (
@@ -149,13 +169,16 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
             cache_write: 1.25,
         },
     ),
+    // Pre-4.6 models put the generation first (`claude-3-5-haiku-20241022`), so
+    // their `pricing_key` reads back-to-front. Claude Code used this one as its
+    // small fast model for a long time, so old JSONL still references it.
     (
-        "haiku-4",
+        "3-5-haiku",
         Price {
-            input: 0.25,
-            output: 1.25,
-            cache_read: 0.03,
-            cache_write: 0.30,
+            input: 0.80,
+            output: 4.0,
+            cache_read: 0.08,
+            cache_write: 1.00,
         },
     ),
 ];
@@ -277,6 +300,31 @@ mod tests {
         let p = find_price(None, "claude-opus-5").unwrap();
         assert_eq!(p.input, 5.0);
         assert_eq!(p.output, 25.0);
+    }
+
+    /// Every current model must resolve. A key missing from the table costs its
+    /// usage at $0 with no error, so this is the check that catches a new model
+    /// nobody added — and the two rates that were wrong on 2026-09-10.
+    #[test]
+    fn current_models_all_priced() {
+        for model in [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-haiku-4-5-20251001",
+            "claude-3-5-haiku-20241022",
+        ] {
+            assert!(find_price(None, model).is_some(), "no price for {model}");
+        }
+
+        let fable = find_price(None, "claude-fable-5-1").unwrap();
+        assert_eq!(fable.input, 10.0);
+        assert_eq!(fable.cache_read, 0.25); // 0.025x, not the usual 0.1x
+
+        let sonnet = find_price(None, "claude-sonnet-5").unwrap();
+        assert_eq!(sonnet.input, 2.0);
+        assert_eq!(sonnet.output, 10.0);
     }
 
     #[test]

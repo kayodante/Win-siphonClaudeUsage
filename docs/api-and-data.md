@@ -411,11 +411,18 @@ the background. `display.quotaMode` is `used` or `remaining` and flips only the
 displayed percentage and its suffix — meters, colors, pace, and alert thresholds
 stay on the raw *used* percent. `window.x/y` is the main window's **physical**
 position, accepted on restore when at least half the window still lands on a
-connected monitor (`siphon_core::geometry`), same rule as `floating.x/y`.
+connected monitor (`siphon_core::geometry`), same rule as `floating.x/y`. A spot
+that lands on no monitor — a display unplugged since the save — and a first launch
+with nothing stored both fall back to the primary monitor's top-right corner,
+16px in.
 `window.width/height` is its size in **logical** pixels — physical position,
 logical size, because a position is a point in the shared virtual desktop while
 a size is a measurement Windows rescales across a DPI boundary. Size is restored
-unconditionally; the OS clamps it to `minWidth`/`minHeight`.
+unconditionally, floored at 300×700 logical: the OS enforces
+`minWidth`/`minHeight` only against a drag-resize, so the restore floors it by
+hand. It is then shrunk to fit the display it is about to land on, since a
+logical size is DPI-independent and a window sized on a large monitor can be
+taller than a smaller one is.
 
 ### `%APPDATA%\Siphon\local-usage-cache.json`
 

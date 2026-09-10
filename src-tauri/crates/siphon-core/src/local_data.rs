@@ -523,8 +523,9 @@ mod tests {
         assert_eq!(summary.today_stats.cost, 30.0);
         assert_eq!(summary.today_stats.total_tokens, 2_000_000);
         assert!(!summary.today_stats.is_empty);
-        // Month (July): opus today ($30) + sonnet 1M in ($3) = $33.
-        assert_eq!(summary.month_stats.cost, 33.0);
+        // Month (July): opus today ($30) + sonnet 1M in ($2) = $32.
+        // The sonnet leg reads BUNDLED_PRICING, so a rate change lands here.
+        assert_eq!(summary.month_stats.cost, 32.0);
     }
 
     #[test]

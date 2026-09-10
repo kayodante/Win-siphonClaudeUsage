@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-09-10
+
 ### Added
 
 - Clicking a notification toast now reopens the Siphon window, instead of
@@ -26,6 +28,49 @@ is added above it.
   succeeding: a failed preference write, an invalid value, a failed Claude
   Code hook sync, or a blocked external link now surfaces to the interface
   instead of disappearing.
+
+### Fixed
+
+- Claude Sonnet 5 usage was costed 50% too high. The bundled price list still
+  carried $3/$15 per million tokens, the increase that had been scheduled for
+  September 1 and was then cancelled — the real price is $2/$10.
+- Claude Fable 5.1 usage was costed at $0. It was missing from the bundled
+  price list entirely, and a model with no price contributes nothing to the
+  total instead of raising an error. Added, along with Claude Mythos 5.1 and
+  Claude Haiku 3.5.
+
+  These prices are only used when `~/.claude/readout-pricing.json` is absent,
+  which on most machines it always is.
+
+### Added
+
+- A public landing page, served by GitHub Pages from `docs/`: the five quota
+  states as real screenshots, the floating widget layouts, install instructions
+  for the installer, the portable build and winget, and the privacy policy.
+
+### Changed
+
+- The banner entrances and the "last updated" pulse are now pure CSS. The pulse
+  used to be recomputed every frame in a JavaScript animation loop; a banner
+  re-triggered mid-entrance used to restart from zero instead of retargeting
+  from where it was.
+
+### Fixed
+
+- Starting a Claude Code session no longer pulls the Siphon window over your
+  work. The hook launched Siphon with no arguments, so an already-running app
+  treated it as a manual launch and raised the window — every session. It also
+  no longer flashes a console window: the hook stopped opening a second
+  PowerShell just to call `Start-Process` inside the shell Claude Code had
+  already opened.
+
+## [1.8.7] - 2026-08-01
+
+### Fixed
+
+- Accessibility pass over the main window and the floating widget: labels,
+  roles, focus order and announcements, covered by two new test suites so the
+  markup contracts stay in place.
 
 ## [1.8.5] - 2026-07-31
 

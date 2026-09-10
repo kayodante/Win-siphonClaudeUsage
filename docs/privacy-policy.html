@@ -71,7 +71,7 @@
           <p>These files are never uploaded or shared.</p>
 
           <h2>External network requests</h2>
-          <p>Siphon makes two types of outbound requests, both to Anthropic:</p>
+          <p>Siphon makes outbound requests to two destinations — Anthropic, for your usage data, and GitHub, for updates:</p>
           <div class="policy-table-wrap">
             <table>
               <thead>
@@ -80,9 +80,12 @@
               <tbody>
                 <tr><td><code>https://claude.ai/</code> (OAuth PKCE flow)</td><td>Sign in — opens in your browser</td></tr>
                 <tr><td><code>https://api.anthropic.com/api/oauth/usage</code></td><td>Fetch session and weekly quota data</td></tr>
+                <tr><td><code>https://api.github.com/repos/&hellip;/releases/latest</code></td><td>Check for a newer version (can be turned off in Settings)</td></tr>
+                <tr><td><code>https://github.com/</code> / <code>*.githubusercontent.com</code></td><td>Download an update installer, only when an update is downloaded</td></tr>
               </tbody>
             </table>
           </div>
+          <p>The GitHub requests carry no usage data, no account information, and no identifier — they only ask what the latest release is and fetch a file.</p>
           <p>No data is sent to any other third party. No analytics, no crash reporting, no telemetry.</p>
 
           <h2>Credentials</h2>
