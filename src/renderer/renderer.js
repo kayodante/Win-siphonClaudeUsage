@@ -11,7 +11,7 @@ import {
   quotaDisplayValue
 } from '../shared/format.js';
 import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
-import { SUPPORTED_LANGUAGES, t, tFormat } from '../shared/i18n.js';
+import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
@@ -268,11 +268,24 @@ function setDownloadUI(state, percent) {
 
 function handleToggleError(logMsg, error, event, errorKey) {
   logSafeError(logMsg, error);
-  if (event && event.target) {
+  if (event && event.target && error?.kind !== 'claudeSettings') {
     event.target.checked = !event.target.checked;
   }
-  if (errorKey && elements.errorText) {
-    setErrorText(t(errorKey, currentLanguage()));
+  const message = formatCommandError(error, currentLanguage(), errorKey);
+  if (message && elements.errorText) {
+    setErrorText(message);
+  }
+}
+
+async function openExternal(url) {
+  try {
+    await window.siphon.openExternal(url);
+  } catch (error) {
+    logSafeError('Failed to open external link:', error);
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) {
+      setErrorText(message);
+    }
   }
 }
 function triggerResetFlash() {
@@ -348,9 +361,17 @@ elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 elements.editClaudePathButton.addEventListener('click', async () => {
   const selected = await window.siphon.pickFolder();
   if (!selected) return;
-  await window.siphon.setPreference('claudePath', selected);
-  appInfo = await window.siphon.getAppInfo();
-  elements.claudePath.textContent = appInfo.claudeDir;
+  try {
+    await window.siphon.setPreference('claudePath', selected);
+    appInfo = await window.siphon.getAppInfo();
+    elements.claudePath.textContent = appInfo.claudeDir;
+  } catch (error) {
+    logSafeError('Failed to save Claude Code path:', error);
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) {
+      setErrorText(message);
+    }
+  }
 });
 
 // Window controls
@@ -360,7 +381,7 @@ document.querySelector('#closeButton').addEventListener('click', () => window.si
 // Footer
 document.querySelector('#openClaudeLink').addEventListener('click', event => {
   event.preventDefault();
-  window.siphon.openExternal('https://claude.ai/settings/usage');
+  openExternal('https://claude.ai/settings/usage');
 });
 document.querySelector('#footerQuitButton').addEventListener('click', () => {
   window.siphon.quit();
@@ -449,7 +470,8 @@ elements.settingsRefreshInterval.addEventListener('change', async event => {
   } catch (error) {
     logSafeError('Failed to save refresh preference:', error);
     event.target.value = previousValue;
-    setErrorText(t('error.saveRefresh', currentLanguage()));
+    const message = formatCommandError(error, currentLanguage(), 'error.saveRefresh');
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.settingsFloatingToggle.addEventListener('change', async event => {
@@ -464,6 +486,8 @@ elements.settingsStyleClassic.addEventListener('click', async () => {
     await window.siphon.setPreference('floating.style', 'classic');
   } catch (error) {
     logSafeError('Failed to save widget style preference:', error);
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.settingsStyleMini.addEventListener('click', async () => {
@@ -471,6 +495,8 @@ elements.settingsStyleMini.addEventListener('click', async () => {
     await window.siphon.setPreference('floating.style', 'mini');
   } catch (error) {
     logSafeError('Failed to save widget style preference:', error);
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.settingsStylePicker.addEventListener('keydown', event => {
@@ -507,21 +533,21 @@ elements.settingsUpdatesAutoCheckToggle.addEventListener('change', async event =
   try {
     await window.siphon.setPreference('updates.autoCheck', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save auto-update-check preference:', error);
+    handleToggleError('Failed to save auto-update-check preference:', error, event);
   }
 });
 elements.settingsUpdatesAutoDownloadToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('updates.autoDownload', event.target.checked);
   } catch (error) {
-    logSafeError('Failed to save auto-download preference:', error);
+    handleToggleError('Failed to save auto-download preference:', error, event);
   }
 });
 elements.settingsLaunchWithClaudeCodeToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('integration.launchWithClaudeCode', event.target.checked);
   } catch (error) {
-    handleToggleError('Failed to save launchWithClaudeCode preference:', error, null, 'error.saveLaunchWithClaudeCode');
+    handleToggleError('Failed to save launchWithClaudeCode preference:', error, event, 'error.saveLaunchWithClaudeCode');
   }
 });
 elements.settingsLanguage.addEventListener('change', async event => {
@@ -531,14 +557,19 @@ elements.settingsLanguage.addEventListener('change', async event => {
   } catch (error) {
     logSafeError('Failed to save language preference:', error);
     event.target.value = previousLanguage;
-    setErrorText(t('error.saveLanguage', previousLanguage));
+    const message = formatCommandError(error, previousLanguage, 'error.saveLanguage');
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.settingsQuotaMode.addEventListener('change', async event => {
+  const previousMode = currentState?.preferences?.display?.quotaMode ?? 'used';
   try {
     await window.siphon.setPreference('display.quotaMode', event.target.value);
   } catch (error) {
     logSafeError('Failed to save quota display mode:', error);
+    event.target.value = previousMode;
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.settingsEmailToggle.addEventListener('click', async () => {
@@ -547,6 +578,8 @@ elements.settingsEmailToggle.addEventListener('click', async () => {
     await window.siphon.setPreference('privacy.maskEmail', next);
   } catch (error) {
     logSafeError('Failed to save email mask preference:', error);
+    const message = formatCommandError(error, currentLanguage());
+    if (message && elements.errorText) setErrorText(message);
   }
 });
 elements.onboardCodeForm.addEventListener('submit', event => {
@@ -557,7 +590,7 @@ elements.onboardCodeForm.addEventListener('submit', event => {
 
 elements.githubLink.addEventListener('click', event => {
   event.preventDefault();
-  window.siphon.openExternal('https://github.com/kayodante/Win-siphonClaudeUsage');
+  openExternal('https://github.com/kayodante/Win-siphonClaudeUsage');
 });
 elements.offlineBannerDismiss.addEventListener('click', () => {
   offlineDismissed = true;
@@ -574,7 +607,7 @@ elements.updateBannerDownload.addEventListener('click', () => {
     setDownloadUI('updating', 0);
     window.siphon.installViaWinget();
   } else if (downloadState === 'idle') {
-    if (!updateDownloadUrl) { if (updateUrl) window.siphon.openExternal(updateUrl); return; }
+    if (!updateDownloadUrl) { if (updateUrl) openExternal(updateUrl); return; }
     setDownloadUI('downloading', 0);
     window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, checksumUrl: updateChecksumUrl, version: updateVersion });
   } else if (downloadState === 'ready') {

@@ -1,6 +1,6 @@
 [package]
 name = "siphon-core"
-version = "1.9.2"
+version = "1.9.3"
 description = "Pure, cross-platform business logic for Siphon (usage parsing, pricing, OAuth/PKCE, quota, preferences)."
 license = "MIT"
 edition = "2021"
@@ -16,8 +16,8 @@ serde_json = "1"
 chrono = { version = "0.4", features = ["clock"] }
 sha2 = "0.10"
 base64 = "0.22"
-rand = "0.8"
-thiserror = "1"
+rand = "0.9"
+thiserror = "2"
 regex-lite = "0.1"
 
 [dev-dependencies]

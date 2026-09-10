@@ -128,6 +128,12 @@ const STRINGS = Object.freeze({
     'error.saveLanguage': 'Could not save language preference.',
     'error.loadState': 'Could not load app state. Try restarting Siphon.',
 
+    'error.unknownPreference': 'Unknown setting.',
+    'error.invalidPreferenceValue': 'Invalid setting value.',
+    'error.prefWrite': 'Could not save settings to disk.',
+    'error.claudeSettings': 'Saved, but could not update Claude Code settings.',
+    'error.unsafeUrl': 'Opening external link was blocked.',
+
     'error.local.missing': 'No usage data yet. Run Claude Code to generate data.',
     'error.local.corrupted': 'Usage cache is corrupted. Try restarting Claude Code.',
     'error.offline.title': 'No connection — Quota data unavailable.',
@@ -293,6 +299,12 @@ const STRINGS = Object.freeze({
     'error.saveRefresh': 'Não foi possível salvar a preferência de atualização.',
     'error.saveLanguage': 'Não foi possível salvar a preferência de idioma.',
     'error.loadState': 'Não foi possível carregar o estado do app. Reinicie o Siphon.',
+
+    'error.unknownPreference': 'Configuração desconhecida.',
+    'error.invalidPreferenceValue': 'Valor de configuração inválido.',
+    'error.prefWrite': 'Não foi possível salvar as configurações no disco.',
+    'error.claudeSettings': 'Salvo, mas não foi possível atualizar as configurações do Claude Code.',
+    'error.unsafeUrl': 'Link externo bloqueado por segurança.',
 
     'error.local.missing': 'Sem dados de uso ainda. Execute o Claude Code para gerar dados.',
     'error.local.corrupted': 'Cache de uso corrompido. Tente reiniciar o Claude Code.',
@@ -460,6 +472,12 @@ const STRINGS = Object.freeze({
     'error.saveLanguage': '言語設定を保存できませんでした。',
     'error.loadState': '状態を読み込めませんでした。Siphonを再起動してください。',
 
+    'error.unknownPreference': '不明な設定項目です。',
+    'error.invalidPreferenceValue': '無効な設定値です。',
+    'error.prefWrite': '設定をディスクに保存できませんでした。',
+    'error.claudeSettings': '保存されましたが、Claude Codeの設定を更新できませんでした。',
+    'error.unsafeUrl': '安全でない外部リンクがブロックされました。',
+
     'error.local.missing': '使用データがまだありません。Claude Codeを実行してデータを生成してください。',
     'error.local.corrupted': '使用キャッシュが破損しています。Claude Codeを再起動してください。',
     'error.offline.title': '接続されていません',
@@ -511,4 +529,13 @@ export function tFormat(key, lang, params = {}) {
   return template.replace(/\{(\w+)\}/g, (match, name) =>
     Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
   );
+}
+
+export function formatCommandError(error, lang, fallbackKey = null) {
+  if (error && typeof error === 'object' && error.kind) {
+    const key = `error.${error.kind}`;
+    const message = t(key, lang);
+    if (message !== key) return message;
+  }
+  return fallbackKey ? t(fallbackKey, lang) : '';
 }

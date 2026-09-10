@@ -29,6 +29,12 @@ export function safeErrorMessage(error, fallback = 'Unexpected error') {
       ? error
       : typeof error?.message === 'string'
       ? error.message
+      : typeof error?.detail === 'string'
+      ? error.detail
+      : typeof error?.kind === 'string'
+      ? (typeof error.detail === 'object' && error.detail !== null
+          ? `${error.kind}: ${JSON.stringify(redactObject(error.detail))}`
+          : error.kind)
       : '';
   const redacted = redactString(message).trim();
   return redacted || fallback;
@@ -65,7 +71,7 @@ function redactString(value) {
       `$1${REDACTED}`
     )
     .replace(
-      /\b(access_token|refresh_token|code|code_verifier|state)=([^&\s]+)/gi,
+      /\b(access_token|refresh_token|code|code_verifier|state)=([^&\s"',}]+)/gi,
       `$1=${REDACTED}`
     )
     .replace(

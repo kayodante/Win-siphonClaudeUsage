@@ -37,12 +37,12 @@ fn raise(win: &tauri::WebviewWindow) {
     };
 
     let Ok(handle) = win.hwnd() else { return };
-    // Tauri re-exports a newer `windows` crate than this one; rebuild the
+    // Aligned with Tauri 2 and tauri-winrt-notification on windows 0.61; rebuild the
     // handle from the raw pointer rather than depending on both versions.
     unsafe {
         let _ = SetWindowPos(
             HWND(handle.0 as _),
-            HWND_TOPMOST,
+            Some(HWND_TOPMOST),
             0,
             0,
             0,

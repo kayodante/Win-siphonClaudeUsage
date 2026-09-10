@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { SUPPORTED_LANGUAGES, t, tFormat } from '../src/shared/i18n.js';
+import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../src/shared/i18n.js';
 
 test('SUPPORTED_LANGUAGES lists English, Brazilian Portuguese, and Japanese', () => {
   assert.deepEqual(SUPPORTED_LANGUAGES, ['en', 'pt-BR', 'ja']);
@@ -88,4 +88,61 @@ test('quota mode and privacy strings exist in both languages', () => {
     assert.notEqual(t('settings.quotaModeRemaining', lang), 'settings.quotaModeRemaining');
     assert.notEqual(t('settings.privacyMaskEmail', lang), 'settings.privacyMaskEmail');
   }
+});
+
+test('command error strings exist in all supported languages', () => {
+  const errorKeys = [
+    'error.unknownPreference',
+    'error.invalidPreferenceValue',
+    'error.prefWrite',
+    'error.claudeSettings',
+    'error.unsafeUrl'
+  ];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const key of errorKeys) {
+      assert.notEqual(t(key, lang), key, `missing translation for ${key} in ${lang}`);
+    }
+  }
+});
+
+test('formatCommandError resolves typed errors and falls back gracefully', () => {
+  assert.equal(
+    formatCommandError({ kind: 'claudeSettings', detail: 'err' }, 'en'),
+    'Saved, but could not update Claude Code settings.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'claudeSettings', detail: 'err' }, 'pt-BR'),
+    'Salvo, mas não foi possível atualizar as configurações do Claude Code.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'prefWrite', detail: 'err' }, 'en'),
+    'Could not save settings to disk.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'unsafeUrl', detail: 'http://bad' }, 'en'),
+    'Opening external link was blocked.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'unknownPreference', detail: 'bad' }, 'en'),
+    'Unknown setting.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'invalidPreferenceValue', detail: {} }, 'en'),
+    'Invalid setting value.'
+  );
+
+  // Fallback key when kind is absent or unmapped
+  assert.equal(
+    formatCommandError(null, 'en', 'error.saveNotification'),
+    'Could not save notification preference.'
+  );
+  assert.equal(
+    formatCommandError(new Error('plain error'), 'en', 'error.saveStartup'),
+    'Could not save startup preference.'
+  );
+  assert.equal(
+    formatCommandError({ kind: 'unrecognizedKind' }, 'en', 'error.saveFloating'),
+    'Could not save floating widget preference.'
+  );
+  assert.equal(formatCommandError(null, 'en'), '');
 });

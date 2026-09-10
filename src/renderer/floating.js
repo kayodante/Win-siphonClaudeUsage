@@ -42,19 +42,31 @@ elements.openButton.addEventListener('click', () => {
   window.siphon.openMainWindowFromWidget();
 });
 
-elements.closeButton.addEventListener('click', event => {
+elements.closeButton.addEventListener('click', async event => {
   event.stopPropagation();
-  window.siphon.closeFloatingWidget();
+  try {
+    await window.siphon.closeFloatingWidget();
+  } catch (error) {
+    logSafeError('Failed to close floating widget:', error);
+  }
 });
 
-elements.refreshButton.addEventListener('click', event => {
+elements.refreshButton.addEventListener('click', async event => {
   event.stopPropagation();
-  window.siphon.refresh();
+  try {
+    await window.siphon.refresh();
+  } catch (error) {
+    logSafeError('Failed to refresh from floating widget:', error);
+  }
 });
 
-elements.expandButton.addEventListener('click', event => {
+elements.expandButton.addEventListener('click', async event => {
   event.stopPropagation();
-  window.siphon.setFloatingExpanded(!currentExpanded);
+  try {
+    await window.siphon.setFloatingExpanded(!currentExpanded);
+  } catch (error) {
+    logSafeError('Failed to toggle floating widget expanded state:', error);
+  }
 });
 
 try {
