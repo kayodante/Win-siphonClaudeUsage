@@ -68,7 +68,7 @@ pub fn code_challenge(verifier: &str) -> String {
 fn random_url_string() -> String {
     use rand::RngCore;
     let mut bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
@@ -241,5 +241,23 @@ mod tests {
     fn rejects_missing_access_token() {
         let now = Utc.with_ymd_and_hms(2026, 1, 1, 12, 0, 0).unwrap();
         assert!(parse_token_response(&json!({ "refresh_token": "x" }), now).is_err());
+    }
+
+    #[test]
+    fn prepare_flow_generates_valid_entropy_and_url() {
+        let flow1 = prepare_flow();
+        let flow2 = prepare_flow();
+
+        assert_eq!(flow1.verifier.len(), 43);
+        assert_eq!(flow1.state.len(), 43);
+        assert_eq!(flow2.verifier.len(), 43);
+        assert_eq!(flow2.state.len(), 43);
+
+        assert_ne!(flow1.verifier, flow2.verifier);
+        assert_ne!(flow1.state, flow2.state);
+
+        assert!(flow1.url.starts_with("https://claude.ai/oauth/authorize?"));
+        assert!(flow1.url.contains(&format!("state={}", flow1.state)));
+        assert!(flow1.url.contains("code_challenge="));
     }
 }
