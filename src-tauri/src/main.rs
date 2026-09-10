@@ -12,6 +12,7 @@ mod controller;
 mod floating;
 mod http;
 mod notify;
+mod oauth_server;
 mod prefs;
 mod token_store;
 mod tray;
