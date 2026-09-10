@@ -56,3 +56,25 @@ test('safeErrorMessage returns a redacted message with fallback for empty errors
   );
   assert.equal(safeErrorMessage(null, 'Fallback'), 'Fallback');
 });
+
+test('safeErrorMessage handles IPC CommandError objects and redacts detail', () => {
+  assert.equal(
+    safeErrorMessage({ kind: 'claudeSettings', detail: 'access_token=secret123 failed' }),
+    'access_token=[REDACTED] failed'
+  );
+  assert.equal(
+    safeErrorMessage({ kind: 'unknownPreference', detail: 'foo.bar' }),
+    'foo.bar'
+  );
+  assert.equal(
+    safeErrorMessage({
+      kind: 'invalidPreferenceValue',
+      detail: { path: 'floating.style', value: 'code=xyz' }
+    }),
+    'invalidPreferenceValue: {"path":"floating.style","value":"code=[REDACTED]"}'
+  );
+  assert.equal(
+    safeErrorMessage({ kind: 'justKind' }),
+    'justKind'
+  );
+});
