@@ -16,6 +16,7 @@ use siphon_core::alerts::UsageAlertService;
 use siphon_core::json_store::JsonStore;
 use siphon_core::local_data::LocalDataService;
 use siphon_core::oauth::{self, AuthFlow};
+use siphon_core::oauth_callback::CallbackOutcome;
 use siphon_core::quota::{QuotaError, QuotaErrorCode};
 use siphon_core::reset_scheduler::{decide_update, ResetDecision};
 use siphon_core::state::AppState;
@@ -55,6 +56,12 @@ pub struct Controller {
     http: HttpClient,
     state: Mutex<AppState>,
     auth_flow: Mutex<Option<AuthFlow>>,
+    /// Aborts the running loopback listener on cancel / sign-out / restart.
+    auth_listener: Mutex<Option<tokio::task::AbortHandle>>,
+    /// Set once a loopback attempt failed in this run. A firewall that lets the
+    /// bind succeed but blocks the browser's connection would otherwise loop
+    /// forever, so the next sign-in goes straight to the manual flow.
+    loopback_failed: Mutex<bool>,
     rate_limited_until: Mutex<Option<Instant>>,
     reset: Mutex<ResetRuntime>,
     alerts: Mutex<UsageAlertService>,
@@ -77,6 +84,8 @@ impl Controller {
             http: HttpClient::new(),
             state: Mutex::new(AppState::default()),
             auth_flow: Mutex::new(None),
+            auth_listener: Mutex::new(None),
+            loopback_failed: Mutex::new(false),
             rate_limited_until: Mutex::new(None),
             reset: Mutex::new(ResetRuntime::default()),
             alerts: Mutex::new(UsageAlertService::new()),
@@ -382,17 +391,113 @@ impl Controller {
 
     // ----- auth ------------------------------------------------------------
 
-    pub async fn start_sign_in(&self) -> String {
-        let flow = oauth::prepare_flow(oauth::REDIRECT_URI);
+    pub async fn start_sign_in(self: std::sync::Arc<Self>) -> String {
+        // A second click, or the re-auth button, must not leave a listener behind.
+        self.abort_listener();
+
+        let force_manual = *self.loopback_failed.lock().unwrap();
+        let pending = if force_manual {
+            None
+        } else {
+            crate::oauth_server::bind().await.ok()
+        };
+        let redirect_uri = match &pending {
+            Some(p) => oauth::loopback_redirect_uri(p.port),
+            None => oauth::REDIRECT_URI.to_string(),
+        };
+
+        let flow = oauth::prepare_flow(&redirect_uri);
         let url = flow.url.clone();
+        let expected_state = flow.state.clone();
         {
             let mut state = self.state.lock().unwrap();
             state.auth_error = None;
-            state.awaiting_code = true;
+            state.awaiting_browser = pending.is_some();
+            // The paste form is only reachable when there is no listener — a code
+            // issued against a loopback redirect cannot be exchanged any other way.
+            state.awaiting_code = pending.is_none();
         }
         *self.auth_flow.lock().unwrap() = Some(flow);
+
+        if let Some(pending) = pending {
+            let loopback = pending.serve(expected_state);
+            *self.auth_listener.lock().unwrap() = Some(loopback.task.abort_handle());
+            let controller = self.clone();
+            tokio::spawn(async move {
+                match loopback.task.await {
+                    Ok(Some(outcome)) => controller.complete_from_callback(outcome).await,
+                    // Timed out: the browser never came back.
+                    Ok(None) => controller.fail_loopback(None),
+                    // Aborted by cancel_auth / sign_out / a restarted flow — that
+                    // path already reset the state, so there is nothing to do.
+                    Err(_) => {}
+                }
+            });
+        }
+
         self.emit();
         url
+    }
+
+    async fn complete_from_callback(self: std::sync::Arc<Self>, outcome: CallbackOutcome) {
+        *self.auth_listener.lock().unwrap() = None;
+        match outcome {
+            CallbackOutcome::Code(code) => {
+                self.submit_code(code).await;
+                {
+                    let mut state = self.state.lock().unwrap();
+                    // Whatever happened, the browser leg is over. A code issued
+                    // against the loopback redirect cannot be re-submitted by
+                    // hand, so a failed exchange returns to the call-to-action
+                    // rather than the paste form; submit_code already set
+                    // auth_error with the reason.
+                    state.awaiting_browser = false;
+                    state.awaiting_code = false;
+                }
+                if self.get_state().is_signed_in {
+                    *self.loopback_failed.lock().unwrap() = false;
+                    crate::windows_ctl::show_main(&self.app);
+                }
+                self.emit();
+            }
+            CallbackOutcome::Provider { error, description } => {
+                self.fail_loopback(Some(description.unwrap_or(error)));
+            }
+            CallbackOutcome::StateMismatch => {
+                self.fail_loopback(Some("Authentication failed: state mismatch".to_string()));
+            }
+            CallbackOutcome::NoCode | CallbackOutcome::Malformed | CallbackOutcome::NotFound => {
+                self.fail_loopback(None);
+            }
+        }
+    }
+
+    /// The loopback attempt did not produce a usable code. Return to the initial
+    /// call-to-action with an error; the next sign-in skips the listener.
+    fn fail_loopback(&self, reason: Option<String>) {
+        *self.loopback_failed.lock().unwrap() = true;
+        {
+            let mut state = self.state.lock().unwrap();
+            // Cancelled or already signed in — leave that state alone.
+            if !state.awaiting_browser {
+                return;
+            }
+            state.awaiting_browser = false;
+            state.awaiting_code = false;
+            state.auth_error = Some(siphon_core::diagnostics::safe_error_message(
+                reason
+                    .as_deref()
+                    .unwrap_or("Sign-in was not completed in the browser. Please try again."),
+                "Authentication failed. Please try again.",
+            ));
+        }
+        self.emit();
+    }
+
+    fn abort_listener(&self) {
+        if let Some(handle) = self.auth_listener.lock().unwrap().take() {
+            handle.abort();
+        }
     }
 
     pub async fn submit_code(&self, raw_code: String) {
@@ -417,6 +522,7 @@ impl Controller {
                 {
                     let mut state = self.state.lock().unwrap();
                     state.awaiting_code = false;
+                    state.awaiting_browser = false;
                     state.is_signed_in = true;
                     state.auth_error = None;
                     state.needs_reauth = false;
@@ -436,12 +542,15 @@ impl Controller {
     }
 
     pub async fn sign_out(&self) {
+        self.abort_listener();
+        *self.loopback_failed.lock().unwrap() = false;
         let _ = self.tokens.clear();
         self.clear_reset().await;
         *self.auth_flow.lock().unwrap() = None;
         {
             let mut state = self.state.lock().unwrap();
             state.awaiting_code = false;
+            state.awaiting_browser = false;
             state.is_signed_in = false;
             state.quota = None;
             state.profile = None;
@@ -453,9 +562,11 @@ impl Controller {
     }
 
     pub fn cancel_auth(&self) {
+        self.abort_listener();
         *self.auth_flow.lock().unwrap() = None;
         let mut state = self.state.lock().unwrap();
         state.awaiting_code = false;
+        state.awaiting_browser = false;
         state.auth_error = None;
         drop(state);
         self.emit();

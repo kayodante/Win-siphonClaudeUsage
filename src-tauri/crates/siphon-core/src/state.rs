@@ -58,6 +58,9 @@ pub struct AppState {
     pub preferences: Preferences,
     pub is_signed_in: bool,
     pub awaiting_code: bool,
+    /// The loopback listener is up and the browser has the authorize URL. The
+    /// renderer shows a waiting state instead of the paste form.
+    pub awaiting_browser: bool,
     /// ISO-8601 string, matching the JS `Date.toISOString()` output.
     pub last_updated: Option<String>,
     pub is_offline: bool,
