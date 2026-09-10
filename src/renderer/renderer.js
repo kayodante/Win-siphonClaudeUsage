@@ -521,7 +521,7 @@ elements.settingsLaunchWithClaudeCodeToggle.addEventListener('change', async eve
   try {
     await window.siphon.setPreference('integration.launchWithClaudeCode', event.target.checked);
   } catch (error) {
-    handleToggleError('Failed to save launchWithClaudeCode preference:', error, event, 'error.saveLaunchWithClaudeCode');
+    handleToggleError('Failed to save launchWithClaudeCode preference:', error, null, 'error.saveLaunchWithClaudeCode');
   }
 });
 elements.settingsLanguage.addEventListener('change', async event => {
