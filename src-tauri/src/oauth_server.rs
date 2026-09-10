@@ -74,9 +74,12 @@ async fn accept_loop(listener: TcpListener, expected_state: String) -> Option<Ca
             BufReader::new(reader.take(MAX_REQUEST_LINE)).read_line(&mut line),
         )
         .await;
-        if !matches!(read, Ok(Ok(_))) {
-            // Either the read errored or READ_TIMEOUT elapsed — a stalled
-            // peer costs one READ_TIMEOUT, not the whole sign-in window.
+        // `Ok(Ok(0))` is a peer that connected and closed without writing a
+        // byte (a bare TCP connect-scan, or a browser's unused preconnect
+        // socket) — a non-event, not a request. Only `n > 0` is an actual
+        // line to classify; a read error, an elapsed READ_TIMEOUT, or an
+        // empty read all just cost this one connection and move on.
+        if !matches!(read, Ok(Ok(n)) if n > 0) {
             continue;
         }
         let outcome = oauth_callback::classify(&line, &expected_state);
