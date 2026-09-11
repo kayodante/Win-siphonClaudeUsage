@@ -152,7 +152,13 @@ test('the loopback sign-in copy exists in every supported language', () => {
     'onboarding.redirect',
     'onboarding.waitingBrowser',
     'onboarding.waitingHint',
-    'onboarding.manualFallback'
+    'onboarding.manualFallback',
+    'onboarding.waitingDeadline',
+    'onboarding.openManually',
+    'onboarding.copyLink',
+    'onboarding.copied',
+    'onboarding.hatchNotice',
+    'onboarding.browserOpenFailed'
   ];
   for (const lang of SUPPORTED_LANGUAGES) {
     for (const key of keys) {
@@ -160,6 +166,16 @@ test('the loopback sign-in copy exists in every supported language', () => {
       assert.notEqual(value, key, `${key} is missing from ${lang}`);
       assert.ok(value.trim().length > 0, `${key} is empty in ${lang}`);
     }
+  }
+});
+
+test('the deadline label carries the countdown placeholder in every language', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.match(
+      t('onboarding.waitingDeadline', lang),
+      /\{time\}/,
+      `onboarding.waitingDeadline lost its {time} placeholder in ${lang}`
+    );
   }
 });
 
