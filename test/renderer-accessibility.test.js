@@ -107,9 +107,12 @@ test('each main-window view and data card has a programmatic heading', () => {
 });
 
 test('the browser-wait state announces itself and can be cancelled', () => {
+  // The wait copy is plain markup, not a live region of its own: revealing a
+  // hidden region is unreliably announced, so the text is pushed through the
+  // always-present #politeAnnouncer instead.
   const waiting = elementWithId('onboardWaiting');
-  assert.match(waiting, /role="status"/);
-  assert.match(waiting, /aria-live="polite"/);
+  assert.doesNotMatch(waiting, /aria-live=/);
+  assert.match(renderer, /announce\(elements\.politeAnnouncer, t\('onboarding\.waitingBrowser'/);
 
   assert.match(elementWithId('onboardWaitingCancel'), /data-i18n="onboarding\.cancel"/);
   assert.match(elementWithId('onboardFallbackNotice'), /data-i18n="onboarding\.manualFallback"/);

@@ -638,6 +638,7 @@ body[data-view="onboard"] .app-footer {
 
 .onboard-fallback-notice {
   margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
   color: var(--subtle-foreground);
 }
 
