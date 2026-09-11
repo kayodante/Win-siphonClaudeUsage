@@ -466,7 +466,7 @@ impl Controller {
                     // counts — see its doc comment.
                     Ok(None) => {
                         *controller.loopback_timeouts.lock().unwrap() += 1;
-                        controller.fail_loopback();
+                        controller.downgrade_to_paste();
                     }
                     // Aborted by cancel_auth / sign_out / a restarted flow — that
                     // path already reset the state, so there is nothing to do.
@@ -557,6 +557,27 @@ impl Controller {
         self.emit();
     }
 
+    /// The listener gave up, but the authorization may still be in flight — a
+    /// user finishing 2FA at 2:40 gets their `?code=` in the address bar with
+    /// nowhere to put it if we destroy the flow here. So the timeout is a
+    /// downgrade, not a failure: the socket closes, the flow survives, and the
+    /// paste form becomes the way home. `fail_loopback` still handles the cases
+    /// where there is genuinely nothing to paste (denied, malformed, wrong
+    /// state).
+    fn downgrade_to_paste(&self) {
+        {
+            let mut state = self.state.lock().unwrap();
+            // Cancelled or already signed in — leave that state alone.
+            if !state.awaiting_browser {
+                return;
+            }
+            state.awaiting_browser = false;
+            state.awaiting_code = true;
+            state.auth_error = None;
+        }
+        self.emit();
+    }
+
     fn abort_listener(&self) {
         if let Some(handle) = self.auth_listener.lock().unwrap().take() {
             handle.abort();
@@ -564,7 +585,7 @@ impl Controller {
     }
 
     pub async fn submit_code(&self, raw_code: String) {
-        let flow = match self.auth_flow.lock().unwrap().clone() {
+        let flow = match self.auth_flow.lock().unwrap().take() {
             Some(f) => f,
             None => return,
         };
@@ -581,7 +602,6 @@ impl Controller {
         {
             Ok(creds) => {
                 let _ = self.tokens.save(&creds);
-                *self.auth_flow.lock().unwrap() = None;
                 // A sign-in got through, so whatever blocked the last loopback
                 // attempt is not a standing condition. Start the count over.
                 *self.loopback_timeouts.lock().unwrap() = 0;
@@ -597,6 +617,9 @@ impl Controller {
                 self.refresh_quota().await;
             }
             Err(err) => {
+                // A bad paste must not burn the flow — the user retypes and
+                // tries again. Only a spent code (the Ok arm) ends it.
+                *self.auth_flow.lock().unwrap() = Some(flow);
                 self.state.lock().unwrap().auth_error =
                     Some(siphon_core::diagnostics::safe_error_message(
                         err.message(),

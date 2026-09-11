@@ -25,13 +25,25 @@ pub async fn refresh(ctx: State<'_, AppContext>) -> CommandResult {
     Ok(())
 }
 
+/// What `auth_start` hands the renderer. `opened` is false when the OS refused
+/// to launch a browser (no default handler, locked-down machine, or a URL the
+/// allow-list rejected). The listener keeps running either way: the user can
+/// still open the URL by hand and have the redirect land automatically.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthStart {
+    pub url: String,
+    pub opened: bool,
+}
+
 #[tauri::command]
-pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> CommandResult<String> {
+pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> CommandResult<AuthStart> {
     let url = ctx.controller.clone().start_sign_in().await;
-    if is_safe_external_url(&url) {
-        let _ = tauri_plugin_opener::OpenerExt::opener(&app).open_url(url.clone(), None::<&str>);
-    }
-    Ok(url)
+    let opened = is_safe_external_url(&url)
+        && tauri_plugin_opener::OpenerExt::opener(&app)
+            .open_url(url.clone(), None::<&str>)
+            .is_ok();
+    Ok(AuthStart { url, opened })
 }
 
 #[tauri::command]

@@ -16,8 +16,10 @@ use tokio::task::JoinHandle;
 use siphon_core::oauth_callback::{self, CallbackOutcome};
 
 /// How long the listener stays up before giving up, so a browser the user
-/// closed does not hold a socket open for the rest of the run.
-const WAIT_TIMEOUT: Duration = Duration::from_secs(300);
+/// closed does not hold a socket open for the rest of the run. The renderer
+/// mirrors this value as `AUTH_DEADLINE_MS` to draw the countdown — change
+/// both together or the clock on screen stops matching the real deadline.
+const WAIT_TIMEOUT: Duration = Duration::from_secs(150);
 
 /// Cap on the request line we will read. A real `GET /callback?…` is a few
 /// hundred bytes; anything larger is not our callback and must not be buffered.
