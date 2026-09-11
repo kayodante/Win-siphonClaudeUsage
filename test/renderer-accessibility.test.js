@@ -113,7 +113,7 @@ test('the browser-wait state announces itself and can be cancelled', () => {
   const waiting = elementWithId('onboardWaiting');
   assert.doesNotMatch(waiting, /aria-live=/);
   assert.doesNotMatch(waiting, /role="status"/);
-  assert.match(renderer, /announce\(elements\.politeAnnouncer, t\('onboarding\.waitingBrowser'/);
+  assert.match(renderer, /announce\(elements\.politeAnnouncer, `\$\{elements\.onboardWaitingHeadline\.textContent\}/);
 
   assert.match(elementWithId('onboardWaitingCancel'), /data-i18n="onboarding\.cancel"/);
   assert.match(elementWithId('onboardFallbackNotice'), /data-i18n="onboarding\.manualFallback"/);

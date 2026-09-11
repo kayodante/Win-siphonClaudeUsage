@@ -1,6 +1,7 @@
 // fallow-ignore-file unused-file -- loaded via <script src> in index.html, not a JS import
 import {
   clampPercent,
+  formatCountdown,
   formatCurrency,
   formatPercent,
   formatRelativeUpdated,
@@ -31,6 +32,11 @@ const elements = {
   onboardWaitingCancel: document.querySelector('#onboardWaitingCancel'),
   onboardWaitingCancelWrap: document.querySelector('#onboardWaitingCancelWrap'),
   onboardFallbackNotice: document.querySelector('#onboardFallbackNotice'),
+  onboardWaitingHeadline: document.querySelector('#onboardWaitingHeadline'),
+  onboardAuthUrl: document.querySelector('#onboardAuthUrl'),
+  onboardCopyUrlButton: document.querySelector('#onboardCopyUrlButton'),
+  onboardCountdown: document.querySelector('#onboardCountdown'),
+  onboardHatchNotice: document.querySelector('#onboardHatchNotice'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
@@ -167,6 +173,20 @@ function cssMs(name, fallback) {
 }
 
 const lastAnnouncements = new WeakMap();
+
+// The browser leg has two clocks: when we stop waiting (the backend's
+// WAIT_TIMEOUT, mirrored here for display only) and when we offer the manual
+// escape hatch. They are deliberately different — a hatch that opens at the
+// deadline is the error screen, not an escape.
+const AUTH_DEADLINE_MS = 150_000;
+const AUTH_HATCH_MS = 60_000;
+
+let authUrl = '';
+let authWaitStartedAt = 0;
+let authCountdownTimer = null;
+let authHatchTimer = null;
+let authOpenFailed = false;
+let lastRenderedLang = 'en';
 
 function announce(element, message) {
   const text = String(message ?? '').trim();
@@ -358,10 +378,37 @@ elements.settingsTabs.addEventListener('keydown', event => {
   switchSettingsTab(tabs[nextIndex][0], { focus: true });
 });
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
-elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
-elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
+async function beginSignIn() {
+  const result = await window.siphon.startSignIn();
+  authUrl = result?.url ?? '';
+  authOpenFailed = result?.opened === false;
+  startAuthWait(lastRenderedLang);
+  render(await window.siphon.getState());
+}
+
+elements.onboardSignInButton.addEventListener('click', beginSignIn);
+elements.reauthButton.addEventListener('click', beginSignIn);
 elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
 elements.onboardWaitingCancel.addEventListener('click', () => window.siphon.cancelAuth());
+elements.onboardCopyUrlButton.addEventListener('click', async () => {
+  if (!authUrl) return;
+  try {
+    await navigator.clipboard.writeText(authUrl);
+  } catch (error) {
+    // Clipboard can be refused (permissions, no focus). Never leave the user
+    // guessing: fall back to selecting the text so Ctrl+C still works.
+    logSafeError('Clipboard write failed:', error);
+    const range = document.createRange();
+    range.selectNodeContents(elements.onboardAuthUrl);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return;
+  }
+  elements.onboardCopyUrlButton.dataset.copied = 'true';
+  announce(elements.politeAnnouncer, t('onboarding.copied', lastRenderedLang));
+  setTimeout(() => elements.onboardCopyUrlButton.removeAttribute('data-copied'), 1600);
+});
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 elements.editClaudePathButton.addEventListener('click', async () => {
   const selected = await window.siphon.pickFolder();
@@ -721,9 +768,51 @@ function animateCountUp(element, target, setValue, { duration = 650, delay = 0 }
   animatingElements.set(element, requestAnimationFrame(tick));
 }
 
+function stopAuthWaitTimers() {
+  clearInterval(authCountdownTimer);
+  clearTimeout(authHatchTimer);
+  authCountdownTimer = null;
+  authHatchTimer = null;
+}
+
+function paintCountdown(lang) {
+  const left = AUTH_DEADLINE_MS - (Date.now() - authWaitStartedAt);
+  elements.onboardCountdown.textContent =
+    tFormat('onboarding.waitingDeadline', lang, { time: formatCountdown(left) });
+  // Park at 0:00 and stop. The backend owns the actual deadline; the renderer
+  // must not decide the wait is over — its clock and tokio's can drift, and a
+  // UI that gives up first would hide a callback still arriving.
+  if (left <= 0) {
+    clearInterval(authCountdownTimer);
+    authCountdownTimer = null;
+  }
+}
+
+function startAuthWait(lang) {
+  stopAuthWaitTimers();
+  authWaitStartedAt = Date.now();
+  paintCountdown(lang);
+  authCountdownTimer = setInterval(() => paintCountdown(lang), 1000);
+  // Opener failure skips the delay: the user already knows the browser never
+  // opened, so making them wait 60s for the alternative is pure friction.
+  // Reveal the form with the notice. The render function computes this same
+  // visibility, but nothing re-renders when a timer fires — waiting for the
+  // next state emit would delay the hatch by up to the refresh interval.
+  if (authOpenFailed) {
+    elements.onboardHatchNotice.hidden = false;
+    elements.onboardCodeForm.hidden = false;
+  } else {
+    authHatchTimer = setTimeout(() => {
+      elements.onboardHatchNotice.hidden = false;
+      elements.onboardCodeForm.hidden = false;
+    }, AUTH_HATCH_MS);
+  }
+}
+
 function render(state) {
   currentState = state;
   const lang = currentLanguage();
+  lastRenderedLang = lang;
   applyTranslations(lang);
   if (!state.isSignedIn) {
     requestedView = 'main';
@@ -744,15 +833,33 @@ function render(state) {
   elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
   elements.onboardSecondary.hidden = awaitingCode || awaitingBrowser;
   elements.onboardWaiting.hidden = !awaitingBrowser;
-  // Revealing an already-rendered live region is unreliably announced; the
-  // dependable shape is a region that is present and empty, with the text put
-  // in afterwards. That is exactly what the shared #politeAnnouncer is for —
-  // same pattern setErrorText uses for the assertive one. The visible copy
-  // above stays where it is; this only carries it to a screen reader.
-  if (awaitingBrowser) announce(elements.politeAnnouncer, t('onboarding.waitingBrowser', lang));
-  else lastAnnouncements.delete(elements.politeAnnouncer);
   elements.onboardWaitingCancelWrap.hidden = !awaitingBrowser;
-  elements.onboardCodeForm.hidden = !awaitingCode;
+
+  if (awaitingBrowser) {
+    elements.onboardWaitingHeadline.textContent =
+      t(authOpenFailed ? 'onboarding.browserOpenFailed' : 'onboarding.waitingBrowser', lang);
+    elements.onboardAuthUrl.textContent = authUrl;
+    // Revealing an already-rendered live region is unreliably announced; the
+    // dependable shape is a region that is present and empty, with the text put
+    // in afterwards. Announce the deadline once here — never the ticking
+    // countdown, which would speak 150 times.
+    announce(elements.politeAnnouncer, `${elements.onboardWaitingHeadline.textContent} ${
+      tFormat('onboarding.waitingDeadline', lang, { time: formatCountdown(AUTH_DEADLINE_MS) })}`);
+  } else {
+    lastAnnouncements.delete(elements.politeAnnouncer);
+    stopAuthWaitTimers();
+    elements.onboardHatchNotice.hidden = true;
+    elements.onboardCopyUrlButton.removeAttribute('data-copied');
+    authUrl = '';
+    authOpenFailed = false;
+  }
+
+  // The paste form is the escape hatch while waiting, and the whole flow when
+  // the backend put us in manual mode.
+  elements.onboardCodeForm.hidden = !awaitingCode && elements.onboardHatchNotice.hidden;
+  // The old notice claims the redirect failed. While still waiting it has not
+  // failed yet, so the hatch supplies its own line and this one stays hidden.
+  elements.onboardFallbackNotice.hidden = awaitingBrowser;
 
   renderSettingsControls(state, lang);
   renderBannersAndErrors(state, sessionPercent, lang);
