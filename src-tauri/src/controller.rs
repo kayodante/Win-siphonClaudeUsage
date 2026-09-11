@@ -485,6 +485,11 @@ impl Controller {
         *self.auth_listener.lock().unwrap() = None;
         match outcome {
             CallbackOutcome::Code(code) => {
+                // Cleared BEFORE the exchange: `submit_code`'s failure arm
+                // restores the flow while either awaiting flag is set, and the
+                // browser leg must decline that restore — this flow is
+                // finished whatever the exchange returns.
+                self.state.lock().unwrap().awaiting_browser = false;
                 self.submit_code(code).await;
                 {
                     let mut state = self.state.lock().unwrap();
@@ -493,7 +498,6 @@ impl Controller {
                     // returns to the call-to-action rather than the paste
                     // form; submit_code already set auth_error with the
                     // reason on failure.
-                    state.awaiting_browser = false;
                     state.awaiting_code = false;
                 }
                 if self.get_state().is_signed_in {
@@ -621,13 +625,16 @@ impl Controller {
             Err(err) => {
                 // A bad paste must not burn the flow — the user retypes and
                 // tries again. Only a spent code (the Ok arm) ends it. But
-                // restore only if this flow is still the current one: a paste
-                // form is still up (`awaiting_code`) and nothing newer has
-                // claimed the slot. An unconditional restore would resurrect
-                // a cancelled flow over a live one (e.g. the user cancelled
-                // and started a fresh sign-in while this exchange was still
-                // in flight).
-                let keep = self.state.lock().unwrap().awaiting_code;
+                // restore only if a paste form is still up.
+                let keep = {
+                    let state = self.state.lock().unwrap();
+                    // The paste form is reachable in BOTH states: `awaiting_code` is the
+                    // backend-driven manual mode, and `awaiting_browser` covers the escape
+                    // hatch, which the renderer reveals locally at 60s without changing
+                    // backend state. `slot.is_none()` is what blocks a cancelled flow from
+                    // being resurrected over a newer one — not this predicate.
+                    state.awaiting_code || state.awaiting_browser
+                };
                 let mut slot = self.auth_flow.lock().unwrap();
                 if keep && slot.is_none() {
                     *slot = Some(flow);

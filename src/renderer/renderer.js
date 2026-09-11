@@ -379,11 +379,20 @@ elements.settingsTabs.addEventListener('keydown', event => {
 });
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
 async function beginSignIn() {
-  const result = await window.siphon.startSignIn();
-  authUrl = result?.url ?? '';
-  authOpenFailed = result?.opened === false;
-  startAuthWait(lastRenderedLang);
-  render(await window.siphon.getState());
+  try {
+    const result = await window.siphon.startSignIn();
+    authUrl = result?.url ?? '';
+    authOpenFailed = result?.opened === false;
+    startAuthWait(lastRenderedLang);
+    render(await window.siphon.getState());
+  } catch (error) {
+    // A rejected startSignIn would otherwise leave the countdown ticking
+    // toward a deadline no backend is honoring, with nothing on screen.
+    logSafeError('Sign-in failed to start:', error);
+    stopAuthWaitTimers();
+    const message = formatCommandError(error, currentLanguage(), 'error.loadState');
+    if (message && elements.errorText) setErrorText(message);
+  }
 }
 
 elements.onboardSignInButton.addEventListener('click', beginSignIn);
@@ -801,10 +810,12 @@ function startAuthWait(lang) {
   if (authOpenFailed) {
     elements.onboardHatchNotice.hidden = false;
     elements.onboardCodeForm.hidden = false;
+    elements.onboardWaitingCancelWrap.hidden = true;
   } else {
     authHatchTimer = setTimeout(() => {
       elements.onboardHatchNotice.hidden = false;
       elements.onboardCodeForm.hidden = false;
+      elements.onboardWaitingCancelWrap.hidden = true;
     }, AUTH_HATCH_MS);
   }
 }
@@ -833,7 +844,6 @@ function render(state) {
   elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
   elements.onboardSecondary.hidden = awaitingCode || awaitingBrowser;
   elements.onboardWaiting.hidden = !awaitingBrowser;
-  elements.onboardWaitingCancelWrap.hidden = !awaitingBrowser;
 
   if (awaitingBrowser) {
     elements.onboardWaitingHeadline.textContent =
@@ -857,6 +867,9 @@ function render(state) {
   // The paste form is the escape hatch while waiting, and the whole flow when
   // the backend put us in manual mode.
   elements.onboardCodeForm.hidden = !awaitingCode && elements.onboardHatchNotice.hidden;
+  // One Cancel at a time: the code form brings its own, so the waiting-state
+  // button stands down once the form is up.
+  elements.onboardWaitingCancelWrap.hidden = !awaitingBrowser || !elements.onboardCodeForm.hidden;
   // The old notice claims the redirect failed. While still waiting it has not
   // failed yet, so the hatch supplies its own line and this one stays hidden.
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
