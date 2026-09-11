@@ -241,11 +241,13 @@ rendering.
 hard-coded.
 
 ```
-client_id     = 9d1c250a-e61b-44d9-88ed-5944d1962f5e
-redirect_uri  = https://platform.claude.com/oauth/code/callback
-auth_url      = https://claude.ai/oauth/authorize
-token_url     = https://platform.claude.com/v1/oauth/token
-scopes        = user:profile user:inference
+client_id       = 9d1c250a-e61b-44d9-88ed-5944d1962f5e
+auth_url        = https://claude.ai/oauth/authorize
+token_url       = https://platform.claude.com/v1/oauth/token
+scopes          = user:profile user:inference
+
+redirect_uri (loopback, preferred) = http://localhost:<ephemeral port>/callback
+redirect_uri (manual fallback)     = https://platform.claude.com/oauth/code/callback
 ```
 
 ### Authorize URL (built in `prepareFlow()`)
@@ -263,6 +265,40 @@ https://claude.ai/oauth/authorize
 ```
 
 `verifier` and `state` are 32 random bytes, base64url-encoded.
+
+### Redirect handling
+
+Siphon binds an ephemeral TCP port on `127.0.0.1` before building the authorize
+URL and sends `http://localhost:<port>/callback` as the `redirect_uri`. The same
+value is echoed in the token exchange — the two must match byte for byte.
+
+The listener answers only `/callback`; anything else gets a 404 and the loop
+keeps waiting. The `state` query parameter is compared against the one this
+process generated, and a mismatch aborts without exchanging the code. On success
+the browser gets `302 Location: https://platform.claude.com/oauth/code/success?app=claude-code`;
+every failure gets a fixed-text 400 that never echoes the provider's message.
+
+A stalled connection (no bytes sent, past a 10-second per-connection read
+timeout) or a connection error is a non-event — it does not end the listener,
+which otherwise keeps waiting for up to 5 minutes. Neither is a request the
+listener cannot use: a wrong or missing `state`, a missing code, a malformed
+request line, or an unrelated path are all answered and ignored, so a stranger
+who guesses the ephemeral port cannot end a sign-in that is still in progress.
+Only the authorization server's own redirect — a valid code, or a reported
+error — ends the loop.
+
+If the bind fails, or **two consecutive** attempts in this run hit that
+5-minute timeout without a successful callback, Siphon falls back to
+`https://platform.claude.com/oauth/code/callback` and the user pastes the code
+— the original flow, unchanged. One timeout is far more likely to be a user who
+stepped away mid-authorization than a broken network, so it costs that attempt
+only; a firewall that blocks the browser's connection times out every time and
+so still reaches the limit. A successful sign-in resets the count. A denied authorization does not count
+toward the fallback — the next attempt still uses the loopback listener. The provider's `error` /
+`error_description` text is attacker-influenced; it is logged and never shown
+in the app's own error line, the same rule the 400 reply already follows. Parsing and classification live in
+`siphon_core::oauth_callback`; the socket lives in
+`src-tauri/src/oauth_server.rs`.
 
 ### Token exchange
 
@@ -300,8 +336,8 @@ Response:
 }
 ```
 
-`extractCode()` accepts either the bare code string or the entire
-redirect URL the user pasted from the browser address bar.
+`extract_code()` accepts either the bare code string or the entire redirect URL,
+and is still used by the manual fallback path.
 
 ### Refresh
 

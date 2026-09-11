@@ -18,6 +18,7 @@ pub mod i18n;
 pub mod json_store;
 pub mod local_data;
 pub mod oauth;
+pub mod oauth_callback;
 pub mod preferences;
 pub mod pricing;
 pub mod profile;

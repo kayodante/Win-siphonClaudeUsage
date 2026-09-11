@@ -27,7 +27,7 @@ pub async fn refresh(ctx: State<'_, AppContext>) -> CommandResult {
 
 #[tauri::command]
 pub async fn auth_start(app: AppHandle, ctx: State<'_, AppContext>) -> CommandResult<String> {
-    let url = ctx.controller.start_sign_in().await;
+    let url = ctx.controller.clone().start_sign_in().await;
     if is_safe_external_url(&url) {
         let _ = tauri_plugin_opener::OpenerExt::opener(&app).open_url(url.clone(), None::<&str>);
     }

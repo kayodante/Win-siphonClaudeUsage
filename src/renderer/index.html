@@ -69,10 +69,21 @@
           </button>
 
           <p class="onboard-secondary" data-i18n="onboarding.redirect">
-            You will be redirected to claude.ai. After authorizing, come back and paste the code.
+            You will be redirected to claude.ai. Approve the request and Siphon finishes the sign-in on its own.
           </p>
 
+          <div class="onboard-waiting" id="onboardWaiting" hidden>
+            <span class="copy-strong" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
+            <span class="copy-muted" data-i18n="onboarding.waitingHint">Approve the request on claude.ai. This window updates on its own.</span>
+          </div>
+          <div class="auth-button-stack" id="onboardWaitingCancelWrap" hidden>
+            <button type="button" class="btn-cancel" id="onboardWaitingCancel" data-i18n="onboarding.cancel">Cancelar</button>
+          </div>
+
           <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
+            <p class="onboard-fallback-notice" id="onboardFallbackNotice" data-i18n="onboarding.manualFallback">
+              Siphon could not receive the redirect automatically. Paste the full redirect URL or the code below.
+            </p>
             <p class="auth-title" id="onboardCodeLabel" data-i18n="onboarding.authTitle">Código de autenticação</p>
             <div class="auth-form-fields">
               <textarea id="onboardCodeInput" rows="2" spellcheck="false" aria-labelledby="onboardCodeLabel" data-i18n-placeholder="onboarding.pasteLabel" placeholder="Cole a URL de redirecionamento completa ou o código"></textarea>

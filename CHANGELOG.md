@@ -11,6 +11,19 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- Sign-in now finishes inside the app: Siphon listens on a loopback port and
+  receives the OAuth redirect directly, so there is no code to copy and paste.
+  The window comes to the front once you are signed in.
+- The `state` parameter returned by the authorization server is now verified
+  before the authorization code is exchanged.
+
+### Changed
+
+- The manual paste flow is kept as an automatic fallback, used when the
+  loopback port cannot be opened or the browser never returns.
+
 ## [1.9.2] - 2026-09-10
 
 ### Added

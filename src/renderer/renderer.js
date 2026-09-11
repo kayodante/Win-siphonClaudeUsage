@@ -27,6 +27,10 @@ const elements = {
   onboardCodeInput: document.querySelector('#onboardCodeInput'),
   onboardCancelButton: document.querySelector('#onboardCancelButton'),
   onboardSecondary: document.querySelector('.onboard-secondary'),
+  onboardWaiting: document.querySelector('#onboardWaiting'),
+  onboardWaitingCancel: document.querySelector('#onboardWaitingCancel'),
+  onboardWaitingCancelWrap: document.querySelector('#onboardWaitingCancelWrap'),
+  onboardFallbackNotice: document.querySelector('#onboardFallbackNotice'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
@@ -357,6 +361,7 @@ elements.backButton.addEventListener('click', () => window.siphon.showMainView()
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
+elements.onboardWaitingCancel.addEventListener('click', () => window.siphon.cancelAuth());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 elements.editClaudePathButton.addEventListener('click', async () => {
   const selected = await window.siphon.pickFolder();
@@ -734,9 +739,20 @@ function render(state) {
   renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
 
   elements.signOutButton.hidden = !state.isSignedIn;
-  elements.onboardSignInButton.hidden = state.awaitingCode;
-  elements.onboardSecondary.hidden = state.awaitingCode;
-  elements.onboardCodeForm.hidden = !state.awaitingCode;
+  const awaitingCode = Boolean(state.awaitingCode);
+  const awaitingBrowser = Boolean(state.awaitingBrowser);
+  elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
+  elements.onboardSecondary.hidden = awaitingCode || awaitingBrowser;
+  elements.onboardWaiting.hidden = !awaitingBrowser;
+  // Revealing an already-rendered live region is unreliably announced; the
+  // dependable shape is a region that is present and empty, with the text put
+  // in afterwards. That is exactly what the shared #politeAnnouncer is for —
+  // same pattern setErrorText uses for the assertive one. The visible copy
+  // above stays where it is; this only carries it to a screen reader.
+  if (awaitingBrowser) announce(elements.politeAnnouncer, t('onboarding.waitingBrowser', lang));
+  else lastAnnouncements.delete(elements.politeAnnouncer);
+  elements.onboardWaitingCancelWrap.hidden = !awaitingBrowser;
+  elements.onboardCodeForm.hidden = !awaitingCode;
 
   renderSettingsControls(state, lang);
   renderBannersAndErrors(state, sessionPercent, lang);
