@@ -17,3 +17,8 @@ test('signed in state defaults unknown views to main', () => {
   assert.equal(resolveView({ isSignedIn: true }, 'onboard'), 'main');
   assert.equal(resolveView({ isSignedIn: true }, undefined), 'main');
 });
+
+test('waiting on the browser still shows the onboarding view', () => {
+  assert.equal(resolveView({ isSignedIn: false, awaitingBrowser: true }, 'main'), 'onboard');
+  assert.equal(resolveView({ isSignedIn: false, awaitingBrowser: true }, 'settings'), 'onboard');
+});

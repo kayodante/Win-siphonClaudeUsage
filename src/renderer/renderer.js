@@ -27,6 +27,9 @@ const elements = {
   onboardCodeInput: document.querySelector('#onboardCodeInput'),
   onboardCancelButton: document.querySelector('#onboardCancelButton'),
   onboardSecondary: document.querySelector('.onboard-secondary'),
+  onboardWaiting: document.querySelector('#onboardWaiting'),
+  onboardWaitingCancel: document.querySelector('#onboardWaitingCancel'),
+  onboardFallbackNotice: document.querySelector('#onboardFallbackNotice'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
@@ -357,6 +360,7 @@ elements.backButton.addEventListener('click', () => window.siphon.showMainView()
 elements.onboardSignInButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.reauthButton.addEventListener('click', () => window.siphon.startSignIn());
 elements.onboardCancelButton.addEventListener('click', () => window.siphon.cancelAuth());
+elements.onboardWaitingCancel.addEventListener('click', () => window.siphon.cancelAuth());
 elements.signOutButton.addEventListener('click', () => window.siphon.signOut());
 elements.editClaudePathButton.addEventListener('click', async () => {
   const selected = await window.siphon.pickFolder();
@@ -734,9 +738,13 @@ function render(state) {
   renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
 
   elements.signOutButton.hidden = !state.isSignedIn;
-  elements.onboardSignInButton.hidden = state.awaitingCode;
-  elements.onboardSecondary.hidden = state.awaitingCode;
-  elements.onboardCodeForm.hidden = !state.awaitingCode;
+  const awaitingCode = Boolean(state.awaitingCode);
+  const awaitingBrowser = Boolean(state.awaitingBrowser);
+  elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
+  elements.onboardSecondary.hidden = awaitingCode || awaitingBrowser;
+  elements.onboardWaiting.hidden = !awaitingBrowser;
+  elements.onboardWaitingCancel.hidden = !awaitingBrowser;
+  elements.onboardCodeForm.hidden = !awaitingCode;
 
   renderSettingsControls(state, lang);
   renderBannersAndErrors(state, sessionPercent, lang);

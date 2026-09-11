@@ -105,3 +105,17 @@ test('each main-window view and data card has a programmatic heading', () => {
     'settingsLimitSectionHeading', 'settingsExpireSectionHeading', 'settingsWidgetStyleHeading'
   ]) assert.match(elementWithId(id), /role="heading"[^>]+aria-level="[12]"/);
 });
+
+test('the browser-wait state announces itself and can be cancelled', () => {
+  const waiting = elementWithId('onboardWaiting');
+  assert.match(waiting, /role="status"/);
+  assert.match(waiting, /aria-live="polite"/);
+
+  assert.match(elementWithId('onboardWaitingCancel'), /data-i18n="onboarding\.cancel"/);
+  assert.match(elementWithId('onboardFallbackNotice'), /data-i18n="onboarding\.manualFallback"/);
+});
+
+test('the renderer toggles the three onboarding states from state flags', () => {
+  assert.match(renderer, /elements\.onboardWaiting\.hidden = !awaitingBrowser/);
+  assert.match(renderer, /elements\.onboardCodeForm\.hidden = !awaitingCode/);
+});

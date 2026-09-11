@@ -629,6 +629,18 @@ body[data-view="onboard"] .app-footer {
   line-height: var(--leading-snug);
 }
 
+.onboard-waiting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.onboard-fallback-notice {
+  margin: 0 0 var(--space-2);
+  color: var(--subtle-foreground);
+}
+
 .onboard-code-form {
   display: flex;
   flex-direction: column;
