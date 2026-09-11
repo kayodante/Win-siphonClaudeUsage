@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   clampPercent,
   formatClockTime,
+  formatCountdown,
   formatCurrency,
   formatDaysRemaining,
   formatPercent,
@@ -331,4 +332,24 @@ test('maskEmail returns empty string for falsy or non-string input', () => {
 
 test('maskEmail with no @ masks the whole string', () => {
   assert.equal(maskEmail('notanemail'), '**********');
+});
+
+test('formatCountdown renders m:ss with a zero-padded seconds field', () => {
+  assert.equal(formatCountdown(150_000), '2:30');
+  assert.equal(formatCountdown(61_000), '1:01');
+  assert.equal(formatCountdown(9_000), '0:09');
+});
+
+test('formatCountdown rounds up so the last second is visible for a full second', () => {
+  // 500ms left is still "1 second showing", not 0:00 — a countdown that shows
+  // 0:00 while the deadline has not passed reads as a hung UI.
+  assert.equal(formatCountdown(500), '0:01');
+  assert.equal(formatCountdown(1_500), '0:02');
+});
+
+test('formatCountdown clamps past-deadline and junk input to 0:00', () => {
+  assert.equal(formatCountdown(0), '0:00');
+  assert.equal(formatCountdown(-5_000), '0:00');
+  assert.equal(formatCountdown(NaN), '0:00');
+  assert.equal(formatCountdown(undefined), '0:00');
 });
