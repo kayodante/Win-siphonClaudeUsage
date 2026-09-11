@@ -18,11 +18,24 @@ is added above it.
   The window comes to the front once you are signed in.
 - The `state` parameter returned by the authorization server is now verified
   before the authorization code is exchanged.
+- The sign-in waiting screen now shows the authorize URL with a copy button,
+  a countdown to the 150-second limit, and a manual paste field that appears
+  after 60 seconds (immediately if the browser could not be opened).
 
 ### Changed
 
 - The manual paste flow is kept as an automatic fallback, used when the
   loopback port cannot be opened or the browser never returns.
+- The loopback listener now waits 150 seconds instead of 300. A single
+  timeout no longer discards the sign-in; it keeps the flow alive so a
+  late-arriving authorization can still be pasted by hand, and only two
+  consecutive timeouts fall back to manual mode from the start.
+
+### Fixed
+
+- Siphon no longer claims to be waiting on a browser it failed to open.
+- A code pasted at the same instant the browser redirect arrives can no
+  longer be exchanged twice.
 
 ## [1.9.2] - 2026-09-10
 
