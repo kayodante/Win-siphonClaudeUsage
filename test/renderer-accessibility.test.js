@@ -123,3 +123,26 @@ test('the renderer toggles the three onboarding states from state flags', () => 
   assert.match(renderer, /elements\.onboardWaiting\.hidden = !awaitingBrowser/);
   assert.match(renderer, /elements\.onboardCodeForm\.hidden = !awaitingCode/);
 });
+
+test('the sign-in waiting block exposes the authorize URL and its controls accessibly', () => {
+  // The URL is long and wraps; a screen reader needs the button labelled by
+  // its own copy, not by the URL it sits next to.
+  const copyButton = elementWithId('onboardCopyUrlButton');
+  assert.match(copyButton, /type="button"/);
+  assert.match(copyButton, /data-i18n-aria-label="onboarding\.copyLink"/);
+
+  // The countdown changes every second. It must NOT be a live region, or a
+  // screen reader announces it 150 times; the deadline is announced once by
+  // the polite announcer when the wait starts.
+  const countdown = elementWithId('onboardCountdown');
+  assert.match(countdown, /aria-hidden="true"/);
+  assert.doesNotMatch(countdown, /aria-live/);
+
+  // The URL itself is machine output, not authored prose.
+  assert.match(elementWithId('onboardAuthUrl'), /<code\b/);
+});
+
+test('the escape hatch notice and headline are addressable for runtime copy swaps', () => {
+  assert.match(elementWithId('onboardWaitingHeadline'), /data-i18n="onboarding\.waitingBrowser"/);
+  assert.match(elementWithId('onboardHatchNotice'), /hidden/);
+});
