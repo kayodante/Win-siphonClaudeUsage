@@ -115,6 +115,8 @@ npm run build:win  # cargo tauri build — NSIS installer
 npm test           # node --test — renderer/shared JS units (test/)
 npm run test:rust  # cargo test -p siphon-core — Rust core logic
 npm run lint       # syntax check + eslint
+npm run lint:rust  # cargo fmt --check + cargo clippy, on siphon-core
+npm run verify     # all of the above — what CI gates on
 ```
 
 Building the Windows binary needs the [Tauri prerequisites](https://tauri.app/start/prerequisites/)
