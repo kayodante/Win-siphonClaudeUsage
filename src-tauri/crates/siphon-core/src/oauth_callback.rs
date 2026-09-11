@@ -167,7 +167,10 @@ mod tests {
 
     #[test]
     fn reports_no_code_when_the_query_has_none() {
-        assert_eq!(classify("GET /callback HTTP/1.1", STATE), CallbackOutcome::NoCode);
+        assert_eq!(
+            classify("GET /callback HTTP/1.1", STATE),
+            CallbackOutcome::NoCode
+        );
         assert_eq!(
             classify("GET /callback?code= HTTP/1.1", STATE),
             CallbackOutcome::NoCode
@@ -217,7 +220,10 @@ mod tests {
             classify("GET /callback?code=ABC123&state=forged HTTP/1.1", STATE),
             CallbackOutcome::StateMismatch
         );
-        assert_eq!(classify("GET /callback HTTP/1.1", STATE), CallbackOutcome::NoCode);
+        assert_eq!(
+            classify("GET /callback HTTP/1.1", STATE),
+            CallbackOutcome::NoCode
+        );
         assert_eq!(classify("GET", STATE), CallbackOutcome::Malformed);
         assert_eq!(
             classify("GET /favicon.ico HTTP/1.1", STATE),

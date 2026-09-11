@@ -317,7 +317,10 @@ mod tests {
         // `localhost`, not `127.0.0.1` — this is the exact string the
         // authorization server accepts for this client id.
         assert_eq!(loopback_redirect_uri(0), "http://localhost:0/callback");
-        assert_eq!(loopback_redirect_uri(65535), "http://localhost:65535/callback");
+        assert_eq!(
+            loopback_redirect_uri(65535),
+            "http://localhost:65535/callback"
+        );
     }
 
     #[test]
