@@ -241,11 +241,13 @@ rendering.
 hard-coded.
 
 ```
-client_id     = 9d1c250a-e61b-44d9-88ed-5944d1962f5e
-redirect_uri  = https://platform.claude.com/oauth/code/callback
-auth_url      = https://claude.ai/oauth/authorize
-token_url     = https://platform.claude.com/v1/oauth/token
-scopes        = user:profile user:inference
+client_id       = 9d1c250a-e61b-44d9-88ed-5944d1962f5e
+auth_url        = https://claude.ai/oauth/authorize
+token_url       = https://platform.claude.com/v1/oauth/token
+scopes          = user:profile user:inference
+
+redirect_uri (loopback, preferred) = http://localhost:<ephemeral port>/callback
+redirect_uri (manual fallback)     = https://platform.claude.com/oauth/code/callback
 ```
 
 ### Authorize URL (built in `prepareFlow()`)
@@ -263,6 +265,24 @@ https://claude.ai/oauth/authorize
 ```
 
 `verifier` and `state` are 32 random bytes, base64url-encoded.
+
+### Redirect handling
+
+Siphon binds an ephemeral TCP port on `127.0.0.1` before building the authorize
+URL and sends `http://localhost:<port>/callback` as the `redirect_uri`. The same
+value is echoed in the token exchange — the two must match byte for byte.
+
+The listener answers only `/callback`; anything else gets a 404 and the loop
+keeps waiting. The `state` query parameter is compared against the one this
+process generated, and a mismatch aborts without exchanging the code. On success
+the browser gets `302 Location: https://platform.claude.com/oauth/code/success?app=claude-code`;
+every failure gets a fixed-text 400 that never echoes the provider's message.
+
+If the bind fails, or a previous loopback attempt failed in this run, Siphon
+falls back to `https://platform.claude.com/oauth/code/callback` and the user
+pastes the code — the original flow, unchanged. Parsing and classification live
+in `siphon_core::oauth_callback`; the socket lives in
+`src-tauri/src/oauth_server.rs`.
 
 ### Token exchange
 
@@ -300,8 +320,8 @@ Response:
 }
 ```
 
-`extractCode()` accepts either the bare code string or the entire
-redirect URL the user pasted from the browser address bar.
+`extract_code()` accepts either the bare code string or the entire redirect URL,
+and is still used by the manual fallback path.
 
 ### Refresh
 
