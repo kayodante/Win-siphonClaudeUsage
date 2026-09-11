@@ -428,8 +428,10 @@ impl Controller {
             let mut state = self.state.lock().unwrap();
             state.auth_error = None;
             state.awaiting_browser = pending.is_some();
-            // The paste form is only reachable when there is no listener — a code
-            // issued against a loopback redirect cannot be exchanged any other way.
+            // The paste form starts hidden while a listener is running — it
+            // is `downgrade_to_paste` (fired when the listener times out)
+            // that reveals it, letting a loopback-issued code be pasted by
+            // hand once the socket has closed.
             state.awaiting_code = pending.is_none();
         }
         *self.auth_flow.lock().unwrap() = Some(flow);
@@ -486,11 +488,11 @@ impl Controller {
                 self.submit_code(code).await;
                 {
                     let mut state = self.state.lock().unwrap();
-                    // Whatever happened, the browser leg is over. A code issued
-                    // against the loopback redirect cannot be re-submitted by
-                    // hand, so a failed exchange returns to the call-to-action
-                    // rather than the paste form; submit_code already set
-                    // auth_error with the reason.
+                    // Whatever happened, the browser leg produced a terminal
+                    // outcome — this flow is finished either way, so it
+                    // returns to the call-to-action rather than the paste
+                    // form; submit_code already set auth_error with the
+                    // reason on failure.
                     state.awaiting_browser = false;
                     state.awaiting_code = false;
                 }
@@ -618,8 +620,20 @@ impl Controller {
             }
             Err(err) => {
                 // A bad paste must not burn the flow — the user retypes and
-                // tries again. Only a spent code (the Ok arm) ends it.
-                *self.auth_flow.lock().unwrap() = Some(flow);
+                // tries again. Only a spent code (the Ok arm) ends it. But
+                // restore only if this flow is still the current one: a paste
+                // form is still up (`awaiting_code`) and nothing newer has
+                // claimed the slot. An unconditional restore would resurrect
+                // a cancelled flow over a live one (e.g. the user cancelled
+                // and started a fresh sign-in while this exchange was still
+                // in flight).
+                let keep = self.state.lock().unwrap().awaiting_code;
+                let mut slot = self.auth_flow.lock().unwrap();
+                if keep && slot.is_none() {
+                    *slot = Some(flow);
+                }
+                drop(slot);
+
                 self.state.lock().unwrap().auth_error =
                     Some(siphon_core::diagnostics::safe_error_message(
                         err.message(),
