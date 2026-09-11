@@ -278,10 +278,16 @@ process generated, and a mismatch aborts without exchanging the code. On success
 the browser gets `302 Location: https://platform.claude.com/oauth/code/success?app=claude-code`;
 every failure gets a fixed-text 400 that never echoes the provider's message.
 
-If the bind fails, or a previous loopback attempt failed in this run, Siphon
-falls back to `https://platform.claude.com/oauth/code/callback` and the user
-pastes the code — the original flow, unchanged. Parsing and classification live
-in `siphon_core::oauth_callback`; the socket lives in
+A stalled connection (no bytes sent, past a 10-second per-connection read
+timeout) or a connection error is a non-event — it does not end the listener,
+which otherwise keeps waiting for up to 5 minutes. If the bind fails, or a
+prior attempt in this run hit that 5-minute timeout without a successful
+callback, Siphon falls back to `https://platform.claude.com/oauth/code/callback`
+and the user pastes the code — the original flow, unchanged. A denied
+authorization, a `state` mismatch, or a malformed callback end that sign-in
+attempt with an error but do **not** trigger the fallback — the next attempt
+still uses the loopback listener. Parsing and classification live in
+`siphon_core::oauth_callback`; the socket lives in
 `src-tauri/src/oauth_server.rs`.
 
 ### Token exchange
