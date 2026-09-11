@@ -49,6 +49,10 @@ enum RefreshOutcome {
     Transient,
 }
 
+/// Consecutive loopback timeouts that force the manual paste flow for the rest
+/// of the run. See `Controller::loopback_timeouts`.
+const LOOPBACK_TIMEOUT_LIMIT: u32 = 2;
+
 pub struct Controller {
     app: AppHandle,
     pub prefs: std::sync::Arc<PrefsStore>,
@@ -58,14 +62,21 @@ pub struct Controller {
     auth_flow: Mutex<Option<AuthFlow>>,
     /// Aborts the running loopback listener on cancel / sign-out / restart.
     auth_listener: Mutex<Option<tokio::task::AbortHandle>>,
-    /// Set once the loopback listener timed out without the browser's
-    /// connection ever reaching it in this run. A firewall that lets the
-    /// bind succeed but blocks the browser's connection would otherwise loop
-    /// forever, so the next sign-in goes straight to the manual flow. A
-    /// denied, malformed, or state-mismatched callback does NOT set this —
-    /// the browser reached the listener fine in those cases, so the
-    /// loopback flow is still worth trying on the next sign-in.
-    loopback_failed: Mutex<bool>,
+    /// How many times *in a row* the loopback listener has timed out with the
+    /// browser's connection never reaching it. At `LOOPBACK_TIMEOUT_LIMIT` the
+    /// rest of the run goes straight to the manual paste flow.
+    ///
+    /// Counted rather than latched because one timeout is far more likely to be
+    /// a user who walked away mid-authorization than a broken network, and
+    /// latching on that would hand them the paste flow for every sign-in for
+    /// the rest of the run with no explanation. A firewall that lets the bind
+    /// succeed but blocks the browser's connection times out every single time,
+    /// so it still reaches the limit and falls back for good.
+    ///
+    /// Reset to zero by any successful token exchange (`submit_code`) and by
+    /// `sign_out`. A denied, malformed, or state-mismatched callback never
+    /// increments it — the browser reached the listener fine in those cases.
+    loopback_timeouts: Mutex<u32>,
     rate_limited_until: Mutex<Option<Instant>>,
     reset: Mutex<ResetRuntime>,
     alerts: Mutex<UsageAlertService>,
@@ -89,7 +100,7 @@ impl Controller {
             state: Mutex::new(AppState::default()),
             auth_flow: Mutex::new(None),
             auth_listener: Mutex::new(None),
-            loopback_failed: Mutex::new(false),
+            loopback_timeouts: Mutex::new(0),
             rate_limited_until: Mutex::new(None),
             reset: Mutex::new(ResetRuntime::default()),
             alerts: Mutex::new(UsageAlertService::new()),
@@ -399,7 +410,7 @@ impl Controller {
         // A second click, or the re-auth button, must not leave a listener behind.
         self.abort_listener();
 
-        let force_manual = *self.loopback_failed.lock().unwrap();
+        let force_manual = *self.loopback_timeouts.lock().unwrap() >= LOOPBACK_TIMEOUT_LIMIT;
         let pending = if force_manual {
             None
         } else {
@@ -451,11 +462,11 @@ impl Controller {
                 match outcome {
                     Ok(Some(outcome)) => controller.complete_from_callback(outcome).await,
                     // Timed out: the browser's connection never reached the
-                    // listener. This is the one case `loopback_failed`
-                    // exists for — see its doc comment.
+                    // listener. This is the one case `loopback_timeouts`
+                    // counts — see its doc comment.
                     Ok(None) => {
-                        *controller.loopback_failed.lock().unwrap() = true;
-                        controller.fail_loopback(None);
+                        *controller.loopback_timeouts.lock().unwrap() += 1;
+                        controller.fail_loopback();
                     }
                     // Aborted by cancel_auth / sign_out / a restarted flow — that
                     // path already reset the state, so there is nothing to do.
@@ -484,31 +495,47 @@ impl Controller {
                     state.awaiting_code = false;
                 }
                 if self.get_state().is_signed_in {
-                    *self.loopback_failed.lock().unwrap() = false;
                     crate::windows_ctl::show_main(&self.app);
                 }
                 self.emit();
             }
+            // The provider's `error` and `error_description` are both
+            // attacker-influenced free text: anything on this machine can hit
+            // the loopback port and name its own error. `http_response`
+            // already refuses to echo them back into the browser; the same
+            // rule applies toward the UI, or the app's own trusted error line
+            // becomes a phishing surface ("Your session expired — re-authorize
+            // at ..." in Siphon's voice). Logged for diagnosis, never shown.
             CallbackOutcome::Provider { error, description } => {
-                self.fail_loopback(Some(description.unwrap_or(error)));
+                log::warn!(
+                    "oauth callback reported an error: {}",
+                    siphon_core::diagnostics::redact_string(&match &description {
+                        Some(d) => format!("{error}: {d}"),
+                        None => error.clone(),
+                    })
+                );
+                self.fail_loopback();
             }
-            CallbackOutcome::StateMismatch => {
-                self.fail_loopback(Some("Authentication failed: state mismatch".to_string()));
-            }
-            CallbackOutcome::NoCode | CallbackOutcome::Malformed | CallbackOutcome::NotFound => {
-                self.fail_loopback(None);
+            // Unreachable in practice — these are non-terminal, so the accept
+            // loop answers them and keeps waiting rather than returning them
+            // (see `CallbackOutcome::is_terminal`). Handled anyway: the enum is
+            // public, and failing closed costs one line.
+            CallbackOutcome::StateMismatch
+            | CallbackOutcome::NoCode
+            | CallbackOutcome::Malformed
+            | CallbackOutcome::NotFound => {
+                self.fail_loopback();
             }
         }
     }
 
     /// The loopback attempt did not produce a usable code. Return to the
-    /// initial call-to-action with an error. Does not touch
-    /// `loopback_failed` — the browser reached the listener fine for every
-    /// outcome that lands here (denied, malformed, wrong state, wrong
-    /// path), so the loopback flow is still worth trying on the next
-    /// sign-in. Only the `Ok(None)` timeout arm in `start_sign_in`'s waiter
-    /// sets that latch.
-    fn fail_loopback(&self, reason: Option<String>) {
+    /// initial call-to-action with a fixed error. Does not touch
+    /// `loopback_timeouts` — the browser reached the listener fine in every
+    /// case that lands here, so the loopback flow is still worth trying on the
+    /// next sign-in. Only the `Ok(None)` timeout arm in `start_sign_in`'s
+    /// waiter increments it.
+    fn fail_loopback(&self) {
         {
             let mut state = self.state.lock().unwrap();
             // Cancelled or already signed in — leave that state alone.
@@ -517,12 +544,15 @@ impl Controller {
             }
             state.awaiting_browser = false;
             state.awaiting_code = false;
-            state.auth_error = Some(siphon_core::diagnostics::safe_error_message(
-                reason
-                    .as_deref()
-                    .unwrap_or("Sign-in was not completed in the browser. Please try again."),
-                "Authentication failed. Please try again.",
-            ));
+            // The flow is over; leave nothing for a later submit_code to spend.
+            // cancel_auth and sign_out already do this — the invariant should
+            // not depend on the renderer keeping the paste form hidden.
+            *self.auth_flow.lock().unwrap() = None;
+            // One fixed sentence, whatever the reason. The only reasons that
+            // reach here carry provider- or stranger-supplied text, and that
+            // text must never appear in Siphon's own error line.
+            state.auth_error =
+                Some("Sign-in was not completed in the browser. Please try again.".to_string());
         }
         self.emit();
     }
@@ -552,6 +582,9 @@ impl Controller {
             Ok(creds) => {
                 let _ = self.tokens.save(&creds);
                 *self.auth_flow.lock().unwrap() = None;
+                // A sign-in got through, so whatever blocked the last loopback
+                // attempt is not a standing condition. Start the count over.
+                *self.loopback_timeouts.lock().unwrap() = 0;
                 {
                     let mut state = self.state.lock().unwrap();
                     state.awaiting_code = false;
@@ -576,7 +609,7 @@ impl Controller {
 
     pub async fn sign_out(&self) {
         self.abort_listener();
-        *self.loopback_failed.lock().unwrap() = false;
+        *self.loopback_timeouts.lock().unwrap() = 0;
         let _ = self.tokens.clear();
         self.clear_reset().await;
         *self.auth_flow.lock().unwrap() = None;

@@ -78,7 +78,7 @@ Tauri backend (Rust)
   ├── siphon-core crate — pure, cross-platform logic:
   │     ├── local usage parsing (~/.claude readouts + project JSONL) w/ incremental cache
   │     ├── quota polling of api.anthropic.com/api/oauth/usage (120 s minimum)
-  │     ├── OAuth PKCE sign-in (same client ID as Claude Code)
+  │     ├── OAuth PKCE sign-in (same client ID as Claude Code), loopback redirect
   │     └── reset scheduler — arms Windows toasts on quota exhaustion
   ├── src-tauri binary  — tray, floating widget, notifications, DPAPI credential
   │                        store, updater, IPC commands
@@ -105,7 +105,7 @@ for known Claude models. No data leaves your machine for usage calculations.
 
 ### Sign-in
 
-Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a browser tab opens to Anthropic's auth page. After authorizing, paste the redirect URL back into the app. Tokens are refreshed automatically 30 seconds before expiry.
+Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a browser tab opens to Anthropic's auth page. Approve the request and the browser hands the authorization straight back to Siphon, which is listening on a short-lived loopback port on your own machine — nothing to copy, and the window comes back to the front on its own. If that port cannot be opened, or the browser never makes it back, Siphon falls back to the original flow and asks you to paste the redirect URL. Tokens are refreshed automatically 30 seconds before expiry.
 
 ## Development
 

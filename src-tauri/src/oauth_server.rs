@@ -87,8 +87,17 @@ async fn accept_loop(listener: TcpListener, expected_state: String) -> Option<Ca
             .write_all(oauth_callback::http_response(&outcome).as_bytes())
             .await;
         let _ = writer.flush().await;
-        // A browser often asks for /favicon.ico around the real callback; those
-        // are answered 404 and the loop keeps waiting for the one that counts.
+        // Half-close instead of dropping the socket with the rest of the
+        // request still sitting unread in the receive queue — that sends RST,
+        // and a browser that gets RST may discard the 302 and show a
+        // connection-reset page instead of the success page.
+        let _ = writer.shutdown().await;
+        // Only the authorization server's own redirect ends the loop. A
+        // browser's /favicon.ico, and anything a stranger sends at this
+        // guessable port, are answered and ignored — see
+        // `CallbackOutcome::is_terminal`. Every iteration needs a fresh
+        // accept(), so ignoring an outcome cannot spin: the loop parks in
+        // `accept().await` until someone actually connects.
         if outcome.is_terminal() {
             return Some(outcome);
         }

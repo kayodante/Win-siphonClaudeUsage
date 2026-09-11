@@ -280,13 +280,25 @@ every failure gets a fixed-text 400 that never echoes the provider's message.
 
 A stalled connection (no bytes sent, past a 10-second per-connection read
 timeout) or a connection error is a non-event — it does not end the listener,
-which otherwise keeps waiting for up to 5 minutes. If the bind fails, or a
-prior attempt in this run hit that 5-minute timeout without a successful
-callback, Siphon falls back to `https://platform.claude.com/oauth/code/callback`
-and the user pastes the code — the original flow, unchanged. A denied
+which otherwise keeps waiting for up to 5 minutes. Neither is a request the
+listener cannot use: a wrong or missing `state`, a missing code, a malformed
+request line, or an unrelated path are all answered and ignored, so a stranger
+who guesses the ephemeral port cannot end a sign-in that is still in progress.
+Only the authorization server's own redirect — a valid code, or a reported
+error — ends the loop.
+
+If the bind fails, or **two consecutive** attempts in this run hit that
+5-minute timeout without a successful callback, Siphon falls back to
+`https://platform.claude.com/oauth/code/callback` and the user pastes the code
+— the original flow, unchanged. One timeout is far more likely to be a user who
+stepped away mid-authorization than a broken network, so it costs that attempt
+only; a firewall that blocks the browser's connection times out every time and
+so still reaches the limit. A successful sign-in resets the count. A denied
 authorization, a `state` mismatch, or a malformed callback end that sign-in
-attempt with an error but do **not** trigger the fallback — the next attempt
-still uses the loopback listener. Parsing and classification live in
+attempt with an error but do **not** count toward the fallback — the next
+attempt still uses the loopback listener. The provider's `error` /
+`error_description` text is attacker-influenced; it is logged and never shown
+in the app's own error line, the same rule the 400 reply already follows. Parsing and classification live in
 `siphon_core::oauth_callback`; the socket lives in
 `src-tauri/src/oauth_server.rs`.
 

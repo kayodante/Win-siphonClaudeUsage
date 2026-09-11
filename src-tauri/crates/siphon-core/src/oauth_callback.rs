@@ -33,10 +33,28 @@ pub enum CallbackOutcome {
 }
 
 impl CallbackOutcome {
-    /// A browser may ask for unrelated paths around the real callback, so only
-    /// a terminal outcome ends the listener's accept loop.
+    /// Should an unauthenticated stranger be able to end this sign-in?
+    ///
+    /// This is a security control, not a parse-result convenience. While the
+    /// listener is up it answers whoever connects, and the port is guessable:
+    /// a web page can sweep the dynamic range in seconds with no-cors fetches.
+    /// The same-origin policy stops such a page *reading* the reply, not
+    /// *sending* the request. So only the outcomes that can plausibly come from
+    /// the authorization server's own redirect end the accept loop — a `code`
+    /// that matched the `state` this process generated, and a provider error.
+    /// Everything else (wrong or missing `state`, no code, garbage, an
+    /// unrelated path) is answered with the fixed reply and ignored, so a probe
+    /// cannot close the socket out from under the browser's real redirect.
+    ///
+    /// The trade is deliberate: a genuine `state` mismatch essentially never
+    /// happens in a working flow, while hostile probes are free to mount.
+    /// Classification still happens — the caller logs it — only the
+    /// loop-ending consequence is withheld.
     pub fn is_terminal(&self) -> bool {
-        !matches!(self, CallbackOutcome::NotFound)
+        matches!(
+            self,
+            CallbackOutcome::Code(_) | CallbackOutcome::Provider { .. }
+        )
     }
 }
 
@@ -174,17 +192,37 @@ mod tests {
     }
 
     #[test]
-    fn only_not_found_keeps_the_listener_running() {
-        assert!(!CallbackOutcome::NotFound.is_terminal());
+    fn only_the_authorization_servers_own_redirect_ends_the_listener() {
+        // These two are the only shapes the real redirect can take.
         assert!(CallbackOutcome::Code("x".to_string()).is_terminal());
-        assert!(CallbackOutcome::StateMismatch.is_terminal());
-        assert!(CallbackOutcome::NoCode.is_terminal());
-        assert!(CallbackOutcome::Malformed.is_terminal());
         assert!(CallbackOutcome::Provider {
             error: "e".to_string(),
             description: None
         }
         .is_terminal());
+
+        // Anything a stranger can send at the guessable ephemeral port must not
+        // be able to end the sign-in: the listener answers and keeps waiting.
+        assert!(!CallbackOutcome::NotFound.is_terminal());
+        assert!(!CallbackOutcome::StateMismatch.is_terminal());
+        assert!(!CallbackOutcome::NoCode.is_terminal());
+        assert!(!CallbackOutcome::Malformed.is_terminal());
+    }
+
+    #[test]
+    fn a_forged_request_is_still_classified_even_though_it_is_not_terminal() {
+        // The classification is what the caller logs; only the loop-ending
+        // consequence was withheld. Losing either would be a regression.
+        assert_eq!(
+            classify("GET /callback?code=ABC123&state=forged HTTP/1.1", STATE),
+            CallbackOutcome::StateMismatch
+        );
+        assert_eq!(classify("GET /callback HTTP/1.1", STATE), CallbackOutcome::NoCode);
+        assert_eq!(classify("GET", STATE), CallbackOutcome::Malformed);
+        assert_eq!(
+            classify("GET /favicon.ico HTTP/1.1", STATE),
+            CallbackOutcome::NotFound
+        );
     }
 
     #[test]
@@ -234,10 +272,10 @@ mod tests {
         // valid code and state won't match).
         let line = "GET /callback?code=%€&state=mismatch HTTP/1.1";
         let outcome = classify(line, STATE);
-        // Should not panic, and should return a normal terminal outcome.
-        assert!(outcome.is_terminal());
-        // The hostile code value decodes to "%€" literally (% followed by Euro).
+        // The hostile code value decodes to "%€" literally (% followed by Euro),
+        // so the state cannot match — classified, not terminal.
         assert_eq!(outcome, CallbackOutcome::StateMismatch);
+        assert!(!outcome.is_terminal());
     }
 
     #[test]
