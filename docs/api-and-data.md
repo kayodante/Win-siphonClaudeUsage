@@ -293,10 +293,8 @@ If the bind fails, or **two consecutive** attempts in this run hit that
 — the original flow, unchanged. One timeout is far more likely to be a user who
 stepped away mid-authorization than a broken network, so it costs that attempt
 only; a firewall that blocks the browser's connection times out every time and
-so still reaches the limit. A successful sign-in resets the count. A denied
-authorization, a `state` mismatch, or a malformed callback end that sign-in
-attempt with an error but do **not** count toward the fallback — the next
-attempt still uses the loopback listener. The provider's `error` /
+so still reaches the limit. A successful sign-in resets the count. A denied authorization does not count
+toward the fallback — the next attempt still uses the loopback listener. The provider's `error` /
 `error_description` text is attacker-influenced; it is logged and never shown
 in the app's own error line, the same rule the 400 reply already follows. Parsing and classification live in
 `siphon_core::oauth_callback`; the socket lives in

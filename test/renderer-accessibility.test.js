@@ -112,6 +112,7 @@ test('the browser-wait state announces itself and can be cancelled', () => {
   // always-present #politeAnnouncer instead.
   const waiting = elementWithId('onboardWaiting');
   assert.doesNotMatch(waiting, /aria-live=/);
+  assert.doesNotMatch(waiting, /role="status"/);
   assert.match(renderer, /announce\(elements\.politeAnnouncer, t\('onboarding\.waitingBrowser'/);
 
   assert.match(elementWithId('onboardWaitingCancel'), /data-i18n="onboarding\.cancel"/);
