@@ -29,6 +29,7 @@ const elements = {
   onboardSecondary: document.querySelector('.onboard-secondary'),
   onboardWaiting: document.querySelector('#onboardWaiting'),
   onboardWaitingCancel: document.querySelector('#onboardWaitingCancel'),
+  onboardWaitingCancelWrap: document.querySelector('#onboardWaitingCancelWrap'),
   onboardFallbackNotice: document.querySelector('#onboardFallbackNotice'),
   mainView: document.querySelector('#mainView'),
   settingsView: document.querySelector('#settingsView'),
@@ -743,7 +744,7 @@ function render(state) {
   elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
   elements.onboardSecondary.hidden = awaitingCode || awaitingBrowser;
   elements.onboardWaiting.hidden = !awaitingBrowser;
-  elements.onboardWaitingCancel.hidden = !awaitingBrowser;
+  elements.onboardWaitingCancelWrap.hidden = !awaitingBrowser;
   elements.onboardCodeForm.hidden = !awaitingCode;
 
   renderSettingsControls(state, lang);

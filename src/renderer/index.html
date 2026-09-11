@@ -76,7 +76,9 @@
             <span class="copy-strong" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
             <span class="copy-muted" data-i18n="onboarding.waitingHint">Approve the request on claude.ai. This window updates on its own.</span>
           </div>
-          <button type="button" class="btn-cancel" id="onboardWaitingCancel" data-i18n="onboarding.cancel" hidden>Cancelar</button>
+          <div class="auth-button-stack" id="onboardWaitingCancelWrap" hidden>
+            <button type="button" class="btn-cancel" id="onboardWaitingCancel" data-i18n="onboarding.cancel">Cancelar</button>
+          </div>
 
           <form id="onboardCodeForm" class="code-form onboard-code-form" hidden>
             <p class="onboard-fallback-notice" id="onboardFallbackNotice" data-i18n="onboarding.manualFallback">
