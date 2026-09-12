@@ -19,6 +19,14 @@ is added above it.
   restart once the installer is verified — previously a background download
   showed nothing at all if that banner had been dismissed.
 
+### Fixed
+
+- Changing the refresh interval in Settings now takes effect within 30 seconds
+  instead of waiting out the interval that was already running — going from 15
+  minutes to 30 seconds no longer meant waiting up to 15 minutes for the first
+  fast refresh. A machine coming back from sleep also refreshes on the first
+  tick after waking instead of up to a full interval later.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
