@@ -23,10 +23,11 @@ mod windows_ctl;
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::Utc;
 use tauri::{Emitter, Manager};
 
 use claude_settings::ClaudeSettings;
-use controller::{Controller, ALLOWED_REFRESH_INTERVALS, MIN_QUOTA_INTERVAL_MS};
+use controller::{Controller, ALLOWED_REFRESH_INTERVALS, MIN_QUOTA_INTERVAL_SECS};
 use prefs::{Change, PrefsStore};
 use siphon_core::json_store::config_dir;
 use token_store::TokenStore;
@@ -125,16 +126,27 @@ fn main() {
             let p = prefs.clone();
             tauri::async_runtime::spawn(async move {
                 c.clone().start().await;
-                let mut elapsed_since_quota = 0u64;
+                // Anchors are wall-clock on purpose. An accumulator counts the
+                // *planned* interval rather than the real one (the refreshes
+                // themselves take time), and the monotonic clock a sleep runs
+                // on may not count time the machine spent suspended — both
+                // leave the numbers stale for longer than the user asked for.
+                let mut last_local = Utc::now();
+                let mut last_quota = Utc::now();
                 loop {
-                    let interval = refresh_interval_secs(&p);
-                    tokio::time::sleep(Duration::from_secs(interval)).await;
-                    c.clone().refresh_local_blocking().await;
-                    elapsed_since_quota += interval * 1000;
-                    let quota_interval = interval.saturating_mul(1000).max(MIN_QUOTA_INTERVAL_MS);
-                    if elapsed_since_quota >= quota_interval && c.get_state().is_signed_in {
+                    tokio::time::sleep(TICK).await;
+                    let now = Utc::now();
+                    let interval = refresh_interval_secs(&p) as i64;
+                    if (now - last_local).num_seconds() >= interval {
+                        last_local = now;
+                        c.clone().refresh_local_blocking().await;
+                    }
+                    let quota_interval = interval.max(MIN_QUOTA_INTERVAL_SECS);
+                    if (now - last_quota).num_seconds() >= quota_interval
+                        && c.get_state().is_signed_in
+                    {
+                        last_quota = now;
                         c.refresh_quota().await;
-                        elapsed_since_quota = 0;
                     }
                 }
             });
@@ -267,6 +279,11 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("error while running Siphon");
 }
+
+/// How often the refresh loop wakes up: the shortest interval the user can
+/// pick, so every tick re-reads `refresh.intervalSeconds` and a change in
+/// Settings applies within one tick instead of waiting out the old sleep.
+const TICK: Duration = Duration::from_secs(ALLOWED_REFRESH_INTERVALS[0]);
 
 fn refresh_interval_secs(prefs: &PrefsStore) -> u64 {
     let n = prefs
