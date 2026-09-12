@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-09-12
+
 ### Added
 
 - A one-line notice now appears while an update downloads in the background
@@ -483,7 +485,8 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.9.2...v1.12.0
 [1.9.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.8...v1.9.2
 [1.8.4]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.3...v1.8.4
