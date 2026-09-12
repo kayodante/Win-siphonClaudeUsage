@@ -73,9 +73,27 @@
           </p>
 
           <div class="onboard-waiting" id="onboardWaiting" hidden>
-            <span class="copy-strong" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
+            <span class="copy-strong" id="onboardWaitingHeadline" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
             <span class="copy-muted" data-i18n="onboarding.waitingHint">Approve the request on claude.ai. This window updates on its own.</span>
+
+            <div class="onboard-url-row">
+              <span class="onboard-url-label" data-i18n="onboarding.openManually">Browser did not open? Open this link yourself:</span>
+              <div class="onboard-url-box">
+                <code class="onboard-url" id="onboardAuthUrl"></code>
+                <button type="button" class="onboard-url-copy" id="onboardCopyUrlButton" data-i18n-aria-label="onboarding.copyLink" aria-label="Copy link">
+                  <!-- Carbon: Copy -->
+                  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M28 10v18H10V10h18m0-2H10a2 2 0 00-2 2v18a2 2 0 002 2h18a2 2 0 002-2V10a2 2 0 00-2-2z"/><path d="M4 18H2V4a2 2 0 012-2h14v2H4z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <span class="onboard-countdown" id="onboardCountdown" aria-hidden="true"></span>
           </div>
+
+          <p class="onboard-hatch-notice" id="onboardHatchNotice" data-i18n="onboarding.hatchNotice" hidden>
+            Still waiting. If you already approved it, paste the redirect URL below.
+          </p>
+
           <div class="auth-button-stack" id="onboardWaitingCancelWrap" hidden>
             <button type="button" class="btn-cancel" id="onboardWaitingCancel" data-i18n="onboarding.cancel">Cancelar</button>
           </div>

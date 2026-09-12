@@ -105,7 +105,7 @@ for known Claude models. No data leaves your machine for usage calculations.
 
 ### Sign-in
 
-Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a browser tab opens to Anthropic's auth page. Approve the request and the browser hands the authorization straight back to Siphon, which is listening on a short-lived loopback port on your own machine — nothing to copy, and the window comes back to the front on its own. If that port cannot be opened, or the browser never makes it back, Siphon falls back to the original flow and asks you to paste the redirect URL. Tokens are refreshed automatically 30 seconds before expiry.
+Siphon reuses Claude Code's OAuth PKCE flow. When you click **Sign in**, a browser tab opens to Anthropic's auth page. Approve the request and the browser hands the authorization straight back to Siphon, which is listening on a short-lived loopback port on your own machine — nothing to copy, and the window comes back to the front on its own. If that port cannot be opened, Siphon asks you to paste the redirect URL instead. While it waits, the authorize link is on screen with a copy button — so a browser that never opened is a copy-and-paste away, not a dead end — alongside a countdown to the 150-second limit. After 60 seconds the paste field appears as well, and if the wait runs out the link you already authorized can still be pasted. Tokens are refreshed automatically 30 seconds before expiry.
 
 ## Development
 
@@ -115,6 +115,8 @@ npm run build:win  # cargo tauri build — NSIS installer
 npm test           # node --test — renderer/shared JS units (test/)
 npm run test:rust  # cargo test -p siphon-core — Rust core logic
 npm run lint       # syntax check + eslint
+npm run lint:rust  # cargo fmt --check + cargo clippy, on siphon-core
+npm run verify     # all of the above — what CI gates on
 ```
 
 Building the Windows binary needs the [Tauri prerequisites](https://tauri.app/start/prerequisites/)

@@ -25,6 +25,8 @@ npm start          # cargo tauri dev — run against src/renderer
 npm test           # node --test — renderer/shared JS units (test/*.test.js)
 npm run test:rust  # cargo test -p siphon-core — Rust core logic
 npm run lint       # syntax check via scripts/check-syntax.js + eslint
+npm run lint:rust  # cargo fmt --check + cargo clippy, on siphon-core
+npm run verify     # all of the above — what CI gates on
 ```
 
 All must pass. The reset scheduler, quota, OAuth/PKCE and usage-parsing logic

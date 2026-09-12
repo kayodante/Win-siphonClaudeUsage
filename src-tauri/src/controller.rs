@@ -428,8 +428,10 @@ impl Controller {
             let mut state = self.state.lock().unwrap();
             state.auth_error = None;
             state.awaiting_browser = pending.is_some();
-            // The paste form is only reachable when there is no listener — a code
-            // issued against a loopback redirect cannot be exchanged any other way.
+            // The paste form starts hidden while a listener is running — it
+            // is `downgrade_to_paste` (fired when the listener times out)
+            // that reveals it, letting a loopback-issued code be pasted by
+            // hand once the socket has closed.
             state.awaiting_code = pending.is_none();
         }
         *self.auth_flow.lock().unwrap() = Some(flow);
@@ -466,7 +468,7 @@ impl Controller {
                     // counts — see its doc comment.
                     Ok(None) => {
                         *controller.loopback_timeouts.lock().unwrap() += 1;
-                        controller.fail_loopback();
+                        controller.downgrade_to_paste();
                     }
                     // Aborted by cancel_auth / sign_out / a restarted flow — that
                     // path already reset the state, so there is nothing to do.
@@ -483,15 +485,19 @@ impl Controller {
         *self.auth_listener.lock().unwrap() = None;
         match outcome {
             CallbackOutcome::Code(code) => {
+                // Cleared BEFORE the exchange: `submit_code`'s failure arm
+                // restores the flow while either awaiting flag is set, and the
+                // browser leg must decline that restore — this flow is
+                // finished whatever the exchange returns.
+                self.state.lock().unwrap().awaiting_browser = false;
                 self.submit_code(code).await;
                 {
                     let mut state = self.state.lock().unwrap();
-                    // Whatever happened, the browser leg is over. A code issued
-                    // against the loopback redirect cannot be re-submitted by
-                    // hand, so a failed exchange returns to the call-to-action
-                    // rather than the paste form; submit_code already set
-                    // auth_error with the reason.
-                    state.awaiting_browser = false;
+                    // Whatever happened, the browser leg produced a terminal
+                    // outcome — this flow is finished either way, so it
+                    // returns to the call-to-action rather than the paste
+                    // form; submit_code already set auth_error with the
+                    // reason on failure.
                     state.awaiting_code = false;
                 }
                 if self.get_state().is_signed_in {
@@ -557,6 +563,27 @@ impl Controller {
         self.emit();
     }
 
+    /// The listener gave up, but the authorization may still be in flight — a
+    /// user finishing 2FA at 2:40 gets their `?code=` in the address bar with
+    /// nowhere to put it if we destroy the flow here. So the timeout is a
+    /// downgrade, not a failure: the socket closes, the flow survives, and the
+    /// paste form becomes the way home. `fail_loopback` still handles the cases
+    /// where there is genuinely nothing to paste (denied, malformed, wrong
+    /// state).
+    fn downgrade_to_paste(&self) {
+        {
+            let mut state = self.state.lock().unwrap();
+            // Cancelled or already signed in — leave that state alone.
+            if !state.awaiting_browser {
+                return;
+            }
+            state.awaiting_browser = false;
+            state.awaiting_code = true;
+            state.auth_error = None;
+        }
+        self.emit();
+    }
+
     fn abort_listener(&self) {
         if let Some(handle) = self.auth_listener.lock().unwrap().take() {
             handle.abort();
@@ -564,7 +591,7 @@ impl Controller {
     }
 
     pub async fn submit_code(&self, raw_code: String) {
-        let flow = match self.auth_flow.lock().unwrap().clone() {
+        let flow = match self.auth_flow.lock().unwrap().take() {
             Some(f) => f,
             None => return,
         };
@@ -581,7 +608,6 @@ impl Controller {
         {
             Ok(creds) => {
                 let _ = self.tokens.save(&creds);
-                *self.auth_flow.lock().unwrap() = None;
                 // A sign-in got through, so whatever blocked the last loopback
                 // attempt is not a standing condition. Start the count over.
                 *self.loopback_timeouts.lock().unwrap() = 0;
@@ -597,6 +623,24 @@ impl Controller {
                 self.refresh_quota().await;
             }
             Err(err) => {
+                // A bad paste must not burn the flow — the user retypes and
+                // tries again. Only a spent code (the Ok arm) ends it. But
+                // restore only if a paste form is still up.
+                let keep = {
+                    let state = self.state.lock().unwrap();
+                    // The paste form is reachable in BOTH states: `awaiting_code` is the
+                    // backend-driven manual mode, and `awaiting_browser` covers the escape
+                    // hatch, which the renderer reveals locally at 60s without changing
+                    // backend state. `slot.is_none()` is what blocks a cancelled flow from
+                    // being resurrected over a newer one — not this predicate.
+                    state.awaiting_code || state.awaiting_browser
+                };
+                let mut slot = self.auth_flow.lock().unwrap();
+                if keep && slot.is_none() {
+                    *slot = Some(flow);
+                }
+                drop(slot);
+
                 self.state.lock().unwrap().auth_error =
                     Some(siphon_core::diagnostics::safe_error_message(
                         err.message(),

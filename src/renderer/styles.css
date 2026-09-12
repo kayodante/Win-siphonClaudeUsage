@@ -636,6 +636,110 @@ body[data-view="onboard"] .app-footer {
   text-align: center;
 }
 
+.onboard-url-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  margin-top: var(--space-2);
+  text-align: left;
+}
+
+.onboard-url-label {
+  font-size: var(--text-sm);
+  color: var(--subtle-foreground);
+}
+
+/* Deepest surface in the stack (DESIGN.md §4) — the URL is data pushed into
+   the card, not a raised control. Flat by default: no shadow. */
+.onboard-url-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--input);
+}
+
+/* The authorize URL is long. Wrapping beats truncation here: a user who cannot
+   copy (clipboard blocked) must still be able to read it to retype, and an
+   ellipsis would hide the query string that carries the whole flow. Capped so
+   a pathological URL cannot push Cancel off the card. */
+.onboard-url {
+  flex: 1;
+  min-width: 0;
+  max-height: 54px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* 28×28 is the standard icon-button footprint (DESIGN.md §5, and
+   `styles.css:2093`). The 24×24 compact size is reserved for the cost-info and
+   banner-dismiss exceptions — this button is a primary affordance, not chrome. */
+.onboard-url-copy {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--subtle-foreground);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.onboard-url-copy svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.onboard-url-copy:hover {
+  background: var(--card-elevated);
+  color: var(--foreground);
+}
+
+.onboard-url-copy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Confirmation is a state on the button, not a toast — the feedback belongs
+   where the click happened. */
+.onboard-url-copy[data-copied='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Mono, not Pixel: a deadline clock is metadata, not a primary reading
+   (DESIGN.md §3, Mono-for-Metadata vs Pixel-for-Data). Deliberately quiet — it
+   informs, it does not pressure. */
+.onboard-countdown {
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--subtle-foreground);
+}
+
+.onboard-hatch-notice {
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--subtle-foreground);
+  text-align: left;
+}
+
 .onboard-fallback-notice {
   margin: 0 0 var(--space-2);
   font-size: var(--text-sm);

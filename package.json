@@ -1,6 +1,6 @@
 {
   "name": "siphon-windows",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
   "type": "module",
   "repository": {
@@ -18,6 +18,8 @@
     "test": "node --test test/*.test.js",
     "test:rust": "cargo test -p siphon-core --manifest-path src-tauri/Cargo.toml",
     "lint": "node scripts/check-syntax.js && eslint .",
+    "lint:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -p siphon-core -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml -p siphon-core --all-targets -- -D warnings",
+    "verify": "npm test && npm run lint && npm run test:rust && npm run lint:rust",
     "sync-version": "node scripts/sync-version.js",
     "version": "node scripts/sync-version.js",
     "fallow": "fallow"

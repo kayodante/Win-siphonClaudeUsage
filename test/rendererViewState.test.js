@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { resolveView } from '../src/renderer/viewState.js';
@@ -28,4 +29,20 @@ test('a signed-in state is not dragged back to onboarding by mid-flow flags', ()
   assert.equal(resolveView({ isSignedIn: true, awaitingBrowser: true }, 'main'), 'main');
   assert.equal(resolveView({ isSignedIn: true, awaitingBrowser: true }, 'settings'), 'settings');
   assert.equal(resolveView({ isSignedIn: true, awaitingCode: true }, 'main'), 'main');
+});
+
+test('the waiting screen tears down its timers whenever the wait ends', () => {
+  const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
+  // One teardown function, called from the single not-waiting branch — a
+  // timer cleared in only some exit paths leaks a 1s interval for the rest
+  // of the run and keeps rewriting a hidden element.
+  assert.match(renderer, /function stopAuthWaitTimers\(\)/);
+  assert.match(renderer, /clearInterval\(authCountdownTimer\)/);
+  assert.match(renderer, /clearTimeout\(authHatchTimer\)/);
+});
+
+test('the escape hatch and the deadline use the agreed constants', () => {
+  const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
+  assert.match(renderer, /const AUTH_DEADLINE_MS = 150_000;/);
+  assert.match(renderer, /const AUTH_HATCH_MS = 60_000;/);
 });

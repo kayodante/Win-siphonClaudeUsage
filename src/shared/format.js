@@ -62,6 +62,17 @@ export function formatClockTime(date) {
   return `${hours}:${minutes}`;
 }
 
+/** Countdown as `m:ss`. Rounds up so the final second stays on screen for a
+ *  full second, and clamps to 0:00 rather than ever showing a negative clock. */
+export function formatCountdown(msRemaining) {
+  const ms = Number(msRemaining);
+  if (!Number.isFinite(ms) || ms <= 0) return '0:00';
+  const total = Math.ceil(ms / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function remainingParts(date, now = new Date()) {
   if (!date) return { zero: true, hours: 0, minutes: 0 };
   const diffMs = date.getTime() - now.getTime();

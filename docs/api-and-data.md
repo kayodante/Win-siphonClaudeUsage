@@ -280,25 +280,37 @@ every failure gets a fixed-text 400 that never echoes the provider's message.
 
 A stalled connection (no bytes sent, past a 10-second per-connection read
 timeout) or a connection error is a non-event — it does not end the listener,
-which otherwise keeps waiting for up to 5 minutes. Neither is a request the
-listener cannot use: a wrong or missing `state`, a missing code, a malformed
-request line, or an unrelated path are all answered and ignored, so a stranger
-who guesses the ephemeral port cannot end a sign-in that is still in progress.
-Only the authorization server's own redirect — a valid code, or a reported
-error — ends the loop.
+which otherwise keeps waiting for up to 150 seconds (`WAIT_TIMEOUT`). The
+renderer mirrors that value as `AUTH_DEADLINE_MS` to draw a countdown on the
+waiting screen, which also shows the authorize URL with a copy button and
+reveals a manual paste field after 60 seconds — immediately instead if the OS
+refused to open a browser. Neither a stalled connection nor a request the
+listener cannot use ends the listener: a wrong or missing `state`, a missing
+code, a malformed request line, or an unrelated path are all answered and
+ignored, so a stranger who guesses the ephemeral port cannot end a sign-in
+that is still in progress. Only the authorization server's own redirect — a
+valid code, or a reported error — ends the loop, and not always the same way:
+a reported error, a missing/malformed code, or a `state` mismatch discard the
+flow outright, while a plain timeout instead downgrades it — the socket
+closes but the flow (and its loopback `redirect_uri`) stays alive, so a code
+that lands late can still be pasted by hand and still exchanges correctly.
 
-If the bind fails, or **two consecutive** attempts in this run hit that
-5-minute timeout without a successful callback, Siphon falls back to
-`https://platform.claude.com/oauth/code/callback` and the user pastes the code
-— the original flow, unchanged. One timeout is far more likely to be a user who
-stepped away mid-authorization than a broken network, so it costs that attempt
-only; a firewall that blocks the browser's connection times out every time and
-so still reaches the limit. A successful sign-in resets the count. A denied authorization does not count
-toward the fallback — the next attempt still uses the loopback listener. The provider's `error` /
-`error_description` text is attacker-influenced; it is logged and never shown
-in the app's own error line, the same rule the 400 reply already follows. Parsing and classification live in
-`siphon_core::oauth_callback`; the socket lives in
-`src-tauri/src/oauth_server.rs`.
+If the bind fails, or **two consecutive** attempts in this run hit the
+150-second timeout without a successful callback, the *next* sign-in attempt
+falls back to `https://platform.claude.com/oauth/code/callback` and starts
+directly in manual mode instead of opening a new listener — the original
+flow, unchanged. A single timeout does not do that: it downgrades the current
+attempt rather than ending it, so a user who steps away mid-authorization only
+costs that one attempt; a firewall that blocks the browser's connection times
+out every time and so still reaches the limit. A successful sign-in resets the
+count. A denied authorization does not count toward the limit either — it
+ends the flow outright rather than downgrading it, and the next attempt still
+uses the loopback listener. The provider's `error` / `error_description` text
+is attacker-influenced; it is logged and never shown in the app's own error
+line, the same rule the 400 reply already follows. Parsing and classification
+live in `siphon_core::oauth_callback`; the socket and the timeout/downgrade
+decision live in `src-tauri/src/oauth_server.rs` and
+`src-tauri/src/controller.rs`.
 
 ### Token exchange
 

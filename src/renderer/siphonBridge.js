@@ -30,6 +30,8 @@
   window.siphon = {
     getState: () => invoke('state_get'),
     refresh: () => invoke('refresh'),
+    // Resolves { url, opened } — `opened` is false when the OS refused to
+    // launch a browser, which the waiting card reports instead of pretending.
     startSignIn: () => invoke('auth_start'),
     submitCode: code => invoke('auth_submit', { code }),
     cancelAuth: () => invoke('auth_cancel'),
