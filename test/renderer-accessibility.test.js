@@ -90,6 +90,11 @@ test('status changes use atomic live regions and deduplicated update milestones'
   assert.match(renderer, /if \(element\.textContent !== translated\) element\.textContent = translated;/);
   assert.match(renderer, /Math\.floor\(progress \/ 25\) \* 25/);
   assert.match(renderer, /bucket > lastDownloadAnnouncementBucket/);
+  // The one-line download notice is its own live region, so the 0% bucket
+  // would announce the same thing twice.
+  assert.match(renderer, /lastDownloadAnnouncementBucket = 0;/);
+  assert.match(elementWithId('downloadBanner'), /role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
+  assert.match(html, /<span class="dmx-scan" aria-hidden="true">/);
 });
 
 test('each main-window view and data card has a programmatic heading', () => {
