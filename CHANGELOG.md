@@ -11,6 +11,14 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- A one-line notice now appears while an update downloads in the background
+  ("Downloading update — v1.13.0", behind an animated dot-matrix scanline). The
+  larger update banner steps aside while it is up and comes back asking for a
+  restart once the installer is verified — previously a background download
+  showed nothing at all if that banner had been dismissed.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

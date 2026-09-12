@@ -151,6 +151,7 @@ const STRINGS = Object.freeze({
 
     'update.title': 'New version available.',
     'update.available': 'v{version} is available.',
+    'update.downloading': 'Downloading update — v{version}',
     'update.error': 'Update failed: {message}',
     'update.errorUnknown': 'unknown error',
     'update.download': 'Download',
@@ -333,6 +334,7 @@ const STRINGS = Object.freeze({
 
     'update.title': 'Nova versão disponível.',
     'update.available': 'v{version} disponível.',
+    'update.downloading': 'Baixando atualização — v{version}',
     'update.error': 'Falha na atualização: {message}',
     'update.errorUnknown': 'erro desconhecido',
     'update.download': 'Baixar',
@@ -515,6 +517,7 @@ const STRINGS = Object.freeze({
 
     'update.title': '新しいバージョンが利用可能です。',
     'update.available': 'v{version} が利用可能です。',
+    'update.downloading': '更新をダウンロード中 — v{version}',
     'update.error': '更新に失敗しました: {message}',
     'update.errorUnknown': '不明なエラー',
     'update.download': 'ダウンロード',
@@ -697,6 +700,7 @@ const STRINGS = Object.freeze({
 
     'update.title': '새 버전이 출시되었습니다.',
     'update.available': 'v{version} 버전을 이용할 수 있습니다.',
+    'update.downloading': '업데이트 다운로드 중 — v{version}',
     'update.error': '업데이트 실패: {message}',
     'update.errorUnknown': '알 수 없는 오류',
     'update.download': '다운로드',

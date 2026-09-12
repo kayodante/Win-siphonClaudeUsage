@@ -116,6 +116,8 @@ const elements = {
   updateBannerVersion: document.querySelector('#updateBannerVersion'),
   updateBannerDownload: document.querySelector('#updateBannerDownload'),
   updateBannerDismiss: document.querySelector('#updateBannerDismiss'),
+  downloadBanner: document.querySelector('#downloadBanner'),
+  downloadBannerText: document.querySelector('#downloadBannerText'),
   politeAnnouncer: document.querySelector('#politeAnnouncer'),
   assertiveAnnouncer: document.querySelector('#assertiveAnnouncer')
 };
@@ -265,7 +267,9 @@ function setDownloadUI(state, percent) {
     btn.textContent = `${progress}%`;
     btn.disabled = true;
     dismiss.hidden = true;
-    if (previousState !== 'downloading') lastDownloadAnnouncementBucket = -1;
+    // The one-line banner announces the start itself, so bucket 0 would be a
+    // duplicate; progress buckets pick up at 25%.
+    if (previousState !== 'downloading') lastDownloadAnnouncementBucket = 0;
     const bucket = Math.floor(progress / 25) * 25;
     if (bucket > lastDownloadAnnouncementBucket) {
       lastDownloadAnnouncementBucket = bucket;
@@ -286,6 +290,17 @@ function setDownloadUI(state, percent) {
     if (previousState !== 'ready') announce(elements.politeAnnouncer, elements.updateBannerVersion.textContent);
   } else if (updateVersion) {
     elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version: updateVersion });
+  }
+  // The one-line notice owns the downloading state: it is all "I'm fetching
+  // this" needs, and it is the only feedback left when the big banner was
+  // dismissed. It has to name a version, so a renderer that opened mid-download
+  // keeps the big banner and its percentage instead of showing a nameless line.
+  if (state === 'downloading' && updateVersion) {
+    elements.downloadBannerText.textContent = tFormat('update.downloading', lang, { version: updateVersion });
+    showBanner(elements.downloadBanner);
+    hideBanner(elements.updateBanner);
+  } else {
+    hideBanner(elements.downloadBanner);
   }
 }
 
@@ -700,6 +715,9 @@ window.siphon.onUpdateProgress(({ percent }) => {
 
 window.siphon.onUpdateDownloaded(() => {
   setDownloadUI('ready', 100);
+  // A verified installer on disk is new information — bring the restart prompt
+  // back even if the available-banner had been dismissed.
+  showBanner(elements.updateBanner);
 });
 
 window.siphon.onUpdateError(({ message } = {}) => {
@@ -708,6 +726,10 @@ window.siphon.onUpdateError(({ message } = {}) => {
   const errorText = tFormat('update.error', lang, { message: message || t('update.errorUnknown', lang) });
   elements.updateBannerVersion.textContent = errorText;
   announce(elements.assertiveAnnouncer, errorText);
+  // The error text lives in the big banner, which setDownloadUI('idle') may
+  // just have hidden coming out of 'downloading' — bring it back unless the
+  // user dismissed it.
+  if (!updateDismissed) showBanner(elements.updateBanner);
 });
 
 elements.notificationState.addEventListener('click', async () => {

@@ -141,6 +141,41 @@
           </div>
         </div>
 
+        <!-- One-line download notice. dotm-square-10 ("CRT glide") as static
+             markup + CSS keyframes: a scanline descends the 5x5 grid leaving an
+             exponential trail, which the reference recomputed per frame in a rAF
+             loop. Row-major; five rows, five keyframe sets. -->
+        <div id="downloadBanner" class="download-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <span class="dmx-scan" aria-hidden="true">
+            <span class="dmx-dot" data-row="0"></span>
+            <span class="dmx-dot" data-row="0"></span>
+            <span class="dmx-dot" data-row="0"></span>
+            <span class="dmx-dot" data-row="0"></span>
+            <span class="dmx-dot" data-row="0"></span>
+            <span class="dmx-dot" data-row="1"></span>
+            <span class="dmx-dot" data-row="1"></span>
+            <span class="dmx-dot" data-row="1"></span>
+            <span class="dmx-dot" data-row="1"></span>
+            <span class="dmx-dot" data-row="1"></span>
+            <span class="dmx-dot" data-row="2"></span>
+            <span class="dmx-dot" data-row="2"></span>
+            <span class="dmx-dot" data-row="2"></span>
+            <span class="dmx-dot" data-row="2"></span>
+            <span class="dmx-dot" data-row="2"></span>
+            <span class="dmx-dot" data-row="3"></span>
+            <span class="dmx-dot" data-row="3"></span>
+            <span class="dmx-dot" data-row="3"></span>
+            <span class="dmx-dot" data-row="3"></span>
+            <span class="dmx-dot" data-row="3"></span>
+            <span class="dmx-dot" data-row="4"></span>
+            <span class="dmx-dot" data-row="4"></span>
+            <span class="dmx-dot" data-row="4"></span>
+            <span class="dmx-dot" data-row="4"></span>
+            <span class="dmx-dot" data-row="4"></span>
+          </span>
+          <span class="download-banner-text" id="downloadBannerText"></span>
+        </div>
+
         <div id="criticalBanner" class="usage-alert-banner" data-level="critical" role="alert" aria-live="assertive" aria-atomic="true" hidden>
           <!-- Carbon: WarningAlt -->
           <svg class="banner-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>

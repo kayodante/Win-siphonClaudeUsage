@@ -1245,6 +1245,108 @@ body[data-refreshing="true"] .card::after {
   }
 }
 
+/* dotm-square-10 ("CRT glide"): a scanline steps down the 5x5 grid and each row
+   fades behind it on an exponential decay — 0.08 + 0.92·e^(−0.72·age), sampled
+   into five discrete 120ms steps of a 600ms cycle (the reference's speed 2.5).
+   Same trade as .dmx-wrap: static markup, CSS keyframes, opacity only. The
+   reference's ±7% per-column warp is dropped — invisible at 14px and it would
+   cost 25 keyframe sets instead of 5. Dots take currentColor so the grid
+   follows the banner's text color. */
+.dmx-scan {
+  display: grid;
+  grid-template-columns: repeat(5, var(--space-0));
+  grid-template-rows: repeat(5, var(--space-0));
+  gap: 1px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.dmx-scan .dmx-dot {
+  background: currentColor;
+}
+
+.dmx-scan .dmx-dot[data-row="0"] {
+  opacity: 0.46;
+}
+
+.dmx-scan .dmx-dot[data-row="1"] {
+  opacity: 0.365;
+}
+
+.dmx-scan .dmx-dot[data-row="2"] {
+  opacity: 0.27;
+}
+
+.dmx-scan .dmx-dot[data-row="3"] {
+  opacity: 0.175;
+}
+
+.dmx-scan .dmx-dot[data-row="4"] {
+  opacity: 0.08;
+}
+
+@keyframes dmxScanRow0 {
+  0%   { opacity: 1; }
+  20%  { opacity: 0.528; }
+  40%  { opacity: 0.298; }
+  60%  { opacity: 0.186; }
+  80%  { opacity: 0.132; }
+  100% { opacity: 1; }
+}
+
+@keyframes dmxScanRow1 {
+  0%   { opacity: 0.08; }
+  20%  { opacity: 1; }
+  40%  { opacity: 0.528; }
+  60%  { opacity: 0.298; }
+  80%  { opacity: 0.186; }
+  100% { opacity: 0.08; }
+}
+
+@keyframes dmxScanRow2 {
+  0%   { opacity: 0.08; }
+  40%  { opacity: 1; }
+  60%  { opacity: 0.528; }
+  80%  { opacity: 0.298; }
+  100% { opacity: 0.08; }
+}
+
+@keyframes dmxScanRow3 {
+  0%   { opacity: 0.08; }
+  60%  { opacity: 1; }
+  80%  { opacity: 0.528; }
+  100% { opacity: 0.08; }
+}
+
+@keyframes dmxScanRow4 {
+  0%   { opacity: 0.08; }
+  80%  { opacity: 1; }
+  100% { opacity: 0.08; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dmx-scan .dmx-dot[data-row="0"] {
+    animation: dmxScanRow0 600ms step-end infinite;
+  }
+
+  .dmx-scan .dmx-dot[data-row="1"] {
+    animation: dmxScanRow1 600ms step-end infinite;
+  }
+
+  .dmx-scan .dmx-dot[data-row="2"] {
+    animation: dmxScanRow2 600ms step-end infinite;
+  }
+
+  .dmx-scan .dmx-dot[data-row="3"] {
+    animation: dmxScanRow3 600ms step-end infinite;
+  }
+
+  .dmx-scan .dmx-dot[data-row="4"] {
+    animation: dmxScanRow4 600ms step-end infinite;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    NOTIFICATION BADGE
 ═══════════════════════════════════════════════════════════ */
@@ -1333,7 +1435,8 @@ body[data-refreshing="true"] .card::after {
 
 .usage-alert-banner,
 .offline-banner,
-.update-banner {
+.update-banner,
+.download-banner {
   display: flex;
   align-items: initial;
   justify-content: space-between;
@@ -1354,7 +1457,8 @@ body[data-refreshing="true"] .card::after {
 @starting-style {
   .usage-alert-banner,
   .offline-banner,
-  .update-banner {
+  .update-banner,
+  .download-banner {
     opacity: 0;
     transform: translateY(-5px) scaleY(0.88);
   }
@@ -1365,7 +1469,8 @@ body[data-refreshing="true"] .card::after {
    after --duration-banner-leave. */
 .usage-alert-banner[data-leaving],
 .offline-banner[data-leaving],
-.update-banner[data-leaving] {
+.update-banner[data-leaving],
+.download-banner[data-leaving] {
   opacity: 0;
   transform: translateY(-4px);
   transition-duration: var(--duration-banner-leave);
@@ -1509,6 +1614,22 @@ body[data-refreshing="true"] .card::after {
   border-color: var(--border-strong);
   cursor: default;
   pointer-events: none;
+}
+
+.download-banner {
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success-soft);
+}
+
+.download-banner-text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  min-width: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2727,6 +2848,7 @@ body[data-refreshing="true"] #refreshButton svg {
   .usage-alert-banner,
   .offline-banner,
   .update-banner,
+  .download-banner,
   .usage-alert-dismiss,
   .offline-banner-dismiss,
   .update-banner-dismiss,
