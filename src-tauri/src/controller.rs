@@ -26,7 +26,7 @@ use crate::http::HttpClient;
 use crate::prefs::PrefsStore;
 use crate::token_store::{read_claude_credentials, TokenStore};
 
-pub const MIN_QUOTA_INTERVAL_MS: u64 = 120_000;
+pub const MIN_QUOTA_INTERVAL_SECS: i64 = 120;
 pub const ALLOWED_REFRESH_INTERVALS: [u64; 4] = [30, 60, 300, 900];
 
 #[derive(Default)]
