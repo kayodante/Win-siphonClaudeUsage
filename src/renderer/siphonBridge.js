@@ -51,7 +51,6 @@
     pickFolder: () => invoke('dialog_pick_folder'),
     downloadUpdate: payload => invoke('update_download', { payload }),
     installUpdate: () => invoke('update_install'),
-    installViaWinget: () => invoke('update_install_via_winget'),
 
     onView: callback => on('view-changed', callback),
     onState: callback => on('state-changed', callback),

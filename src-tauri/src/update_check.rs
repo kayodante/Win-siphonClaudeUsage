@@ -55,14 +55,10 @@ async fn check_once(app: &AppHandle) {
     let Some(info) = parse_release(&release, &current) else {
         return;
     };
-    let winget = tauri::async_runtime::spawn_blocking(winget_upgrade_available)
-        .await
-        .unwrap_or(false);
-    let payload = info.to_payload(winget);
+    let payload = info.to_payload();
     let _ = app.emit("update-available", payload.clone());
 
-    // winget installs own the upgrade path — nothing to download ourselves.
-    if !prefs.auto_download || winget {
+    if !prefs.auto_download {
         return;
     }
     let already = DOWNLOADED.lock().unwrap().as_deref() == Some(info.version.as_str());
@@ -90,30 +86,4 @@ async fn fetch_latest_release() -> Option<Value> {
         return None;
     }
     resp.json::<Value>().await.ok()
-}
-
-/// True when the app is installed via winget, so the renderer can offer the
-/// winget upgrade path instead of the direct download.
-#[cfg(windows)]
-fn winget_upgrade_available() -> bool {
-    use std::os::windows::process::CommandExt;
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    std::process::Command::new("winget")
-        .args([
-            "list",
-            "--exact",
-            "--id",
-            siphon_core::updater::WINGET_ID,
-            "--disable-interactivity",
-            "--accept-source-agreements",
-        ])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-#[cfg(not(windows))]
-fn winget_upgrade_available() -> bool {
-    false
 }

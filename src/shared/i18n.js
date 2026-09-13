@@ -156,8 +156,6 @@ const STRINGS = Object.freeze({
     'update.errorUnknown': 'unknown error',
     'update.download': 'Download',
     'update.install': 'Install',
-    'update.updating': 'Updating…',
-    'update.updateRestart': 'Update & restart',
     'update.readyToApply': 'Update ready. Restart to apply.',
     'update.restart': 'Restart',
 
@@ -339,8 +337,6 @@ const STRINGS = Object.freeze({
     'update.errorUnknown': 'erro desconhecido',
     'update.download': 'Baixar',
     'update.install': 'Instalar',
-    'update.updating': 'Atualizando…',
-    'update.updateRestart': 'Atualizar e reiniciar',
     'update.readyToApply': 'Atualização pronta. Reinicie para aplicar.',
     'update.restart': 'Reiniciar',
 
@@ -522,8 +518,6 @@ const STRINGS = Object.freeze({
     'update.errorUnknown': '不明なエラー',
     'update.download': 'ダウンロード',
     'update.install': 'インストール',
-    'update.updating': '更新中…',
-    'update.updateRestart': '更新して再起動',
     'update.readyToApply': '更新の準備ができました。再起動して適用してください。',
     'update.restart': '再起動',
 
@@ -705,8 +699,6 @@ const STRINGS = Object.freeze({
     'update.errorUnknown': '알 수 없는 오류',
     'update.download': '다운로드',
     'update.install': '설치',
-    'update.updating': '업데이트 중…',
-    'update.updateRestart': '업데이트 및 다시 시작',
     'update.readyToApply': '업데이트 준비 완료. 적용하려면 다시 시작하세요.',
     'update.restart': '다시 시작',
 

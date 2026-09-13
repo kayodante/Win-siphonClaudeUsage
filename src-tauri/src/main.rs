@@ -274,7 +274,6 @@ fn main() {
             commands::dialog_pick_folder,
             commands::update_download,
             commands::update_install,
-            commands::update_install_via_winget,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Siphon");

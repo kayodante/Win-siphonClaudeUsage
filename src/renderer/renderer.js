@@ -146,7 +146,6 @@ let lastDownloadAnnouncementBucket = -1;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
-let updateWingetUpgradeAvailable = false;
 let isEntering = false;
 let bootPlayed = false;
 const animatingElements = new Map();
@@ -253,16 +252,7 @@ function setDownloadUI(state, percent) {
   const previousState = downloadState;
   downloadState = state;
   btn.dataset.state = state;
-  if (state === 'winget') {
-    btn.textContent = t('update.updateRestart', lang);
-    btn.disabled = false;
-    dismiss.hidden = false;
-  } else if (state === 'updating') {
-    btn.textContent = t('update.updating', lang);
-    btn.disabled = true;
-    dismiss.hidden = true;
-    if (previousState !== 'updating') announce(elements.politeAnnouncer, btn.textContent);
-  } else if (state === 'downloading') {
+  if (state === 'downloading') {
     const progress = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
     btn.textContent = `${progress}%`;
     btn.disabled = true;
@@ -679,10 +669,7 @@ elements.updateBannerDismiss.addEventListener('click', () => {
   hideBanner(elements.updateBanner);
 });
 elements.updateBannerDownload.addEventListener('click', () => {
-  if (downloadState === 'winget') {
-    setDownloadUI('updating', 0);
-    window.siphon.installViaWinget();
-  } else if (downloadState === 'idle') {
+  if (downloadState === 'idle') {
     if (!updateDownloadUrl) { if (updateUrl) openExternal(updateUrl); return; }
     setDownloadUI('downloading', 0);
     window.siphon.downloadUpdate({ downloadUrl: updateDownloadUrl, checksumUrl: updateChecksumUrl, version: updateVersion });
@@ -691,17 +678,19 @@ elements.updateBannerDownload.addEventListener('click', () => {
   }
 });
 
-window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, wingetUpgradeAvailable }) => {
-  if (downloadState !== 'downloading' && downloadState !== 'updating') {
+window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl }) => {
+  if (downloadState !== 'downloading') {
     updateUrl = url;
     updateVersion = version;
     updateDownloadUrl = downloadUrl ?? null;
     updateChecksumUrl = checksumUrl ?? null;
-    updateWingetUpgradeAvailable = Boolean(wingetUpgradeAvailable);
   }
   const lang = currentState?.preferences?.language ?? 'en';
-  elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version });
-  if (updateWingetUpgradeAvailable) setDownloadUI('winget', 0);
+  // A verified installer on disk outranks "available" — the 6-hour check
+  // re-announcing the same version must not overwrite the restart prompt.
+  if (downloadState !== 'ready') {
+    elements.updateBannerVersion.textContent = tFormat('update.available', lang, { version });
+  }
   if (!updateDismissed) {
     showBanner(elements.updateBanner);
     announce(elements.politeAnnouncer, `${t('update.title', lang)} ${elements.updateBannerVersion.textContent}`);
@@ -710,7 +699,7 @@ window.siphon.onUpdateAvailable(({ version, url, downloadUrl, checksumUrl, winge
 
 window.siphon.onUpdateProgress(({ percent }) => {
   // Also covers the background auto-download, which nothing in the UI started.
-  if (downloadState !== 'ready' && downloadState !== 'updating') setDownloadUI('downloading', percent);
+  if (downloadState !== 'ready') setDownloadUI('downloading', percent);
 });
 
 window.siphon.onUpdateDownloaded(() => {

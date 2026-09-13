@@ -11,6 +11,31 @@ is added above it.
 
 ## [Unreleased]
 
+### Fixed
+
+- "Update & restart" no longer closes and reopens Siphon without updating
+  anything. The updater asked winget whether Siphon had been *installed* through
+  it (`winget list --id`), which also answers yes for a copy installed from the
+  regular `.exe` — winget correlates that install with the published manifest.
+  Siphon then skipped the download entirely, quit, ran a `winget upgrade` that
+  had nothing to do (the winget manifest lags a GitHub release by hours) and
+  relaunched itself at the same version, flashing a PowerShell window on the
+  way. This is the v1.5.1 bug, reintroduced by the Tauri migration.
+- A rejected or unlaunchable installer no longer discards the pending download,
+  so the restart button stays clickable instead of going dead after one failed
+  attempt.
+- The six-hour update check no longer overwrites "Update ready. Restart to
+  apply." with "Update available" when it re-announces the version whose
+  installer is already downloaded and verified.
+
+### Removed
+
+- The winget upgrade path inside the app. An update now always downloads the
+  installer, verifies its SHA-256 and runs it: that works the moment a release
+  is published, and the installer refreshes the registry entry winget reads, so
+  a winget-installed copy stays in sync. `winget install win-siphon` and
+  `winget upgrade` from a terminal are unaffected.
+
 ## [1.13.0] - 2026-09-12
 
 ### Added

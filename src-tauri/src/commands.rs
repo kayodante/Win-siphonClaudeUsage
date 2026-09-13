@@ -282,9 +282,3 @@ pub fn update_install(app: AppHandle) {
         app.exit(0);
     }
 }
-
-#[tauri::command]
-pub fn update_install_via_winget(app: AppHandle) {
-    crate::updater_bin::install_via_winget();
-    app.exit(0);
-}

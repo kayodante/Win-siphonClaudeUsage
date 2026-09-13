@@ -1,7 +1,6 @@
 //! The side-effecting half of the updater (`updateService.js` + the download IPC
 //! in `main.js`): download the installer to temp, verify its SHA-256, then spawn
-//! it — or hand off to winget. Host allow-list + version validation come from
-//! `siphon_core::security`.
+//! it. Host allow-list + version validation come from `siphon_core::security`.
 
 use std::path::PathBuf;
 
@@ -10,7 +9,6 @@ use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter};
 
 use siphon_core::security::{is_trusted_download_url, is_valid_version, TRUSTED_DOWNLOAD_HOSTS};
-use siphon_core::updater::WINGET_ID;
 
 fn emit_error(app: &AppHandle, message: &str) {
     let _ = app.emit("update:error", json!({ "message": message }));
@@ -154,7 +152,7 @@ static PENDING: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
 /// Launch the downloaded installer. Returns true once it is running, so the
 /// caller can quit and let it replace the exe.
 pub fn install(app: &AppHandle) -> bool {
-    let Some(path) = PENDING.lock().unwrap().take() else {
+    let Some(path) = PENDING.lock().unwrap().clone() else {
         return false;
     };
     // Validate it is the installer we downloaded to temp.
@@ -172,7 +170,13 @@ pub fn install(app: &AppHandle) -> bool {
     #[cfg(windows)]
     {
         match std::process::Command::new(&path).spawn() {
-            Ok(_) => true,
+            Ok(_) => {
+                // Consumed only once the installer is actually running: a
+                // rejected path or a failed spawn leaves the verified installer
+                // pending, so the button stays clickable.
+                PENDING.lock().unwrap().take();
+                true
+            }
             Err(e) => {
                 emit_error(app, &format!("failed to launch installer: {e}"));
                 false
@@ -183,33 +187,5 @@ pub fn install(app: &AppHandle) -> bool {
     {
         let _ = &path;
         false
-    }
-}
-
-/// Wait for this process to exit, run the winget upgrade, then relaunch. Matches
-/// `buildWingetUpgradeCommand`.
-pub fn install_via_winget() {
-    #[cfg(windows)]
-    {
-        let pid = std::process::id();
-        let exe = std::env::current_exe()
-            .map(|p| p.to_string_lossy().replace('\'', "''"))
-            .unwrap_or_default();
-        let command = format!(
-            "try {{ Wait-Process -Id {pid} -Timeout 30 }} catch {{}}; \
-             winget upgrade --id {WINGET_ID} -e --silent --accept-package-agreements \
-             --accept-source-agreements --disable-interactivity; \
-             Start-Process -FilePath '{exe}'"
-        );
-        let _ = std::process::Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-WindowStyle",
-                "Hidden",
-                "-Command",
-                &command,
-            ])
-            .spawn();
     }
 }
