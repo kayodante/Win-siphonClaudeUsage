@@ -135,7 +135,7 @@
   --radius-pill: 999px;
 
   /* ── Shadows ── */
-  --inner-light: inset 0 1px 0 oklch(100% 0 0 / 0.04);
+  --inner-light: inset 0 3px 3px -2px oklch(100% 0 0 / 0.06);
 
   /* ── Transitions ── */
   --duration-fast:   120ms;
@@ -428,7 +428,7 @@ body[data-view="onboard"] .top-actions-divider {
   background: var(--card);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
-  box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-strong);
+  box-shadow: var(--inner-light);
 }
 
 body[data-view="onboard"] .app-footer {
@@ -445,14 +445,6 @@ body[data-view="onboard"] .app-footer {
   font-size: var(--text-sm);
   letter-spacing: -0.02em;
   text-transform: lowercase;
-}
-
-.footer-updated-row::before,
-.footer-updated-row::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border-strong);
 }
 
 .footer-buttons {
@@ -472,12 +464,12 @@ body[data-view="onboard"] .app-footer {
   padding: var(--space-7) var(--space-8);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
+  background: var(--card-foreground);
   color: var(--foreground);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   text-decoration: none;
-  box-shadow: inset 0 2px 3px -2px var(--border-strong);
+  box-shadow: var(--inner-light);
   transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
@@ -851,7 +843,7 @@ body[data-view="onboard"] .app-footer {
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
   padding: var(--space-6) var(--space-7);
-  box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-subtle);
+  box-shadow: var(--inner-light);
 }
 
 .card-eyebrow {
@@ -1356,7 +1348,10 @@ body[data-refreshing="true"] .card::after {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
-  margin: -4px -8px;
+  /* Sits at the right end of the footer's "updated" row. The negative right
+     margin cancels its own padding so the label optically aligns with the
+     card's inner edge, the way the timestamp does on the left. */
+  margin: -4px -8px -4px auto;
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
   letter-spacing: 0;
@@ -1736,7 +1731,7 @@ body[data-refreshing="true"] .card::after {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-strong);
+  box-shadow: var(--inner-light);
 }
 
 .account-card {
@@ -1747,7 +1742,7 @@ body[data-refreshing="true"] .card::after {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  box-shadow: var(--inner-light), inset 0 2px 2px -2px var(--border-strong);
+  box-shadow: var(--inner-light);
 }
 
 .account-inner {
@@ -1828,7 +1823,7 @@ body[data-refreshing="true"] .card::after {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  box-shadow: inset 0 2px 3px -2px var(--border-strong);
+  box-shadow: var(--inner-light);
   transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 

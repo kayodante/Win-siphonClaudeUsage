@@ -5,7 +5,6 @@
 use serde_json::{json, Value};
 
 pub const REPO: &str = "kayodante/Win-siphonClaudeUsage";
-pub const WINGET_ID: &str = "kayodante.Siphon";
 
 /// Everything the renderer needs to offer an update. Matches the object returned
 /// by `checkForUpdate`.
@@ -35,13 +34,12 @@ pub fn is_newer(tag: &str, current: &str) -> bool {
 impl UpdateInfo {
     /// The `update-available` event payload. Field names are the contract with
     /// `renderer.js` (`onUpdateAvailable`) — do not rename.
-    pub fn to_payload(&self, winget_upgrade_available: bool) -> Value {
+    pub fn to_payload(&self) -> Value {
         json!({
             "version": self.version,
             "url": self.url,
             "downloadUrl": self.download_url,
             "checksumUrl": self.checksum_url,
-            "wingetUpgradeAvailable": winget_upgrade_available,
         })
     }
 }
@@ -138,11 +136,10 @@ mod tests {
             download_url: Some("https://github.com/d.exe".into()),
             checksum_url: None,
         };
-        let p = info.to_payload(true);
+        let p = info.to_payload();
         assert_eq!(p["version"], "1.8.0");
         assert_eq!(p["url"], "https://github.com/x/releases/latest");
         assert_eq!(p["downloadUrl"], "https://github.com/d.exe");
         assert!(p["checksumUrl"].is_null());
-        assert_eq!(p["wingetUpgradeAvailable"], true);
     }
 }
