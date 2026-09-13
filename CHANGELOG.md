@@ -11,6 +11,22 @@ is added above it.
 
 ## [Unreleased]
 
+### Changed
+
+- The main window follows the updated Figma design. "Notify reset" moved out of
+  the Current Session card's top-right corner down into the footer, beside the
+  "updated" timestamp, and the two rules that flanked that row are gone. The
+  peak-hours badge took the corner it vacated — and picked up the card
+  eyebrow's uppercase treatment on the way, so it now reads "PEAK HOURS". The
+  footer's two buttons traded their vertical gradient for a flat Card
+  Foreground.
+- Every raised surface now carries one shadow instead of four hand-written
+  variants of it. `--inner-light` went from a hairline top edge
+  (`inset 0 1px 0`, 4% white) to a softer three-pixel fall
+  (`inset 0 3px 3px -2px`, 6%) and is now the entire declaration on cards, the
+  topbar, the footer, the settings and account panels, and the secondary and
+  footer buttons. The system's resting light is calibrated in one place.
+
 ### Fixed
 
 - "Update & restart" no longer closes and reopens Siphon without updating
