@@ -26,6 +26,10 @@ is added above it.
   (`inset 0 3px 3px -2px`, 6%) and is now the entire declaration on cards, the
   topbar, the footer, the settings and account panels, and the secondary and
   footer buttons. The system's resting light is calibrated in one place.
+- The window itself is rounded now — 24px corners over a 1px `border-strong`
+  edge, matching the Figma frame. The shell draws both, not `body`: CSS
+  propagates a background set on `body` up to the canvas, which paints the whole
+  viewport square and ignores any radius on it.
 
 ### Fixed
 
