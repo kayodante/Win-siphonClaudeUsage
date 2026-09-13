@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.13.3] - 2026-09-13
+
 ### Changed
 
 - The main window follows the updated Figma design. "Notify reset" moved out of
@@ -530,7 +532,8 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.3...HEAD
+[1.13.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.0...v1.13.3
 [1.13.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.9.2...v1.12.0
 [1.9.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.8.8...v1.9.2
