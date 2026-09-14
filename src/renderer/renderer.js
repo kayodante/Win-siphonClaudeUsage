@@ -1067,8 +1067,11 @@ function updateLastUpdatedLine() {
 
 function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
-  elements.notificationStateText.textContent =
-    t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
+  const label = t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
+  elements.notificationStateText.textContent = label;
+  // The topbar shows only the bell, so the state that used to be readable in
+  // the footer now lives in the tooltip (and in the hidden label above).
+  elements.notificationState.title = label;
   if (enabled) {
     delete elements.notificationState.dataset.notifOff;
   } else {

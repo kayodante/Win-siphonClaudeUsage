@@ -313,6 +313,7 @@ body[data-view="onboard"] .topbar-card {
 }
 
 body[data-view="onboard"] .topbar .brand,
+body[data-view="onboard"] #notificationState,
 body[data-view="onboard"] #refreshButton,
 body[data-view="onboard"] #settingsButton {
   display: none;
@@ -348,7 +349,9 @@ body[data-view="onboard"] .window-control-btn svg {
 }
 
 .brand-logo {
-  height: 28px;
+  /* 18px tall keeps the 103×24 source's aspect (≈77px wide), which is what
+     leaves room for the notification button in the topbar. */
+  height: 18px;
   width: auto;
   display: block;
   user-select: none;
@@ -446,12 +449,24 @@ body[data-view="onboard"] .app-footer {
 .footer-updated-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   padding: var(--space-5);
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: -0.02em;
+}
+
+/* The stamp is centred, so the leftover space on each side becomes a rule —
+   two flex children of equal grow, which keeps it centred whatever the clock
+   reads in any language. */
+.footer-updated-row::before,
+.footer-updated-row::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
 }
 
 .footer-buttons {
@@ -616,7 +631,7 @@ body[data-view="onboard"] .app-footer {
   align-items: center;
   justify-content: center;
   gap: var(--space-5);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   background: var(--card);
 }
 
@@ -1350,32 +1365,25 @@ body[data-refreshing="true"] .card::after {
    NOTIFICATION BADGE
 ═══════════════════════════════════════════════════════════ */
 
+/* Sits in the topbar next to refresh and settings, so it is an .icon-button
+   first: that rule owns the 28×28 footprint, colour and hover. What is left
+   here is the toggle's own behaviour — the label it carries for assistive
+   tech, and the crossfade between the two bells. */
 .notif-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  /* Sits at the right end of the footer's "updated" row. The negative right
-     margin cancels its own padding so the label optically aligns with the
-     card's inner edge, the way the timestamp does on the left. */
-  margin: -4px -8px -4px auto;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-normal);
-  letter-spacing: 0;
-  text-transform: none;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-xs);
-  color: var(--subtle-foreground);
-  white-space: nowrap;
   flex-shrink: 0;
-  cursor: pointer;
   transition: background var(--duration-base) var(--ease), color var(--duration-base) var(--ease),
     transform var(--duration-press) var(--ease-press);
 }
 
-.notif-badge:hover {
-  background: var(--card-elevated);
+/* The button reads as an icon, but its state ("Notify reset" / "Don't notify
+   reset") is the accessible name, so the label is hidden rather than removed. */
+.notif-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .notif-badge:focus-visible {
@@ -1987,7 +1995,8 @@ body[data-refreshing="true"] .card::after {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
   padding: var(--space-5) var(--space-5) 17px;
 }
 
@@ -2063,7 +2072,7 @@ body[data-refreshing="true"] .card::after {
   align-items: flex-end;
   justify-content: space-between;
   width: 100%;
-  margin-top: var(--space-4);
+  margin-top: var(--space-8);
   white-space: nowrap;
   -webkit-app-region: no-drag;
 }
@@ -3100,7 +3109,7 @@ body[data-refreshing="true"] #refreshButton svg {
   padding: var(--space-none);
   background: oklch(0 0 0 / 0.85);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-subtle);
   -webkit-app-region: drag;
 }
 
