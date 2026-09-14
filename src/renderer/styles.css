@@ -616,7 +616,7 @@ body[data-view="onboard"] .app-footer {
   align-items: center;
   justify-content: center;
   gap: var(--space-5);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   background: var(--card);
 }
 
@@ -1987,7 +1987,8 @@ body[data-refreshing="true"] .card::after {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
   padding: var(--space-5) var(--space-5) 17px;
 }
 
@@ -2063,7 +2064,7 @@ body[data-refreshing="true"] .card::after {
   align-items: flex-end;
   justify-content: space-between;
   width: 100%;
-  margin-top: var(--space-4);
+  margin-top: var(--space-8);
   white-space: nowrap;
   -webkit-app-region: no-drag;
 }
@@ -3100,7 +3101,7 @@ body[data-refreshing="true"] #refreshButton svg {
   padding: var(--space-none);
   background: oklch(0 0 0 / 0.85);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-subtle);
   -webkit-app-region: drag;
 }
 
