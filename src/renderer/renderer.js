@@ -92,6 +92,7 @@ const elements = {
   settingsUpdatesAutoDownloadToggle: document.querySelector('#settingsUpdatesAutoDownloadToggle'),
   settingsLaunchWithClaudeCodeToggle: document.querySelector('#settingsLaunchWithClaudeCodeToggle'),
   settingsTabs: document.querySelector('#settingsTabs'),
+  settingsTabsCard: document.querySelector('.settings-tabs-card'),
   settingsTabSystem: document.querySelector('#settingsTabSystem'),
   settingsTabNotification: document.querySelector('#settingsTabNotification'),
   settingsTabWidget: document.querySelector('#settingsTabWidget'),
@@ -119,7 +120,8 @@ const elements = {
   downloadBanner: document.querySelector('#downloadBanner'),
   downloadBannerText: document.querySelector('#downloadBannerText'),
   politeAnnouncer: document.querySelector('#politeAnnouncer'),
-  assertiveAnnouncer: document.querySelector('#assertiveAnnouncer')
+  assertiveAnnouncer: document.querySelector('#assertiveAnnouncer'),
+  tooltip: document.querySelector('#tooltip')
 };
 
 let appInfo = {
@@ -326,6 +328,21 @@ function triggerResetFlash() {
   el.addEventListener('animationend', () => delete el.dataset.justReset, { once: true });
 }
 
+// Empty submit and a rejected auth_submit both land here. `.is-error` (the
+// border + the routed message) and `.is-shaking` are kept orthogonal so a
+// second failed attempt can replay the shake without flickering the border
+// treatment off and back on — same reflow dance as flashUpdate/triggerResetFlash.
+function showCodeInputError(message) {
+  const el = elements.onboardCodeInput;
+  el.classList.add('is-error');
+  setErrorText(message);
+  if (reducedMotion()) return;
+  el.classList.remove('is-shaking');
+  void el.offsetWidth;
+  el.classList.add('is-shaking');
+  el.addEventListener('animationend', () => el.classList.remove('is-shaking'), { once: true });
+}
+
 const QUOTA_COLOR_WAYPOINTS = [
   { at: 0,   l: 90, c: 0,     h: 92 },
   { at: 65,  l: 90, c: 0,     h: 92 },
@@ -357,6 +374,59 @@ function setQuotaColorDrift(element, pct) {
   element.style.setProperty('--quota-c', c.toFixed(4));
   element.style.setProperty('--quota-h', h.toFixed(2));
 }
+
+// ── Tooltip (Today/Month "Usage estimate" info + peak-hours info) ──
+// Native `title` can't do this job: the copy is multi-line and runs past
+// 100 characters, and the three .cost-info-btn triggers live inside
+// .shell-scroll (overflow-y: auto), which would clip an absolutely
+// positioned bubble. One fixed-position element, shared by all three
+// triggers, reads its text from dataset.tooltip — never `.title` for these
+// three — and repositions itself in viewport coordinates on every show.
+// applyTranslations() and updateQuotaMeters() are the two writers of that
+// text; see the data-i18n-tooltip loop and the peakHoursInfo branch below.
+let tooltipTrigger = null;
+
+function positionTooltip(trigger) {
+  const tip = elements.tooltip;
+  const rect = trigger.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const margin = 8;
+  // Clamp horizontally to the viewport — the window's minimum width is
+  // 300px and two of the three triggers sit near its right edge.
+  let left = rect.left + rect.width / 2 - tipRect.width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - tipRect.width - margin));
+  let top = rect.top - tipRect.height - margin;
+  if (top < margin) top = rect.bottom + margin; // no room above: flip below
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+}
+
+function showTooltip(trigger) {
+  const text = trigger.dataset.tooltip;
+  if (!text) return;
+  tooltipTrigger = trigger;
+  elements.tooltip.textContent = text;
+  positionTooltip(trigger);
+  elements.tooltip.dataset.show = 'true';
+}
+
+function hideTooltip() {
+  tooltipTrigger = null;
+  elements.tooltip.dataset.show = 'false';
+}
+
+document.querySelectorAll('.cost-info-btn').forEach(trigger => {
+  trigger.addEventListener('pointerenter', () => showTooltip(trigger));
+  trigger.addEventListener('pointerleave', hideTooltip);
+  trigger.addEventListener('focus', () => showTooltip(trigger));
+  trigger.addEventListener('blur', hideTooltip);
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && tooltipTrigger) hideTooltip();
+});
+// The tooltip's position is computed once, on show; scrolling the panel
+// underneath it would otherwise leave it pointing at empty space.
+document.querySelector('.shell-scroll')?.addEventListener('scroll', hideTooltip, { passive: true });
 
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
@@ -648,10 +718,20 @@ elements.settingsEmailToggle.addEventListener('click', async () => {
     if (message && elements.errorText) setErrorText(message);
   }
 });
-elements.onboardCodeForm.addEventListener('submit', event => {
+elements.onboardCodeForm.addEventListener('submit', async event => {
   event.preventDefault();
   const code = elements.onboardCodeInput.value.trim();
-  if (code) window.siphon.submitCode(code);
+  if (!code) {
+    showCodeInputError(t('error.submitCode', currentLanguage()));
+    return;
+  }
+  try {
+    await window.siphon.submitCode(code);
+    elements.onboardCodeInput.classList.remove('is-error');
+  } catch (error) {
+    logSafeError('Failed to submit auth code:', error);
+    showCodeInputError(formatCommandError(error, currentLanguage(), 'error.submitCode'));
+  }
 });
 
 elements.githubLink.addEventListener('click', event => {
@@ -918,8 +998,14 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   if (inPeakHours) {
     const { start, end } = peakHoursLocalRange(now);
     const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
-    elements.peakHoursInfo.title = titleText;
+    // dataset.tooltip, not .title — see the custom tooltip wired up above,
+    // which is what actually renders this copy.
+    elements.peakHoursInfo.dataset.tooltip = titleText;
     elements.peakHoursInfo.setAttribute('aria-label', titleText);
+    // This render loop runs every refresh tick; if the tooltip is already
+    // open on this trigger, keep its visible text in sync rather than
+    // waiting for the next hover/focus to pick up the new copy.
+    if (tooltipTrigger === elements.peakHoursInfo) elements.tooltip.textContent = titleText;
   }
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
@@ -1144,10 +1230,10 @@ function setCostValue(element, cost) {
 // hidden and the layout is unchanged otherwise.
 function renderExtraUsage(extra) {
   if (!extra) {
-    elements.extraUsageCard.hidden = true;
+    hideBanner(elements.extraUsageCard);
     return;
   }
-  elements.extraUsageCard.hidden = false;
+  showBanner(elements.extraUsageCard);
   elements.extraUsedCredits.textContent = formatCurrency(extra.usedCredits);
   elements.extraMonthlyLimit.textContent = formatCurrency(extra.monthlyLimit);
 }
@@ -1188,6 +1274,8 @@ function switchSettingsTab(name, { focus = false } = {}) {
     notification: elements.settingsTabNotification,
     widget: elements.settingsTabWidget
   };
+  const tabIndexes = { system: 0, notification: 1, widget: 2 };
+  const card = elements.settingsTabsCard;
   if (!panels[name]) return;
   if (name === currentSettingsTab) {
     if (focus) tabs[name].focus();
@@ -1202,12 +1290,18 @@ function switchSettingsTab(name, { focus = false } = {}) {
       panel.style.pointerEvents = '';
       panel.style.opacity = '';
     }
+    card.style.height = '';
+    delete card.dataset.resizing;
     _tabTransitioning = false;
   }
   _tabTransitioning = true;
   const FADE_MS = cssMs('--duration-tab-fade', 110);
   const outgoing = panels[currentSettingsTab];
   const incoming = panels[name];
+  // Container-Follows-Content Rule (DESIGN.md §5): capture the card's height
+  // before the outgoing panel is parked out of flow, while it still reflects
+  // both panels' natural layout.
+  const startHeight = card.getBoundingClientRect().height;
   tabs[currentSettingsTab].classList.remove('settings-tab--active');
   tabs[name].classList.add('settings-tab--active');
   tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
@@ -1215,6 +1309,7 @@ function switchSettingsTab(name, { focus = false } = {}) {
   tabs[currentSettingsTab].tabIndex = -1;
   tabs[name].tabIndex = 0;
   if (focus) tabs[name].focus();
+  elements.settingsTabs.style.setProperty('--tab-index', tabIndexes[name]);
   currentSettingsTab = name;
 
   // Overlap the crossfade instead of running it twice. Parking the outgoing
@@ -1228,6 +1323,24 @@ function switchSettingsTab(name, { focus = false } = {}) {
 
   incoming.hidden = false;
   incoming.style.opacity = '0';
+
+  // Container-Follows-Content Rule: now that the outgoing panel is out of
+  // flow and the incoming one is in it, the card's natural height is the
+  // target. Pin it back to startHeight, force a reflow so that pin actually
+  // lands, then write the target — the height transition (same
+  // --duration-tab-fade token as the opacity fade above) animates between
+  // the two instead of the card snapping to the incoming panel's height in
+  // one frame.
+  const targetHeight = card.getBoundingClientRect().height;
+  card.style.height = `${startHeight}px`;
+  void card.offsetHeight;
+  // The height transition is gated on [data-resizing] so it exists only for
+  // the length of this swap. The rule lets the card follow its content
+  // mid-crossfade; it must not rubber-band when a window resize reflows the
+  // panel's text.
+  card.dataset.resizing = '';
+  card.style.height = `${targetHeight}px`;
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => { incoming.style.opacity = '1'; });
   });
@@ -1239,6 +1352,8 @@ function switchSettingsTab(name, { focus = false } = {}) {
     outgoing.style.pointerEvents = '';
     outgoing.style.opacity = '';
     incoming.style.opacity = '';
+    card.style.height = '';
+    delete card.dataset.resizing;
     _tabTransitioning = false;
     _tabTransitionTimer = null;
   }, FADE_MS);
@@ -1369,6 +1484,12 @@ function applyTranslations(lang) {
   });
   document.querySelectorAll('[data-i18n-title]').forEach(element => {
     element.title = t(element.dataset.i18nTitle, lang);
+  });
+  // Custom-tooltip triggers: write into dataset.tooltip instead of .title, or
+  // the OS tooltip would reappear on top of the designed one on every
+  // language change.
+  document.querySelectorAll('[data-i18n-tooltip]').forEach(element => {
+    element.dataset.tooltip = t(element.dataset.i18nTooltip, lang);
   });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
     element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel, lang));

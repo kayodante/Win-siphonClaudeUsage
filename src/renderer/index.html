@@ -82,7 +82,38 @@
           </p>
 
           <div class="onboard-waiting" id="onboardWaiting" hidden>
-            <span class="copy-strong" id="onboardWaitingHeadline" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
+            <span class="onboard-waiting-headline-row">
+              <span class="copy-strong" id="onboardWaitingHeadline" data-i18n="onboarding.waitingBrowser">Waiting for authorization in your browser…</span>
+              <!-- Same 5x5 CRT-glide scanline the download notice uses. Static
+                   markup + CSS keyframes; row-major, five rows. -->
+              <span class="dmx-scan" aria-hidden="true">
+                <span class="dmx-dot" data-row="0"></span>
+                <span class="dmx-dot" data-row="0"></span>
+                <span class="dmx-dot" data-row="0"></span>
+                <span class="dmx-dot" data-row="0"></span>
+                <span class="dmx-dot" data-row="0"></span>
+                <span class="dmx-dot" data-row="1"></span>
+                <span class="dmx-dot" data-row="1"></span>
+                <span class="dmx-dot" data-row="1"></span>
+                <span class="dmx-dot" data-row="1"></span>
+                <span class="dmx-dot" data-row="1"></span>
+                <span class="dmx-dot" data-row="2"></span>
+                <span class="dmx-dot" data-row="2"></span>
+                <span class="dmx-dot" data-row="2"></span>
+                <span class="dmx-dot" data-row="2"></span>
+                <span class="dmx-dot" data-row="2"></span>
+                <span class="dmx-dot" data-row="3"></span>
+                <span class="dmx-dot" data-row="3"></span>
+                <span class="dmx-dot" data-row="3"></span>
+                <span class="dmx-dot" data-row="3"></span>
+                <span class="dmx-dot" data-row="3"></span>
+                <span class="dmx-dot" data-row="4"></span>
+                <span class="dmx-dot" data-row="4"></span>
+                <span class="dmx-dot" data-row="4"></span>
+                <span class="dmx-dot" data-row="4"></span>
+                <span class="dmx-dot" data-row="4"></span>
+              </span>
+            </span>
             <span class="copy-muted" data-i18n="onboarding.waitingHint">Approve the request on claude.ai. This window updates on its own.</span>
 
             <div class="onboard-url-row">
@@ -91,7 +122,9 @@
                 <code class="onboard-url" id="onboardAuthUrl"></code>
                 <button type="button" class="onboard-url-copy" id="onboardCopyUrlButton" data-i18n-aria-label="onboarding.copyLink" aria-label="Copy link">
                   <!-- Carbon: Copy -->
-                  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M28 10v18H10V10h18m0-2H10a2 2 0 00-2 2v18a2 2 0 002 2h18a2 2 0 002-2V10a2 2 0 00-2-2z"/><path d="M4 18H2V4a2 2 0 012-2h14v2H4z"/></svg>
+                  <svg data-copy-icon="glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="M28 10v18H10V10h18m0-2H10a2 2 0 00-2 2v18a2 2 0 002 2h18a2 2 0 002-2V10a2 2 0 00-2-2z"/><path d="M4 18H2V4a2 2 0 012-2h14v2H4z"/></svg>
+                  <!-- Carbon: Checkmark -->
+                  <svg data-copy-icon="check" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 24L4 15 5.4 13.6 13 21.2 26.6 7.6 28 9 13 24z"/></svg>
                 </button>
               </div>
             </div>
@@ -278,7 +311,7 @@
             <span class="card-eyebrow" id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
             <span class="cost-estimate-row">
               <span data-i18n="home.costEstimate">Usage estimate</span>
-              <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
+              <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
@@ -290,7 +323,7 @@
             <span class="card-eyebrow" id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
             <span class="cost-estimate-row">
               <span data-i18n="home.costEstimate">Usage estimate</span>
-              <button type="button" class="cost-info-btn" data-i18n-title="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
+              <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
@@ -339,6 +372,7 @@
 
         <!-- Tab bar -->
         <div class="settings-tabs" id="settingsTabs" role="tablist" aria-orientation="horizontal">
+          <span class="settings-tab-pill" aria-hidden="true"></span>
           <button class="settings-tab settings-tab--active" id="settingsTabSystem" role="tab" aria-selected="true" aria-controls="settingsTabSystemPanel" tabindex="0" data-i18n="settings.tabs.system">System</button>
           <button class="settings-tab" id="settingsTabNotification" role="tab" aria-selected="false" aria-controls="settingsTabNotificationPanel" tabindex="-1" data-i18n="settings.tabs.notification">Notification</button>
           <button class="settings-tab" id="settingsTabWidget" role="tab" aria-selected="false" aria-controls="settingsTabWidgetPanel" tabindex="-1" data-i18n="settings.tabs.widget">Widget</button>
@@ -604,6 +638,12 @@
 
     <span id="politeAnnouncer" role="status" aria-live="polite" aria-atomic="true"></span>
     <span id="assertiveAnnouncer" role="alert" aria-live="assertive" aria-atomic="true"></span>
+
+    <!-- Shared tooltip for the three .cost-info-btn triggers (Today/Month
+         cost info + peak-hours info). Each trigger's aria-label already
+         carries this same sentence as its accessible name, so the bubble
+         itself is aria-hidden — a screen reader must not announce it twice. -->
+    <div class="tooltip" id="tooltip" aria-hidden="true" data-show="false"></div>
 
     <script src="./siphonBridge.js"></script>
     <script type="module" src="./renderer.js"></script>

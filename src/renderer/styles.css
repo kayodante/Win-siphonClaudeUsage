@@ -650,6 +650,22 @@ body[data-view="onboard"] .app-footer {
   text-align: center;
 }
 
+/* The waiting screen can sit still for up to 150s while Siphon waits on the
+   browser callback, so it gets the one moving element on that screen. It is
+   the download notice's scanline grid rather than a new treatment: same "this
+   is in flight" vocabulary, and currentColor keeps the loader reading as part
+   of the sentence instead of importing the level scale into a place where it
+   would mean nothing (Orthogonal Systems Rule — the same reasoning written on
+   .dmx-scan itself). Gradient text is not an option here: DESIGN.md §6 bans
+   background-clip: text outright, and duplicating the string into generated
+   content would make a screen reader announce the headline twice. */
+.onboard-waiting-headline-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
 .onboard-url-row {
   display: flex;
   flex-direction: column;
@@ -696,6 +712,7 @@ body[data-view="onboard"] .app-footer {
    `styles.css:2093`). The 24×24 compact size is reserved for the cost-info and
    banner-dismiss exceptions — this button is a primary affordance, not chrome. */
 .onboard-url-copy {
+  position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -711,10 +728,25 @@ body[data-view="onboard"] .app-footer {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+/* Both icons stack in the same slot (transitions-dev "Icon swap") — the copy
+   glyph is centered via inset:0 + margin:auto instead of relying on the
+   button's flex centering, since that only centers a single child. */
 .onboard-url-copy svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 14px;
   height: 14px;
   fill: currentColor;
+  transition: opacity var(--duration-slow) var(--ease-out-quart),
+    filter var(--duration-slow) var(--ease-out-quart),
+    transform var(--duration-slow) var(--ease-out-quart);
+}
+
+.onboard-url-copy svg[data-copy-icon='check'] {
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.25);
 }
 
 .onboard-url-copy:hover {
@@ -732,6 +764,18 @@ body[data-view="onboard"] .app-footer {
 .onboard-url-copy[data-copied='true'] {
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.onboard-url-copy[data-copied='true'] svg[data-copy-icon='glyph'] {
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.25);
+}
+
+.onboard-url-copy[data-copied='true'] svg[data-copy-icon='check'] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
 }
 
 /* Mono, not Pixel: a deadline clock is metadata, not a primary reading
@@ -807,6 +851,25 @@ body[data-view="onboard"] .app-footer {
 
 .auth-form-fields textarea::placeholder {
   color: var(--subtle-foreground);
+}
+
+/* Border tween owns the visible error state; the shake is a separate,
+   orthogonal class so it can replay (remove -> reflow -> re-add, see
+   showCodeInputError in renderer.js) on a second failed attempt without
+   flickering .is-error off and back on. */
+#onboardCodeInput.is-error {
+  border-color: var(--destructive);
+}
+
+#onboardCodeInput.is-shaking {
+  animation: onboardCodeShake 240ms var(--ease-out-expo);
+}
+
+@keyframes onboardCodeShake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(6px); }
+  50%      { transform: translateX(-6px); }
+  75%      { transform: translateX(4px); }
 }
 
 .auth-button-stack {
@@ -1193,6 +1256,43 @@ body[data-refreshing="true"] .card::after {
   fill: currentColor;
 }
 
+/* ─── Tooltip ─── */
+
+/* Shared by the three .cost-info-btn triggers (Today/Month cost info +
+   peak-hours info). position:fixed so it escapes .shell-scroll's
+   overflow-y:auto instead of being clipped by it — renderer.js's
+   positionTooltip() writes top/left from getBoundingClientRect() and clamps
+   left to the viewport on every show. */
+.tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: 240px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--card-elevated);
+  box-shadow: var(--inner-light);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  white-space: pre-line; /* home.peakHoursTooltip carries a literal \n */
+  opacity: 0;
+  transform: scale(0.98);
+  pointer-events: none;
+  /* Hide rule (the default): no delay, so leaving a trigger closes the
+     bubble immediately. */
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.tooltip[data-show="true"] {
+  opacity: 1;
+  transform: scale(1);
+  /* The appear delay belongs only to this rule, so a quick hover-past never
+     shows it. */
+  transition: opacity var(--duration-base) var(--ease-out) 80ms,
+    transform var(--duration-base) var(--ease-out) 80ms;
+}
+
 /* ─── Last updated / DMX ─── */
 
 .dmx-wrap {
@@ -1422,19 +1522,31 @@ body[data-refreshing="true"] .card::after {
   width: 100%;
   height: 100%;
   fill: currentColor;
-  transition: opacity var(--duration-slow) var(--ease-out-quart);
+  transition: opacity var(--duration-slow) var(--ease-out-quart),
+    filter var(--duration-slow) var(--ease-out-quart),
+    transform var(--duration-slow) var(--ease-out-quart);
 }
 
+/* Icon swap (transitions-dev "Icon swap"), adapted to the existing
+   [data-notif-off] attribute instead of a generic data-state toggle: the
+   outgoing glyph shrinks and blurs out of its own slot instead of just
+   dissolving, so the two states read as one glyph morphing. */
 #notificationIconOff {
   opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.25);
 }
 
 .notif-badge[data-notif-off] #notificationIconOn {
   opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.25);
 }
 
 .notif-badge[data-notif-off] #notificationIconOff {
   opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1454,6 +1566,18 @@ body[data-refreshing="true"] .card::after {
   padding: var(--space-4) var(--space-6);
   border: 1px solid;
   border-radius: var(--radius-lg);
+}
+
+/* Enter/leave transition only — kept separate from the layout rule above so
+   #extraUsageCard (.quota-panel--extra) can share this exact treatment
+   without inheriting the banners' row layout, which would fight its own
+   .card/.quota-panel column layout. Reused, not duplicated: this is the same
+   rule the four banners use, just with the selector list extended. */
+.usage-alert-banner,
+.offline-banner,
+.update-banner,
+.download-banner,
+.quota-panel--extra {
   transform-origin: top center;
   opacity: 1;
   transform: translateY(0) scaleY(1);
@@ -1468,7 +1592,8 @@ body[data-refreshing="true"] .card::after {
   .usage-alert-banner,
   .offline-banner,
   .update-banner,
-  .download-banner {
+  .download-banner,
+  .quota-panel--extra {
     opacity: 0;
     transform: translateY(-5px) scaleY(0.88);
   }
@@ -1480,10 +1605,35 @@ body[data-refreshing="true"] .card::after {
 .usage-alert-banner[data-leaving],
 .offline-banner[data-leaving],
 .update-banner[data-leaving],
-.download-banner[data-leaving] {
+.download-banner[data-leaving],
+.quota-panel--extra[data-leaving] {
   opacity: 0;
   transform: translateY(-4px);
   transition-duration: var(--duration-banner-leave);
+}
+
+/* These five are stacked block siblings, not floating toasts, so the full
+   Sonner-style stacking treatment (position math, z-index depth, a hover
+   spread) has no problem to solve here — they almost never overlap, and
+   when they do they stay in normal flow rather than needing to fan out.
+   renderBannersAndErrors can still flip more than one from hidden -> visible
+   in the same render pass (e.g. launching already offline and over quota),
+   which would otherwise pop them in on the same frame. A fixed per-banner
+   delay is the small, declarative fix: it makes that case cascade instead of
+   coincide. Zeroed on [data-leaving] — ID beats the class selector above, so
+   without this a dismiss would inherit the enter delay and appear to hang
+   before its (deliberately faster) exit. */
+#updateBanner,
+#downloadBanner {
+  transition-delay: 40ms;
+}
+#offlineBanner {
+  transition-delay: 80ms;
+}
+#updateBanner[data-leaving],
+#downloadBanner[data-leaving],
+#offlineBanner[data-leaving] {
+  transition-delay: 0s;
 }
 
 .usage-alert-text,
@@ -2252,6 +2402,21 @@ body[data-refreshing="true"] .card::after {
   transform: rotate(180deg);
 }
 
+/* The chevron above eases in over --duration-fast; without this the three
+   rows underneath snapped to full opacity the instant `hidden` cleared.
+   `animation`, not `transition` — `hidden` flips `display`, which a
+   transition cannot start from. Reuses `subtleFadeUp`, the same fade+rise
+   the entering home-view rows already use, with a small per-row stagger. */
+.floating-body[data-expanded="true"] .floating-metric {
+  animation: subtleFadeUp 160ms var(--ease-out) both;
+}
+.floating-body[data-expanded="true"] .floating-metric:nth-child(2) {
+  animation-delay: 40ms;
+}
+.floating-body[data-expanded="true"] .floating-metric:nth-child(3) {
+  animation-delay: 80ms;
+}
+
 /* ═══════════════════════════════════════════════════════════
    BUTTONS
 ═══════════════════════════════════════════════════════════ */
@@ -2854,12 +3019,16 @@ body[data-refreshing="true"] #refreshButton svg {
   .quota-percent,
   .card::after,
   .cost-info-btn,
+  .tooltip,
+  .tooltip[data-show="true"],
   .notif-badge,
   .notif-icon-wrap svg,
+  .onboard-url-copy svg,
   .usage-alert-banner,
   .offline-banner,
   .update-banner,
   .download-banner,
+  .quota-panel--extra,
   .usage-alert-dismiss,
   .offline-banner-dismiss,
   .update-banner-dismiss,
@@ -2873,11 +3042,14 @@ body[data-refreshing="true"] #refreshButton svg {
   button,
   .switch-track,
   .switch-thumb,
+  .meter,
   .meter-segment,
   .settings-test-btn,
   textarea,
   .settings-tab,
+  .settings-tab-pill,
   .settings-tab-panel,
+  .settings-tabs-card[data-resizing],
   .settings-style-card {
     transition: none;
   }
@@ -2897,7 +3069,9 @@ body[data-refreshing="true"] #refreshButton svg {
   .data-updated,
   body[data-refreshing="true"] #refreshButton svg,
   .notif-badge.notif-pop,
-  #sessionPercent[data-just-reset] {
+  #sessionPercent[data-just-reset],
+  .floating-body[data-expanded="true"] .floating-metric,
+  #onboardCodeInput.is-shaking {
     animation: none;
   }
 
@@ -2949,15 +3123,40 @@ body[data-refreshing="true"] #refreshButton svg {
 
 /* ── Settings tabs ─────────────────────────────────────── */
 .settings-tabs {
+  position: relative;
   display: flex;
   gap: var(--space-none);
   padding: var(--space-1);
   background: var(--card-foreground);
   border-radius: var(--radius-sm);
   margin: var(--space-none) var(--space-none) var(--space-10);
+  /* Which third the pill sits over. switchSettingsTab writes 0/1/2; this is
+     just the default so the pill matches the System tab that's active on
+     first paint, before any tab switch has happened. */
+  --tab-index: 0;
+}
+
+/* The pill: a static width of one third of the bar's content box (the three
+   tabs are equal flex thirds with no gap), moved with translateX only — 0 /
+   100% / 200% lands it exactly on tab 0/1/2. No JS measurement needed. Sits
+   under the tab labels (z-index: 0) so text stays legible while it travels. */
+.settings-tab-pill {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  width: calc((100% - var(--space-1) * 2) / 3);
+  height: calc(100% - var(--space-1) * 2);
+  border-radius: calc(var(--radius-xs));
+  background: var(--border-strong);
+  transform: translateX(calc(var(--tab-index) * 100%));
+  transition: transform var(--duration-normal) var(--ease-out);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .settings-tab {
+  position: relative;
+  z-index: 1;
   flex: 1;
   padding: var(--space-4) var(--space-none);
   border: 1px solid transparent;
@@ -2967,14 +3166,11 @@ body[data-refreshing="true"] #refreshButton svg {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease,
-    transform var(--duration-press) var(--ease-press);
+  transition: color 120ms ease, transform var(--duration-press) var(--ease-press);
 }
 
 .settings-tab--active {
-  border-color: var(--border-strong);
   color: var(--foreground);
-  background: var(--border-strong);
 }
 
 .settings-tab-panel {
@@ -2986,10 +3182,22 @@ body[data-refreshing="true"] #refreshButton svg {
 
 .settings-tabs-card {
   /* Anchors the outgoing panel during the tab crossfade — switchSettingsTab
-     parks it out of flow so the incoming panel can come up underneath it. */
+     parks it out of flow so the incoming panel can come up underneath it.
+     The height transition is the Container-Follows-Content Rule (DESIGN.md
+     §5): it rides the same --duration-tab-fade token the opacity crossfade
+     reads via cssMs(), so the two can never drift apart, and JS writes the
+     start/target height explicitly rather than transitioning to auto. The
+     transition itself is gated on [data-resizing], which switchSettingsTab
+     sets only for the length of a swap: the rule authorizes the card to
+     follow its content mid-crossfade, not to rubber-band every time a window
+     resize reflows the panel's text. */
   position: relative;
   padding: var(--space-8) var(--space-6);
   gap: var(--space-none);
+}
+
+.settings-tabs-card[data-resizing] {
+  transition: height var(--duration-tab-fade) var(--ease-out);
 }
 
 /* ── Style picker ─────────────────────────────────────── */

@@ -137,6 +137,7 @@ const STRINGS = Object.freeze({
     'error.saveRefresh': 'Could not save refresh preference.',
     'error.saveLanguage': 'Could not save language preference.',
     'error.loadState': 'Could not load app state. Try restarting Siphon.',
+    'error.submitCode': 'Could not sign in. Check the code and try again.',
 
     'error.unknownPreference': 'Unknown setting.',
     'error.invalidPreferenceValue': 'Invalid setting value.',
@@ -313,6 +314,7 @@ const STRINGS = Object.freeze({
     'error.saveRefresh': 'Não foi possível salvar a preferência de atualização.',
     'error.saveLanguage': 'Não foi possível salvar a preferência de idioma.',
     'error.loadState': 'Não foi possível carregar o estado do app. Reinicie o Siphon.',
+    'error.submitCode': 'Não foi possível entrar. Verifique o código e tente novamente.',
 
     'error.unknownPreference': 'Configuração desconhecida.',
     'error.invalidPreferenceValue': 'Valor de configuração inválido.',
@@ -489,6 +491,7 @@ const STRINGS = Object.freeze({
     'error.saveRefresh': '更新間隔を保存できませんでした。',
     'error.saveLanguage': '言語設定を保存できませんでした。',
     'error.loadState': '状態を読み込めませんでした。Siphonを再起動してください。',
+    'error.submitCode': 'サインインできませんでした。コードを確認してもう一度お試しください。',
 
     'error.unknownPreference': '不明な設定項目です。',
     'error.invalidPreferenceValue': '無効な設定値です。',
@@ -665,6 +668,7 @@ const STRINGS = Object.freeze({
     'error.saveRefresh': '새로고침 설정을 저장할 수 없습니다.',
     'error.saveLanguage': '언어 설정을 저장할 수 없습니다.',
     'error.loadState': '앱 상태를 불러올 수 없습니다. Siphon을 다시 시작해 보세요.',
+    'error.submitCode': '로그인할 수 없습니다. 코드를 확인하고 다시 시도하세요.',
 
     'error.unknownPreference': '알 수 없는 설정 항목입니다.',
     'error.invalidPreferenceValue': '유효하지 않은 설정 값입니다.',

@@ -11,6 +11,50 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-14
+
+### Added
+
+- The settings tab bar's active highlight slides between tabs instead of
+  jumping. The surface moved off the tab and onto its own pill, sized to a
+  static third of the bar and moved with `translateX` alone — no width
+  animation, no runtime measurement, no resize listener.
+- The three "Usage estimate" and peak-hours info buttons have a designed
+  tooltip in place of the OS one: multi-line, wrapped at 240px, clamped to the
+  viewport, and positioned `fixed` so the settings scroll container cannot clip
+  it. The other nine `title` attributes are short icon labels and keep the
+  native tooltip.
+- The sign-in waiting screen shows the same dot-matrix scanline the download
+  notice uses, so a screen that can sit still for 150 seconds has one live
+  element on it.
+- The floating widget's expanded panel fades its three metric rows in with a
+  small stagger, instead of snapping in while the chevron above it eased.
+- The copy button on the waiting screen now resolves into a checkmark, and the
+  notification bell cross-fades through a blur and scale rather than a plain
+  opacity dissolve.
+- The extra-usage card enters and leaves with the same transition the banners
+  already share, rather than appearing and vanishing instantly.
+
+### Changed
+
+- The settings card's height follows its content across a tab switch. This is a
+  deliberate, narrow exception to the rule against animating layout — recorded
+  in `DESIGN.md` as the Container-Follows-Content Rule, gated behind an
+  attribute that exists only for the length of a swap so nothing rubber-bands
+  on a window resize. The view container was examined and deliberately left
+  alone: it is sized by the window, not by its content, so it never snapped.
+
+### Fixed
+
+- Pasting an empty or invalid authorization code gave no feedback whatsoever.
+  The empty case was a silent no-op, and a rejected code left an unhandled
+  promise rejection, with the failure surfacing only indirectly on some later
+  state update. Both now report immediately through the existing error line.
+- `prefers-reduced-motion` did not stop the quota meter's 900 ms colour
+  interpolation. The reduced-motion block named `.meter-segment` but not
+  `.meter`, which is where the inherited typed properties actually animate —
+  so the one thing the documentation claimed was disabled was still running.
+
 ## [1.13.3] - 2026-09-13
 
 ### Changed
@@ -532,7 +576,8 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.3...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.3...v1.14.0
 [1.13.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.0...v1.13.3
 [1.13.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.9.2...v1.12.0
