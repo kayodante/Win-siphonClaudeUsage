@@ -9,7 +9,6 @@ import {
   formatDaysRemaining,
   formatPercent,
   formatQuotaPercent,
-  formatRelativeUpdated,
   formatTimeRemaining,
   formatTokens,
   formatWeekdayClock,
@@ -18,49 +17,6 @@ import {
   maskEmail,
   quotaDisplayValue
 } from '../src/shared/format.js';
-
-test('formatRelativeUpdated keeps English as the default language', () => {
-  assert.equal(
-    formatRelativeUpdated(
-      new Date('2026-05-04T12:03:00Z'),
-      new Date('2026-05-04T12:05:00Z')
-    ),
-    'updated 2min ago'
-  );
-});
-
-test('formatRelativeUpdated localizes Portuguese output', () => {
-  assert.equal(
-    formatRelativeUpdated(
-      new Date('2026-05-04T12:03:00Z'),
-      new Date('2026-05-04T12:05:00Z'),
-      'pt-BR'
-    ),
-    'atualizado há 2min'
-  );
-});
-
-test('formatRelativeUpdated localizes Japanese output', () => {
-  assert.equal(
-    formatRelativeUpdated(
-      new Date('2026-05-04T12:03:00Z'),
-      new Date('2026-05-04T12:05:00Z'),
-      'ja'
-    ),
-    '2分前に更新'
-  );
-});
-
-test('formatRelativeUpdated localizes Korean output', () => {
-  assert.equal(
-    formatRelativeUpdated(
-      new Date('2026-05-04T12:03:00Z'),
-      new Date('2026-05-04T12:05:00Z'),
-      'ko'
-    ),
-    '2분 전 업데이트됨'
-  );
-});
 
 test('clampPercent rounds and clamps to the 0-100 range', () => {
   assert.equal(clampPercent(54.4), 54);

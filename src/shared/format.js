@@ -107,23 +107,6 @@ export function formatWeekdayClock(date, lang = 'en') {
   return `${capitalized}, ${formatClockTime(date)}`;
 }
 
-export function formatRelativeUpdated(date, now = new Date(), lang = 'en') {
-  if (!date) return t('time.updated.never', lang);
-  const target = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(target.getTime())) return t('time.updated.never', lang);
-  const diffMs = now.getTime() - target.getTime();
-  if (diffMs < 0) return t('time.updated.now', lang);
-  const seconds = Math.round(diffMs / 1000);
-  if (seconds < 10) return t('time.updated.now', lang);
-  if (seconds < 60) return tFormat('time.updated.seconds', lang, { seconds });
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return tFormat('time.updated.minutes', lang, { minutes });
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return tFormat('time.updated.hours', lang, { hours });
-  const days = Math.round(hours / 24);
-  return tFormat('time.updated.days', lang, { days });
-}
-
 export function formatTokens(n, lang = 'en') {
   if (n == null || Number.isNaN(n) || n === 0) return null;
   const value = n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`;

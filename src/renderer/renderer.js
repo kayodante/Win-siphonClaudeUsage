@@ -1,10 +1,10 @@
 // fallow-ignore-file unused-file -- loaded via <script src> in index.html, not a JS import
 import {
   clampPercent,
+  formatClockTime,
   formatCountdown,
   formatCurrency,
   formatPercent,
-  formatRelativeUpdated,
   formatTokens,
   hydrateSlot,
   levelForPercent,
@@ -760,10 +760,6 @@ try {
   }
 }
 
-// Re-render the relative "updated Xs ago" line every 30s so it stays current
-// even when no state event fires.
-setInterval(updateLastUpdatedLine, 30_000);
-
 function cancelCountUp(element) {
   const id = animatingElements.get(element);
   if (id != null) { cancelAnimationFrame(id); animatingElements.delete(element); }
@@ -1065,7 +1061,7 @@ function updateLastUpdatedLine() {
   if (!currentState) return;
   const lang = currentLanguage();
   elements.lastUpdated.textContent = currentState.lastUpdated
-    ? formatRelativeUpdated(new Date(currentState.lastUpdated), new Date(), lang)
+    ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(currentState.lastUpdated)) })
     : '--';
 }
 

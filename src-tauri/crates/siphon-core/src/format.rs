@@ -61,7 +61,8 @@ pub fn format_clock_time(date: Option<DateTime<Utc>>) -> String {
     }
 }
 
-/// `formatRelativeUpdated` — "updated 12s ago" etc., in `en`, `pt-BR`, `ja`, or `ko`.
+/// "Updated 12s ago" etc., in `en`, `pt-BR`, `ja`, or `ko`. Tray tooltip only —
+/// the renderer's footer shows a clock stamp, so there is no JS twin any more.
 pub fn format_relative_updated(
     date: Option<DateTime<Utc>>,
     now: DateTime<Utc>,
@@ -72,23 +73,23 @@ pub fn format_relative_updated(
     let ko = lang == "ko";
 
     let never = if pt {
-        "nunca atualizado"
+        "Nunca atualizado"
     } else if ja {
         "更新なし"
     } else if ko {
         "업데이트 없음"
     } else {
-        "never updated"
+        "Never updated"
     };
 
     let just_now = if pt {
-        "atualizado agora mesmo"
+        "Atualizado agora"
     } else if ja {
-        "たった今更新"
+        "今更新"
     } else if ko {
-        "방금 업데이트됨"
+        "지금 업데이트됨"
     } else {
-        "updated just now"
+        "Updated now"
     };
 
     let target = match date {
@@ -105,48 +106,48 @@ pub fn format_relative_updated(
     }
     if seconds < 60 {
         return if pt {
-            format!("atualizado há {seconds}s")
+            format!("Atualizado há {seconds}s")
         } else if ja {
             format!("{seconds}秒前")
         } else if ko {
             format!("{seconds}초 전")
         } else {
-            format!("updated {seconds}s ago")
+            format!("Updated {seconds}s ago")
         };
     }
     let minutes = (seconds as f64 / 60.0).round() as i64;
     if minutes < 60 {
         return if pt {
-            format!("atualizado há {minutes}min")
+            format!("Atualizado há {minutes}min")
         } else if ja {
             format!("{minutes}分前")
         } else if ko {
             format!("{minutes}분 전")
         } else {
-            format!("updated {minutes}min ago")
+            format!("Updated {minutes}min ago")
         };
     }
     let hours = (minutes as f64 / 60.0).round() as i64;
     if hours < 24 {
         return if pt {
-            format!("atualizado há {hours}h")
+            format!("Atualizado há {hours}h")
         } else if ja {
             format!("{hours}時間前")
         } else if ko {
             format!("{hours}시간 전")
         } else {
-            format!("updated {hours}h ago")
+            format!("Updated {hours}h ago")
         };
     }
     let days = (hours as f64 / 24.0).round() as i64;
     if pt {
-        format!("atualizado há {days}d")
+        format!("Atualizado há {days}d")
     } else if ja {
         format!("{days}日前")
     } else if ko {
         format!("{days}일 전")
     } else {
-        format!("updated {days}d ago")
+        format!("Updated {days}d ago")
     }
 }
 
@@ -217,13 +218,13 @@ mod tests {
         let five_min_ago = now - chrono::Duration::minutes(5);
         assert_eq!(
             format_relative_updated(Some(five_min_ago), now, "en"),
-            "updated 5min ago"
+            "Updated 5min ago"
         );
         assert_eq!(
             format_relative_updated(Some(five_min_ago), now, "pt-BR"),
-            "atualizado há 5min"
+            "Atualizado há 5min"
         );
-        assert_eq!(format_relative_updated(None, now, "en"), "never updated");
+        assert_eq!(format_relative_updated(None, now, "en"), "Never updated");
     }
 
     #[test]

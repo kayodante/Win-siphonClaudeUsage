@@ -174,12 +174,7 @@ const STRINGS = Object.freeze({
     'time.days.soon': 'Resets soon',
     'time.days.one': 'Resets in 1 day',
     'time.days.n': 'Resets in {days} days',
-    'time.updated.never': 'never updated',
-    'time.updated.now': 'updated just now',
-    'time.updated.seconds': 'updated {seconds}s ago',
-    'time.updated.minutes': 'updated {minutes}min ago',
-    'time.updated.hours': 'updated {hours}h ago',
-    'time.updated.days': 'updated {days}d ago',
+    'time.updated.at': 'Updated {time}',
     'format.tokens': '{value} tokens'
   }),
   'pt-BR': Object.freeze({
@@ -355,12 +350,7 @@ const STRINGS = Object.freeze({
     'time.days.soon': 'Reseta em breve',
     'time.days.one': 'Reseta em 1 dia',
     'time.days.n': 'Reseta em {days} dias',
-    'time.updated.never': 'nunca atualizado',
-    'time.updated.now': 'atualizado agora mesmo',
-    'time.updated.seconds': 'atualizado há {seconds}s',
-    'time.updated.minutes': 'atualizado há {minutes}min',
-    'time.updated.hours': 'atualizado há {hours}h',
-    'time.updated.days': 'atualizado há {days}d',
+    'time.updated.at': 'Atualizado {time}',
     'format.tokens': '{value} tokens'
   }),
   'ja': Object.freeze({
@@ -536,12 +526,7 @@ const STRINGS = Object.freeze({
     'time.days.soon': 'まもなくリセット',
     'time.days.one': '1日後にリセット',
     'time.days.n': '{days}日後にリセット',
-    'time.updated.never': '更新なし',
-    'time.updated.now': 'たった今更新',
-    'time.updated.seconds': '{seconds}秒前に更新',
-    'time.updated.minutes': '{minutes}分前に更新',
-    'time.updated.hours': '{hours}時間前に更新',
-    'time.updated.days': '{days}日前に更新',
+    'time.updated.at': '{time} 更新',
     'format.tokens': '{value}トークン'
   }),
   'ko': Object.freeze({
@@ -717,12 +702,7 @@ const STRINGS = Object.freeze({
     'time.days.soon': '곧 리셋',
     'time.days.one': '1일 후 리셋',
     'time.days.n': '{days}일 후 리셋',
-    'time.updated.never': '업데이트 없음',
-    'time.updated.now': '방금 업데이트됨',
-    'time.updated.seconds': '{seconds}초 전 업데이트됨',
-    'time.updated.minutes': '{minutes}분 전 업데이트됨',
-    'time.updated.hours': '{hours}시간 전 업데이트됨',
-    'time.updated.days': '{days}일 전 업데이트됨',
+    'time.updated.at': '{time} 업데이트됨',
     'format.tokens': '{value} 토큰'
   })
 });
