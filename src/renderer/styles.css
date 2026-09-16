@@ -295,7 +295,7 @@ body[data-view="onboard"] .shell-scroll {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-0);
-  padding: var(--space-8) var(--space-8) 22px;
+  padding: var(--space-5) var(--space-8) 11px var(--space-8);
   background: var(--card);
   border-radius: var(--radius-xl);
   box-shadow: var(--inner-light), inset 0 0 0 1px var(--border-subtle);
@@ -349,10 +349,10 @@ body[data-view="onboard"] .window-control-btn svg {
 }
 
 .brand-logo {
-  /* 18px tall keeps the 103×24 source's aspect (≈77px wide), which is what
-     leaves room for the notification button in the topbar. */
+  /* 78×18 keeps the 103×24 source's aspect and leaves room for the
+     notification button in the topbar. */
   height: 18px;
-  width: auto;
+  width: 78px;
   display: block;
   user-select: none;
   -webkit-user-drag: none;
@@ -2624,8 +2624,9 @@ button:focus-visible {
 @property --quota-h { syntax: '<number>'; inherits: false; initial-value: 156; }
 
 .meter {
+  position: relative;
   display: flex;
-  gap: var(--space-0);
+  gap: 1px;
   height: var(--space-3);
   --seg-l: 84.59%;
   --seg-c: 0.2026;
@@ -2635,10 +2636,30 @@ button:focus-visible {
     --seg-h 900ms var(--ease-out-quart);
 }
 
+/* One glow for the whole filled run, not one per segment: the halo reads as a
+   single mass anyway, and 40 blurred layers would be 40 filters repainting on
+   every refresh. Width mirrors the flex math — each segment is (100% + 1px)/40
+   wide counting its gap, minus the trailing gap. Scoped to `.meter` so the
+   floating widget, which shares `.meter-segment`, stays flat. */
+.meter::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: calc((100% + 1px) * var(--filled, 0) / 40 - 1px);
+  border-radius: 999px;
+  background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+  opacity: 0.5;
+  filter: blur(8px);
+  pointer-events: none;
+  transition: width 250ms var(--ease-out-quart);
+}
+
 .meter-segment {
+  position: relative; /* paints above ::before without a z-index fight */
   flex: 1;
   height: var(--space-4);
-  border-radius: var(--space-0);
+  border-radius: 999px;
   background: var(--level-ok-soft);
   transition: background-color 250ms var(--ease-out-quart);
 }
@@ -3043,6 +3064,7 @@ body[data-refreshing="true"] #refreshButton svg {
   .switch-track,
   .switch-thumb,
   .meter,
+  .meter::before,
   .meter-segment,
   .settings-test-btn,
   textarea,

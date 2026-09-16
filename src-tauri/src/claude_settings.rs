@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-use crate::STARTUP_HIDDEN_ARG;
 
 pub struct ClaudeSettings {
     exe_path: String,
@@ -53,14 +52,11 @@ impl ClaudeSettings {
                 // `powershell -NoProfile -Command` — that extra console process
                 // is the window that flashes at every session start.
                 //
-                // `--hidden` marks this as an automated relaunch: it keeps a
-                // cold start from popping the window over the user's work, and
-                // the single-instance handler in main.rs reads it to leave an
-                // already-running Siphon alone instead of pulling it to front.
-                "command": format!(
-                    "Start-Process '{}' -ArgumentList '{STARTUP_HIDDEN_ARG}'",
-                    self.exe_path
-                ),
+                // No `--hidden`: opening a Claude Code session is the user
+                // asking for Siphon, so the window shows like a manual launch —
+                // and the single-instance handler in main.rs brings an
+                // already-running Siphon to front for the same reason.
+                "command": format!("Start-Process '{}'", self.exe_path),
                 "shell": "powershell",
                 "async": true
             }]
@@ -248,10 +244,8 @@ mod tests {
         // No nested `powershell -NoProfile -Command` around Start-Process —
         // that second console process is what flashes at every session start.
         assert!(!cmd.contains("powershell"));
-        assert_eq!(
-            cmd,
-            "Start-Process 'C:\\apps\\siphon.exe' -ArgumentList '--hidden'"
-        );
+        // No `--hidden` either: the window opens like a manual launch.
+        assert_eq!(cmd, "Start-Process 'C:\\apps\\siphon.exe'");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

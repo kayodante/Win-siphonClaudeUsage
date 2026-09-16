@@ -1245,6 +1245,7 @@ function renderMeter(meter, percent) {
   if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
   meter.dataset.level = level;
   meter.dataset.filled = String(filled);
+  meter.style.setProperty('--filled', filled); // width of the glow behind the filled run
   if (meter.children.length !== total) {
     meter.replaceChildren();
     const fragment = document.createDocumentFragment();

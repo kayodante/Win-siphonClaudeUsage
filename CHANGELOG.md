@@ -11,6 +11,21 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-09-16
+
+### Changed
+
+- Opening a Claude Code session now shows Siphon's window instead of leaving it
+  in the tray. The `SessionStart` hook drops the `--hidden` argument, so a cold
+  start paints the window and an already-running instance is brought to front.
+  Windows autostart still launches hidden, where `startup.showWindowOnLogin`
+  decides.
+- The quota meter's segments are pills (full radius, 1px gap) and the filled run
+  carries a soft glow — one blurred element sized to the filled width rather
+  than one per segment. The floating widget's meter is unchanged.
+- The header is 19px shorter (`padding: 12px 20px 11px`) and the brand logo is
+  pinned to 78×18px.
+
 ## [1.14.0] - 2026-09-14
 
 ### Added
