@@ -80,6 +80,12 @@ test('weekly in progress shows days + weekday in PT', () => {
   assert.match(result, /^Reseta em \d+ dias? · /);
 });
 
+test('weekly resetting within a day shows hours/minutes, not "1 dia"', () => {
+  const slot = { percent: 25, resetsAt: new Date('2026-05-04T23:59:00Z') };
+  const result = buildWeeklyResetLine(slot, NOW, 'pt-BR');
+  assert.match(result, /^\d+h \d+min restantes · /);
+});
+
 test('weekly at 100% shows limit reached in PT', () => {
   const slot = { percent: 100, resetsAt: new Date('2026-05-08T00:00:00Z') };
   const result = buildWeeklyResetLine(slot, NOW, 'pt-BR');

@@ -8,6 +8,7 @@ import {
 import { t, tFormat } from './i18n.js';
 
 const SEPARATOR = ' · ';
+const DAY_MS = 86_400_000;
 
 export function buildSessionResetLine(slot, now = new Date(), lang = 'en') {
   if (!slot) return t('session.reset.empty', lang);
@@ -45,8 +46,14 @@ export function buildWeeklyResetLine(slot, now = new Date(), lang = 'en') {
     return `${t('weekly.reset.full', lang)}${SEPARATOR}${tail}`;
   }
 
-  const days = formatDaysRemaining(slot.resetsAt, now, lang);
-  return `${days}${SEPARATOR}${weekday}`;
+  // Under a day left, days-granularity would round up to "1 day" for a reset
+  // happening in a couple of hours — fall back to the hour/minute countdown.
+  const diffMs = slot.resetsAt ? slot.resetsAt.getTime() - now.getTime() : 0;
+  const remaining =
+    diffMs > 0 && diffMs < DAY_MS
+      ? formatTimeRemaining(slot.resetsAt, now, lang)
+      : formatDaysRemaining(slot.resetsAt, now, lang);
+  return `${remaining}${SEPARATOR}${weekday}`;
 }
 
 function clamp(value) {
