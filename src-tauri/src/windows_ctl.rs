@@ -27,6 +27,11 @@ fn show_window(app: &AppHandle) {
         let _ = win.show();
         let _ = win.unminimize();
         let _ = win.set_focus();
+        // WebView2 keeps reporting the document as visible while the native
+        // window is hidden, so `visibilitychange` never fires in the renderer
+        // and the entrance choreography has no other way to know the window
+        // just came back. Every show funnels through here.
+        let _ = app.emit_to("main", "window-shown", ());
     }
 }
 

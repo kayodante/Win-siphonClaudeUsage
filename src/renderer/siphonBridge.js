@@ -55,6 +55,7 @@
     onView: callback => on('view-changed', callback),
     onState: callback => on('state-changed', callback),
     onResetSound: callback => on('play-reset-sound', () => callback()),
+    onWindowShown: callback => on('window-shown', () => callback()),
     onUpdateAvailable: callback => on('update-available', callback),
     onUpdateProgress: callback => on('update:progress', callback),
     onUpdateDownloaded: callback => on('update:downloaded', callback),

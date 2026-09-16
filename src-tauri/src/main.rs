@@ -43,6 +43,12 @@ const MAIN_POS_FLUSH_DELAY_MS: u64 = 500;
 /// Same debounce as `MAIN_PENDING_POS`, for window size.
 static MAIN_PENDING_SIZE: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
 
+/// Whether the main window is currently minimized, tracked through the 0×0
+/// `Resized` event Windows reports for a minimize. Restoring from the taskbar
+/// never goes through `windows_ctl::show_window`, so the following non-zero
+/// resize is the only moment the renderer can be told the window is back.
+static MAIN_MINIMIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Managed application state, shared by every command and background task.
 pub struct AppContext {
     pub controller: Arc<Controller>,
@@ -210,8 +216,16 @@ fn main() {
                 // physical 400px a 320px window reports on a 125% panel, restore
                 // it on a 100% one, and it comes back 400px wide for real.
                 tauri::WindowEvent::Resized(size) => {
+                    use std::sync::atomic::Ordering;
                     if size.width == 0 || size.height == 0 {
+                        MAIN_MINIMIZED.store(true, Ordering::Relaxed);
                         return;
+                    }
+                    // Back from a minimize: tell the renderer so it can replay
+                    // the entrance. See `MAIN_MINIMIZED` — a taskbar restore
+                    // reaches no other code of ours.
+                    if MAIN_MINIMIZED.swap(false, Ordering::Relaxed) {
+                        let _ = window.app_handle().emit_to("main", "window-shown", ());
                     }
                     let scale = window.scale_factor().unwrap_or(1.0);
                     let size = size.to_logical::<f64>(scale);

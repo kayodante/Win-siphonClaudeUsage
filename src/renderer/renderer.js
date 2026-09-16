@@ -149,7 +149,6 @@ let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
 let isEntering = false;
-let bootPlayed = false;
 const animatingElements = new Map();
 
 for (const announcer of [elements.politeAnnouncer, elements.assertiveAnnouncer]) {
@@ -1527,20 +1526,61 @@ function updateSliderFill(slider) {
 
 
 
-// The entrance choreography runs once, on the first time the window is shown.
-// This is a tray app opened dozens of times a day for a single number, and that
-// number is the last thing the sequence delivers (~1s in). Paying it every open
-// turns the app's whole reason for existing into a wait; paying it once keeps
-// the first impression. Later opens render the values immediately, and
-// `flashUpdate` still marks anything that actually changed.
+// The entrance choreography runs every time the window is shown — boot, and
+// each reopen from the tray or from minimized. It costs ~1s before the session
+// number lands on its final value, which is the whole point of the app, but
+// the reveal is what the window is *for* on a tray app: it says "this is fresh"
+// better than the numbers alone do.
 const ENTER_SEQUENCE_MS = 900;
+const ENTER_DEDUPE_MS = 250;
+let enterSequenceTimer = null;
+let lastEntranceAt = -Infinity;
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden || bootPlayed) return;
-  bootPlayed = true;
+function playEntranceSequence() {
+  // Two signals can describe the same show (the native `window-shown` and, if
+  // the webview ever does update its visibility, `visibilitychange`). Restarting
+  // the sequence milliseconds in reads as a stutter, so the second one loses.
+  const now = performance.now();
+  if (now - lastEntranceAt < ENTER_DEDUPE_MS) return;
+  lastEntranceAt = now;
   isEntering = true;
+  // Reopening inside the 900ms window would otherwise find the attribute still
+  // set and no CSS animation would restart. Drop it, force a reflow, re-add.
+  delete document.body.dataset.entering;
+  void document.body.offsetWidth;
   document.body.dataset.entering = '1';
-  setTimeout(() => {
+  // Re-render now so the count-ups start with the CSS reveal instead of waiting
+  // for the next refresh tick, up to 30s away. Same state in, so the threshold
+  // sounds see no crossing and the view transition sees no change.
+  if (currentState) render(currentState);
+  clearTimeout(enterSequenceTimer);
+  enterSequenceTimer = setTimeout(() => {
     delete document.body.dataset.entering;
   }, ENTER_SEQUENCE_MS);
+}
+
+// The native signal, emitted by `windows_ctl::show_window` for every tray or
+// menu show and by the `Resized` handler for a taskbar restore. This is what
+// actually fires on Windows.
+// Subscribed here, at the bottom, rather than beside the other `window.siphon`
+// listeners: the module's top-level `await`s mean those run before this file's
+// tail, and an event arriving in that gap would hit `lastEntranceAt` in its
+// temporal dead zone. `?.` covers the bridge having bailed out.
+window.siphon?.onWindowShown?.(playEntranceSequence);
+
+// Kept as a belt-and-braces second source: WebView2 does not update document
+// visibility when the native window is hidden, but a future runtime (or a
+// platform port) that does would land here. `ENTER_DEDUPE_MS` keeps the two
+// from playing over each other.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  playEntranceSequence();
 });
+
+// The window is born hidden (`visible: false`) and shown from Rust's `setup()`
+// hook, which races this module's load. When `show()` wins, the page is already
+// visible by the time we get here and `visibilitychange` never fires — the boot
+// entrance is simply lost, which is what happens under `npm start`. So play it
+// straight away whenever we load into a visible window; only a genuinely hidden
+// start waits for the event.
+if (!document.hidden) playEntranceSequence();
