@@ -987,9 +987,11 @@ body[data-view="onboard"] .app-footer {
   letter-spacing: -0.02em;
   color: var(--accent-light);
   font-variant-numeric: tabular-nums;
-  transition: --quota-l 1100ms var(--ease-out-quart),
-    --quota-c 1100ms var(--ease-out-quart),
-    --quota-h 1100ms var(--ease-out-quart);
+  /* 900ms, matching `.meter`'s --seg-* drift: the number and the bar report the
+     same level change and must land on the new colour together. */
+  transition: --quota-l 900ms var(--ease-out-quart),
+    --quota-c 900ms var(--ease-out-quart),
+    --quota-h 900ms var(--ease-out-quart);
 }
 
 .quota-value-group {
@@ -2627,7 +2629,12 @@ button:focus-visible {
   position: relative;
   display: flex;
   gap: 1px;
-  height: var(--space-3);
+  /* Matches `.meter-segment`'s height. A segment with an explicit height opts
+     out of flex `stretch`, so an 8px track held 10px segments that overflowed
+     2px past the bottom — leaving `::before` (inset-block: 0) 2px shorter than
+     the bar it haloes, and `meterReveal`'s `transform-origin: bottom` pivoting
+     below the glow's baseline. */
+  height: var(--space-4);
   --seg-l: 84.59%;
   --seg-c: 0.2026;
   --seg-h: 156.3;
@@ -2666,6 +2673,18 @@ button:focus-visible {
 
 .meter-segment.active {
   background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
+}
+
+/* The fill colour is already interpolated once, on `.meter`'s --seg-* over
+   900ms. Letting the segment run its own background-color transition on top
+   made it chase a moving target: ~1150ms of drift against the halo's clean
+   900ms, so segments and glow landed on the new level at different times.
+   Dropping the transition here costs the 250ms fade when a segment lights up —
+   a discrete segment clicking on is arguably the truer read anyway, and the
+   halo still sweeps in 250ms underneath. Scoped to `.meter` so the floating
+   widget, which has no --seg-* drift to fight, keeps its plain fade. */
+.meter > .meter-segment.active {
+  transition: none;
 }
 
 .meter[data-level="warn"] {
@@ -2927,11 +2946,11 @@ body[data-entering] #sessionPace {
 body[data-entering] #sessionMeter .meter-segment {
   transform-origin: bottom;
   animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 12ms + 230ms);
+  animation-delay: calc(var(--i, 0) * 6ms + 230ms);
 }
 body[data-entering] #sessionMeter .meter-segment.active {
   animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 12ms + 230ms);
+  animation-delay: calc(var(--i, 0) * 6ms + 230ms);
 }
 
 body[data-entering] #weeklyPercent {
@@ -2940,11 +2959,11 @@ body[data-entering] #weeklyPercent {
 body[data-entering] #weeklyMeter .meter-segment {
   transform-origin: bottom;
   animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 12ms + 295ms);
+  animation-delay: calc(var(--i, 0) * 6ms + 295ms);
 }
 body[data-entering] #weeklyMeter .meter-segment.active {
   animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 12ms + 295ms);
+  animation-delay: calc(var(--i, 0) * 6ms + 295ms);
 }
 
 body[data-entering] #todayCost {
@@ -3012,18 +3031,25 @@ body[data-refreshing="true"] #refreshButton svg {
 
 /* ── Critical meter pulse ───────────────────────────────── */
 
+/* One breathing halo, not 40 breathing segments. At `data-filled="40"` the glow
+   already spans the whole bar, so it carries the same "you are out" signal that
+   40 separately-delayed opacity animations carried — at one composited layer
+   instead of forty, permanently, for as long as the window is open at 100%.
+   Moving it off the segments also settles a specificity fight: this rule
+   (0,1,4,0) outranked `body[data-entering] #sessionMeter .meter-segment.active`
+   (0,1,3,1), so at exactly 100% the session bar was the one element on screen
+   that skipped its entrance reveal. Range is keyed to `::before`'s static 0.5. */
 @keyframes criticalPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 0.2; }
 }
 
-#sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
+#sessionMeter[data-level="critical"][data-filled="40"]::before {
   animation: criticalPulse 1700ms ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * 32ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
+  #sessionMeter[data-level="critical"][data-filled="40"]::before {
     animation: none;
   }
 }

@@ -1531,6 +1531,13 @@ function updateSliderFill(slider) {
 // number lands on its final value, which is the whole point of the app, but
 // the reveal is what the window is *for* on a tray app: it says "this is fresh"
 // better than the numbers alone do.
+//
+// This is a deadline, not a duration: dropping `data-entering` deselects the
+// keyframes, so anything still running is cut off rather than finished. The
+// last step to land is the weekly meter's 40th segment, at
+// `39 * 6ms + 295ms + 210ms` = 739ms (see the `body[data-entering] #weeklyMeter`
+// rules in styles.css). Keep that sum under this number — at the old 12ms
+// stagger it was 973ms and the last six segments snapped instead of settling.
 const ENTER_SEQUENCE_MS = 900;
 const ENTER_DEDUPE_MS = 250;
 let enterSequenceTimer = null;
