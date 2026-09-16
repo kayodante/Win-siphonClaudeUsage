@@ -3031,25 +3031,31 @@ body[data-refreshing="true"] #refreshButton svg {
 
 /* ── Critical meter pulse ───────────────────────────────── */
 
-/* One breathing halo, not 40 breathing segments. At `data-filled="40"` the glow
-   already spans the whole bar, so it carries the same "you are out" signal that
-   40 separately-delayed opacity animations carried — at one composited layer
-   instead of forty, permanently, for as long as the window is open at 100%.
-   Moving it off the segments also settles a specificity fight: this rule
-   (0,1,4,0) outranked `body[data-entering] #sessionMeter .meter-segment.active`
-   (0,1,3,1), so at exactly 100% the session bar was the one element on screen
-   that skipped its entrance reveal. Range is keyed to `::before`'s static 0.5. */
+/* The wave travelling across the segments is the point — a single breathing
+   halo costs one composited layer instead of forty but reads as a different,
+   quieter thing. Forty it is; the two fixes that came with the halo stay.
+
+   `body:not([data-entering])` is the first. Without it this selector (0,1,4,0)
+   outranked `body[data-entering] #sessionMeter .meter-segment.active` (0,1,3,1),
+   so at exactly 100% the session bar was the one element on screen that skipped
+   its entrance reveal. Now the two can never match at once, and the wave builds
+   in from the left once the entrance has dropped `data-entering` at 900ms.
+
+   42.5ms is the second: 40 segments must span exactly one 1700ms period, or the
+   last segment and the first sit at unrelated phases and the wave shows a seam
+   where it wraps. At the old 32ms the span was 1248ms and the seam was visible. */
 @keyframes criticalPulse {
-  0%, 100% { opacity: 0.65; }
-  50%      { opacity: 0.2; }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
 }
 
-#sessionMeter[data-level="critical"][data-filled="40"]::before {
+body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
   animation: criticalPulse 1700ms ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 42.5ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #sessionMeter[data-level="critical"][data-filled="40"]::before {
+  body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
     animation: none;
   }
 }
