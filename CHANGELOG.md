@@ -11,6 +11,55 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.14.4] - 2026-09-16
+
+### Fixed
+
+- The weekly row shows hours and minutes when the reset is less than 24 hours
+  away. It was formatting through `formatDaysRemaining`, which floors at one
+  day, so a reset a few hours out read "Resets in 1 day".
+
+## [1.14.3] - 2026-09-16
+
+### Changed
+
+- The 100% pulse goes back to sweeping across the 40 segments, reverting that
+  part of 1.14.2. The halo breathing costs one composited layer instead of
+  forty, but it reads as something else, quieter. Forty, then.
+- The pulse's per-segment delay is 42.5ms, so the 40 segments cover one 1700ms
+  period exactly. At 32ms the sweep spanned 1248ms, leaving the first and last
+  segment in unrelated phases and showing a seam where it wrapped.
+
+### Fixed
+
+- The pulse rule is scoped to `body:not([data-entering])`, so at exactly 100%
+  the session meter no longer skips the entrance animation. The pulse rule
+  (0,1,4,0) was outweighing `body[data-entering] #sessionMeter
+  .meter-segment.active` (0,1,3,1); the two are now mutually exclusive and the
+  sweep starts after `data-entering` drops at 900ms.
+
+## [1.14.2] - 2026-09-16
+
+### Added
+
+- The entrance animation replays every time the window is shown, not only on
+  first paint.
+
+### Fixed
+
+- The quota meter's track is 10px, the same height as its segments. An explicit
+  segment height opts out of the flex stretch, so the 8px track let the
+  segments overhang by 2px and left the halo (`inset-block: 0`) shorter than
+  the bar.
+- The active segment no longer transitions `background-color`. The fill colour
+  is already interpolated once over 900ms in `--seg-*`, and a transition on top
+  of that chased a moving target, desyncing segments from the halo on a level
+  change.
+- The entrance stagger is 6ms instead of 12ms. The old sequence finished at
+  973ms, past the 900ms at which `ENTER_SEQUENCE_MS` drops `data-entering`,
+  clipping the overshoot on the weekly meter's last six segments.
+- `.quota-percent` settles in 900ms rather than 1100ms, in step with the bar.
+
 ## [1.14.1] - 2026-09-16
 
 ### Changed
@@ -591,7 +640,11 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.4...HEAD
+[1.14.4]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.3...v1.14.4
+[1.14.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.2...v1.14.3
+[1.14.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.1...v1.14.2
+[1.14.1]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.0...v1.14.1
 [1.14.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.3...v1.14.0
 [1.13.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.13.0...v1.13.3
 [1.13.0]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.12.0...v1.13.0
