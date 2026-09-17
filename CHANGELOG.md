@@ -11,6 +11,31 @@ is added above it.
 
 ## [Unreleased]
 
+### Changed
+
+- `--inner-light` is now three layers instead of one: a 1px top hairline, a
+  full inner ring, and an outer ring that seats the surface on what is behind
+  it. The outer ring replaces the `1px border-subtle` every raised surface
+  carried, so those borders are gone — a component takes the token or a
+  border, never both.
+- The edge light reaches the surfaces that were missing it: the window frame
+  itself, the settings tabs and their pill, the switch track, the volume
+  slider thumb, the four inline banners and their download CTA, the
+  widget-style cards, the floating widget, and the onboarding auth card.
+- `--inner-light-up` is the same stack lit from below, for a surface recessed
+  into its parent. Only `.account-inner` uses it; it also moves from a 16px to
+  a 20px radius to match the card it sits in.
+- The settings tab tray, its pill, and the tabs themselves are pill-shaped
+  (`--radius-pill`) instead of 8px/4px.
+- The "Peak hours" badge reads in `--warning` on `--warning-soft`, icon
+  included, instead of subdued text on an elevated surface. Its info button
+  drops to 20px, the badge's own height — at 24px it was taller than the badge
+  holding it and stretched the row.
+- The footer's two buttons carry a 3% white wash over Card Foreground, which
+  lifts them a step without introducing a sixth grey.
+- Selecting a widget style swaps the edge light for the accent ring rather
+  than drawing both.
+
 ## [1.14.4] - 2026-09-16
 
 ### Fixed

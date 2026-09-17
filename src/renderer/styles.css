@@ -136,7 +136,22 @@
   --radius-pill: 999px;
 
   /* ── Shadows ── */
-  --inner-light: inset 0 3px 3px -2px oklch(100% 0 0 / 0.06);
+  /* Three layers in one declaration: a top hairline that catches the light, a
+     full inner ring that draws the component's own edge, and an outer ring
+     that seats it against the surface behind. The outer ring is what replaced
+     every `border: 1px solid var(--border-subtle)` these surfaces used to
+     carry — reach for the token, never re-add the border. */
+  --inner-light:
+    inset 0 1px 0 0 oklch(100% 0 0 / 0.11),
+    inset 0 0 0 1px oklch(100% 0 0 / 0.06),
+    0 0 0 1px oklch(13.44% 0 0 / 0.7);
+  /* The same stack lit from below — the hairline moves to the bottom edge.
+     Only .account-inner uses it, so the one recessed surface in the app reads
+     as recessed instead of raised. */
+  --inner-light-up:
+    inset 0 -1px 0 0 oklch(100% 0 0 / 0.11),
+    inset 0 0 0 1px oklch(100% 0 0 / 0.06),
+    0 0 0 1px oklch(13.44% 0 0 / 0.7);
 
   /* ── Transitions ── */
   --duration-fast:   120ms;
@@ -247,8 +262,8 @@ h3 {
   min-height: 0;
   overflow: hidden;
   background: var(--bg-page);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-2xl);
+  box-shadow: var(--inner-light);
 }
 
 .shell-scroll {
@@ -298,7 +313,7 @@ body[data-view="onboard"] .shell-scroll {
   padding: var(--space-5) var(--space-8) 11px var(--space-8);
   background: var(--card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--inner-light), inset 0 0 0 1px var(--border-subtle);
+  box-shadow: var(--inner-light);
   -webkit-app-region: drag;
 }
 
@@ -438,7 +453,6 @@ body[data-view="onboard"] .top-actions-divider {
   padding: var(--space-2);
   background: var(--card);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
   box-shadow: var(--inner-light);
 }
 
@@ -484,9 +498,10 @@ body[data-view="onboard"] .app-footer {
   height: auto;
   min-width: 0;
   padding: var(--space-7) var(--space-8);
-  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  background: var(--card-foreground);
+  /* Two fills, as the design has them: a 3% white wash over the tonal
+     surface, which lifts the button a step without adding a sixth grey. */
+  background: linear-gradient(oklch(100% 0 0 / 0.03), oklch(100% 0 0 / 0.03)), var(--card-foreground);
   color: var(--foreground);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -633,6 +648,7 @@ body[data-view="onboard"] .app-footer {
   gap: var(--space-5);
   border-radius: var(--radius-xl);
   background: var(--card);
+  box-shadow: var(--inner-light);
 }
 
 .onboard-secondary {
@@ -926,7 +942,6 @@ body[data-view="onboard"] .app-footer {
   position: relative;
   background: var(--card);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
   padding: var(--space-6) var(--space-7);
   box-shadow: var(--inner-light);
 }
@@ -1112,27 +1127,27 @@ body[data-view="onboard"] .app-footer {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-none) var(--space-1) var(--space-none) var(--space-2);
-  min-height: var(--space-8);
+  padding: var(--space-none) var(--space-none) var(--space-none) var(--space-2);
+  min-height: var(--space-7);
   border-radius: var(--radius-xs);
   font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
-  color: var(--subtle-foreground);
-  background: var(--card-elevated);
+  color: var(--warning);
+  background: var(--warning-soft);
   width: fit-content;
 }
 
 .peak-badge .cost-info-btn {
-  width: var(--space-9);
-  height: var(--space-9);
+  width: var(--space-8);
+  height: var(--space-8);
 }
 
 .peak-badge .cost-info-btn svg {
   width: var(--space-5);
   height: var(--space-5);
-  fill: var(--accent-light);
+  fill: var(--warning);
 }
 
 /* ─── Cost grid ─── */
@@ -1271,7 +1286,6 @@ body[data-refreshing="true"] .card::after {
   max-width: 240px;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
   background: var(--card-elevated);
   box-shadow: var(--inner-light);
   color: var(--foreground);
@@ -1566,8 +1580,8 @@ body[data-refreshing="true"] .card::after {
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-6);
-  border: 1px solid;
   border-radius: var(--radius-lg);
+  box-shadow: var(--inner-light);
 }
 
 /* Enter/leave transition only — kept separate from the layout rule above so
@@ -1713,25 +1727,21 @@ body[data-refreshing="true"] .card::after {
 .usage-alert-banner[data-level="warn"] {
   background: var(--level-warn-soft);
   color: var(--level-warn);
-  border-color: var(--level-warn-soft);
 }
 
 .usage-alert-banner[data-level="critical"] {
   background: var(--destructive-soft);
   color: var(--destructive);
-  border-color: var(--destructive-soft);
 }
 
 .offline-banner {
   background: var(--destructive-soft);
   color: var(--destructive);
-  border-color: var(--destructive-soft);
 }
 
 .update-banner {
   background: var(--success-soft);
   color: var(--success);
-  border-color: var(--success-soft);
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
@@ -1749,20 +1759,19 @@ body[data-refreshing="true"] .card::after {
   font-weight: var(--weight-medium);
   color: var(--foreground);
   background: var(--border-strong);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-4);
   align-self: flex-start;
   margin-top: var(--space-5);
   cursor: pointer;
+  box-shadow: var(--inner-light);
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
+    transform var(--duration-press) var(--ease-press);
 }
 
 .update-banner-download:hover {
   background: var(--success);
   color: var(--input);
-  border-color: var(--border-strong);
 }
 
 .update-banner-download:focus-visible {
@@ -1773,7 +1782,6 @@ body[data-refreshing="true"] .card::after {
 
 .update-banner-download[data-state="downloading"] {
   color: var(--success);
-  border-color: var(--border-strong);
   cursor: default;
   pointer-events: none;
 }
@@ -1785,7 +1793,6 @@ body[data-refreshing="true"] .card::after {
   padding: var(--space-3) var(--space-6);
   background: var(--success-soft);
   color: var(--success);
-  border-color: var(--success-soft);
 }
 
 .download-banner-text {
@@ -1892,7 +1899,6 @@ body[data-refreshing="true"] .card::after {
 
 .settings-card {
   background: var(--card);
-  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-8) var(--space-7);
   display: flex;
@@ -1903,7 +1909,6 @@ body[data-refreshing="true"] .card::after {
 
 .account-card {
   background: var(--card);
-  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-2);
   display: flex;
@@ -1912,10 +1917,12 @@ body[data-refreshing="true"] .card::after {
   box-shadow: var(--inner-light);
 }
 
+/* The one recessed surface in the app: it sits inside .account-card rather
+   than on top of it, so it takes the light from below. */
 .account-inner {
   background: var(--input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--inner-light-up);
   padding: var(--space-2) var(--space-2) var(--space-5);
   display: flex;
   flex-direction: column;
@@ -1982,7 +1989,6 @@ body[data-refreshing="true"] .card::after {
   height: auto;
   margin-top: 0;
   padding: var(--space-6) var(--space-9);
-  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
   color: var(--foreground);
@@ -2148,7 +2154,7 @@ body[data-refreshing="true"] .card::after {
   flex-direction: column;
   justify-content: flex-start;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
+  box-shadow: var(--inner-light);
   padding: var(--space-5) var(--space-5) 17px;
 }
 
@@ -2566,6 +2572,7 @@ button:focus-visible {
   height: 19px;
   background: var(--muted-foreground);
   border-radius: var(--radius-pill);
+  box-shadow: var(--inner-light);
   transition: background var(--duration-slow) var(--ease);
 }
 
@@ -2811,7 +2818,7 @@ button:focus-visible {
   border-radius: 50%;
   background: var(--foreground);
   cursor: pointer;
-  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.4);
+  box-shadow: var(--inner-light);
 }
 
 .settings-volume-slider:disabled {
@@ -3182,7 +3189,8 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   gap: var(--space-none);
   padding: var(--space-1);
   background: var(--card-foreground);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--inner-light);
   margin: var(--space-none) var(--space-none) var(--space-10);
   /* Which third the pill sits over. switchSettingsTab writes 0/1/2; this is
      just the default so the pill matches the System tab that's active on
@@ -3200,8 +3208,9 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   left: var(--space-1);
   width: calc((100% - var(--space-1) * 2) / 3);
   height: calc(100% - var(--space-1) * 2);
-  border-radius: calc(var(--radius-xs));
+  border-radius: var(--radius-pill);
   background: var(--border-strong);
+  box-shadow: var(--inner-light);
   transform: translateX(calc(var(--tab-index) * 100%));
   transition: transform var(--duration-normal) var(--ease-out);
   z-index: 0;
@@ -3214,7 +3223,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   flex: 1;
   padding: var(--space-4) var(--space-none);
   border: 1px solid transparent;
-  border-radius: calc(var(--radius-xs));
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--subtle-foreground);
   font-family: var(--font-sans);
@@ -3292,17 +3301,24 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   justify-content: flex-start;
   gap: var(--space-5);
   height: auto;
-  border: 1px solid var(--border-strong);
+  /* The border stays in the box at 1px transparent so selecting a card can't
+     shift the row by a pixel. Resting, the card is drawn by --inner-light;
+     selected, the accent ring takes over and the light steps aside, so the
+     two edge treatments never stack. */
+  border: 1px solid transparent;
   border-radius: var(--radius-xs);
   background: var(--card);
   padding: var(--space-4) var(--space-3) var(--space-3);
   cursor: pointer;
   text-align: left;
-  transition: border-color 120ms ease, transform var(--duration-press) var(--ease-press);
+  box-shadow: var(--inner-light);
+  transition: border-color 120ms ease, box-shadow 120ms ease,
+    transform var(--duration-press) var(--ease-press);
 }
 
 .settings-style-card[data-active="true"] {
   border-color: var(--accent);
+  box-shadow: none;
 }
 
 .settings-style-card:focus-visible {
