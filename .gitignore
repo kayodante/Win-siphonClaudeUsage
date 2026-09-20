@@ -1,19 +1,7 @@
-.agents/
-.claude/
-.code-review-graph/
-.codex/
-.fallow/
-.gemini/
-.impeccable/
-.lore/
+# Build output
 .nyc_output/
-.playwright-cli/
-.playwright-mcp/
-.superpowers/
 coverage/
 dist/
-docs/superpowers/
-graphify-out/
 node_modules/
 out/
 output/
@@ -39,12 +27,9 @@ CLAUDE.md
 DESIGN.md
 PRODUCT.md
 ROADMAP.md
-lore.md
-skills-lock.json
-.code-review-graphignore
-.github/code-review-graph.instruction.md
-.graphifyignore
-.mcp.json
+
+# Local config
+*.local
 
 # Secrets / credentials
 .env
@@ -57,14 +42,3 @@ credentials.json
 *.pfx
 *.cer
 *.crt
-
-# Editors
-.vscode/
-.idea/
-.vs/
-*.local
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini

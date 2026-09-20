@@ -546,16 +546,21 @@ Written by `ClaudeSettingsService` (not `JsonStore`) when the
 `integration.launchWithClaudeCode` preference is on and the build is
 packaged. It adds a `SessionStart` hook that runs the Siphon exe so Claude
 Code launches/refreshes Siphon when a session starts. Siphon edits only its
-own entry — tagged `_siphon: true` — and leaves any other hooks untouched.
+own entry and leaves any other hooks untouched.
 
 ```jsonc
 {
   "hooks": {
     "SessionStart": [
       {
-        "_siphon": true,
+        "matcher": "startup|resume",
         "hooks": [
-          { "type": "command", "command": "C:\\…\\Siphon.exe", "async": true }
+          {
+            "type": "command",
+            "command": "Start-Process 'C:\\…\\Siphon.exe'",
+            "shell": "powershell",
+            "async": true
+          }
         ]
       }
     ]
@@ -563,8 +568,18 @@ own entry — tagged `_siphon: true` — and leaves any other hooks untouched.
 }
 ```
 
+`Start-Process` detaches Siphon from the hook process, and `shell: powershell`
+reuses the shell Claude Code already spawns rather than nesting a second one —
+that extra console is what used to flash at every session start. There is no
+`--hidden` argument, so a Claude Code session opens Siphon's window like a
+manual launch; only the Windows autostart launch passes it, and there
+`startup.showWindowOnLogin` decides.
+
 `enable()` appends this entry idempotently; `disable()` filters Siphon
 entries back out and prunes the now-empty `SessionStart` / `hooks` keys.
+Siphon recognizes its own entries by their command — the current exe path, or
+any command launching another Siphon build (dev, portable, an older install
+dir) — so one build's stale hook cannot linger and start a second Siphon.
 Writes go through a `.tmp` file + `rename` so a partial write can't corrupt
 the user's Claude Code settings.
 
