@@ -14,7 +14,7 @@
 
   <br/>
   <br/>
-  <img src="src/assets/Hero.png" alt="Hero" />
+  <img src="docs/assets/SiphonDemo.webp" alt="Siphon demo" />
 </div>
 
 ---

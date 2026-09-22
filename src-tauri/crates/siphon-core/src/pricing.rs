@@ -21,9 +21,9 @@ pub struct Tokens {
 
 /// Bundled fallback pricing (USD per million tokens) used when
 /// `readout-pricing.json` is absent. Keys match `pricing_key` output.
-/// Verified against platform.claude.com/docs/en/about-claude/pricing (2026-09-10).
+/// Verified against platform.claude.com/docs/en/about-claude/pricing (2026-09-22).
 /// `cache_write` is the 5-minute write (1.25x input); `cache_read` is 0.1x input
-/// on every model except Fable/Mythos 5.1, which read at 0.025x.
+/// on every model except Fable/Mythos 5.1 (0.025x) and Opus 5.5 (0.05x).
 pub const BUNDLED_PRICING: &[(&str, Price)] = &[
     (
         "fable-5-1",
@@ -59,6 +59,15 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
             output: 50.0,
             cache_read: 1.00,
             cache_write: 12.50,
+        },
+    ),
+    (
+        "opus-5-5",
+        Price {
+            input: 4.0,
+            output: 20.0,
+            cache_read: 0.20,
+            cache_write: 5.00,
         },
     ),
     (
@@ -310,6 +319,7 @@ mod tests {
         for model in [
             "claude-fable-5-1",
             "claude-fable-5",
+            "claude-opus-5-5",
             "claude-opus-5",
             "claude-sonnet-5",
             "claude-haiku-4-5-20251001",
@@ -321,6 +331,11 @@ mod tests {
         let fable = find_price(None, "claude-fable-5-1").unwrap();
         assert_eq!(fable.input, 10.0);
         assert_eq!(fable.cache_read, 0.25); // 0.025x, not the usual 0.1x
+
+        let opus55 = find_price(None, "claude-opus-5-5").unwrap();
+        assert_eq!(opus55.input, 4.0);
+        assert_eq!(opus55.output, 20.0);
+        assert_eq!(opus55.cache_read, 0.20); // 0.05x
 
         let sonnet = find_price(None, "claude-sonnet-5").unwrap();
         assert_eq!(sonnet.input, 2.0);

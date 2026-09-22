@@ -11,6 +11,17 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.14.6] - 2026-09-22
+
+### Fixed
+
+- Claude Opus 5.5 usage is costed again. The bundled pricing table had no
+  entry for it, so every Opus 5.5 token counted as $0. It now uses the
+  published rates: $4 input, $20 output, $5 cache write and $0.20 cache read
+  (0.05x input) per million tokens.
+
+## [1.14.5] - 2026-09-17
+
 ### Changed
 
 - `--inner-light` is now three layers instead of one: a 1px top hairline, a
