@@ -17,6 +17,10 @@
   <img src="docs/assets/SiphonDemo.webp" alt="Siphon demo" />
 </div>
 
+<p align="center">
+  <b>English</b> · <a href="README.pt-BR.md">Português</a>
+</p>
+
 ---
 
 Siphon sits quietly in your system tray and shows session quota, weekly limits, and daily/monthly usage — all pulled directly from Claude Code's local files and the Anthropic OAuth usage endpoint. No API keys, no configuration: if you use Claude Code, it just works.
