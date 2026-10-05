@@ -80,8 +80,6 @@ impl LocalDataService {
     ) -> Result<UsageSummary, LocalError> {
         let cutoff = now - Duration::days(LOOKBACK_DAYS);
         let cache = normalize_cache(self.cache_store.load().ok().flatten());
-        let mut next_files: Map<String, Value> = Map::new();
-
         let project_entries = match std::fs::read_dir(&self.projects_dir) {
             Ok(entries) => entries,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(LocalError::NoData),
@@ -89,38 +87,76 @@ impl LocalDataService {
             Err(_) => return Ok(summarize_usage(&Value::Object(Map::new()), pricing, now)),
         };
 
+        let mut project_paths = Vec::new();
         for project in project_entries.flatten() {
-            if !project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                continue;
-            }
-            let files = match std::fs::read_dir(project.path()) {
-                Ok(f) => f,
-                Err(_) => continue,
-            };
-            for file in files.flatten() {
-                let path = file.path();
-                if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
-                    continue;
-                }
-                let meta = match std::fs::metadata(&path) {
-                    Ok(m) => m,
-                    Err(_) => continue,
-                };
-                let mtime_ms = mtime_ms(&meta);
-                let size = meta.len();
-                if mtime_ms < cutoff.timestamp_millis() as f64 {
-                    continue;
-                }
-                let key = path.to_string_lossy().to_string();
-                let previous = cache.get(&key).cloned();
-                if is_unchanged(previous.as_ref(), mtime_ms, size) {
-                    next_files.insert(key.clone(), previous.unwrap());
-                    continue;
-                }
-                let aggregate = parse_jsonl_file(&path, previous.as_ref(), mtime_ms, size, cutoff);
-                next_files.insert(key, aggregate);
+            if project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                project_paths.push(project.path());
             }
         }
+
+        let mut next_files: Map<String, Value> = Map::new();
+
+        // Spawn a thread scope to read and process project directories in parallel.
+        // We use available_parallelism() but cap it to avoid excessive context switching,
+        // as file IO parallelism has diminishing returns.
+        let num_threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4)
+            .min(8);
+
+        std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(num_threads);
+            let project_paths = &project_paths;
+            let cache = &cache;
+
+            for i in 0..num_threads {
+                handles.push(s.spawn(move || {
+                    let mut local_next_files: Map<String, Value> = Map::new();
+                    // Interleave the paths among threads.
+                    for (idx, path) in project_paths.iter().enumerate() {
+                        if idx % num_threads != i {
+                            continue;
+                        }
+                        let files = match std::fs::read_dir(path) {
+                            Ok(f) => f,
+                            Err(_) => continue,
+                        };
+                        for file in files.flatten() {
+                            let path = file.path();
+                            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                                continue;
+                            }
+                            let meta = match std::fs::metadata(&path) {
+                                Ok(m) => m,
+                                Err(_) => continue,
+                            };
+                            let mtime_ms = mtime_ms(&meta);
+                            let size = meta.len();
+                            if mtime_ms < cutoff.timestamp_millis() as f64 {
+                                continue;
+                            }
+                            let key = path.to_string_lossy().to_string();
+                            let previous = cache.get(&key).cloned();
+                            if is_unchanged(previous.as_ref(), mtime_ms, size) {
+                                local_next_files.insert(key.clone(), previous.unwrap());
+                                continue;
+                            }
+                            let aggregate =
+                                parse_jsonl_file(&path, previous.as_ref(), mtime_ms, size, cutoff);
+                            local_next_files.insert(key, aggregate);
+                        }
+                    }
+                    local_next_files
+                }));
+            }
+
+            for handle in handles {
+                let local_map = handle.join().unwrap();
+                for (k, v) in local_map {
+                    next_files.insert(k, v);
+                }
+            }
+        });
 
         let next_cache = json!({
             "version": CACHE_VERSION,
