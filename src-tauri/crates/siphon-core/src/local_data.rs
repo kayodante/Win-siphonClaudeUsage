@@ -257,6 +257,33 @@ fn normalize_tokens(v: &Value) -> Tokens {
 /// Parse a JSONL chunk, folding assistant-usage records into `days`/`hourly`
 /// token maps. Returns the trailing partial line (`remainder`). Port of
 /// `parseJsonlChunk`. `seen` de-dups within a single parse by `messageId:requestId`.
+
+#[derive(serde::Deserialize)]
+struct LogRecord<'a> {
+    #[serde(rename = "type")]
+    record_type: Option<&'a str>,
+    timestamp: Option<&'a str>,
+    #[serde(rename = "requestId")]
+    request_id: Option<&'a str>,
+    #[serde(borrow)]
+    message: Option<MessageRecord<'a>>,
+}
+
+#[derive(serde::Deserialize)]
+struct MessageRecord<'a> {
+    id: Option<&'a str>,
+    model: Option<&'a str>,
+    usage: Option<UsageRecord>,
+}
+
+#[derive(serde::Deserialize)]
+struct UsageRecord {
+    input_tokens: Option<i64>,
+    output_tokens: Option<i64>,
+    cache_read_input_tokens: Option<i64>,
+    cache_creation_input_tokens: Option<i64>,
+}
+
 pub fn parse_jsonl_chunk(
     chunk: &str,
     days: &mut Map<String, Value>,
@@ -276,20 +303,20 @@ pub fn parse_jsonl_chunk(
         if line.trim().is_empty() || !line.contains("\"assistant\"") {
             continue;
         }
-        let record: Value = match serde_json::from_str(line) {
+        let record: LogRecord = match serde_json::from_str(line) {
             Ok(v) => v,
             Err(_) => continue,
         };
-        if record.get("type").and_then(|v| v.as_str()) != Some("assistant") {
+        if record.record_type != Some("assistant") {
             continue;
         }
-        let Some(message) = record.get("message") else {
+        let Some(message) = record.message else {
             continue;
         };
-        let Some(usage) = message.get("usage") else {
+        let Some(usage) = message.usage else {
             continue;
         };
-        let Some(timestamp) = record.get("timestamp").and_then(|v| v.as_str()) else {
+        let Some(timestamp) = record.timestamp else {
             continue;
         };
         let Some(entry_time) = parse_iso(timestamp) else {
@@ -299,26 +326,28 @@ pub fn parse_jsonl_chunk(
             continue;
         }
         let model = message
-            .get("model")
-            .and_then(|v| v.as_str())
+            .model
             .map(|s| s.to_string())
             .or_else(|| last_model.clone())
             .unwrap_or_else(|| "unknown".to_string());
         if model == "<synthetic>" || model.starts_with("synthetic") {
             continue;
         }
-        let message_id = message.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let request_id = record
-            .get("requestId")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let message_id = message.id.unwrap_or("");
+        let request_id = record.request_id.unwrap_or("");
+
         if !message_id.is_empty() && !request_id.is_empty() {
             let dedup_key = format!("{message_id}:{request_id}");
             if !seen.insert(dedup_key) {
                 continue;
             }
         }
-        let tokens = normalize_jsonl_usage(usage);
+        let tokens = [
+            usage.input_tokens.unwrap_or(0),
+            usage.output_tokens.unwrap_or(0),
+            usage.cache_read_input_tokens.unwrap_or(0),
+            usage.cache_creation_input_tokens.unwrap_or(0),
+        ];
         let date_key = to_local_date_key(entry_time);
         let hour_key = to_hour_key(entry_time);
         add_to_nested(days, &date_key, &model, tokens);
@@ -326,16 +355,6 @@ pub fn parse_jsonl_chunk(
         *last_model = Some(model);
     }
     remainder
-}
-
-fn normalize_jsonl_usage(usage: &Value) -> [i64; 4] {
-    let n = |k: &str| usage.get(k).and_then(|v| v.as_i64()).unwrap_or(0);
-    [
-        n("input_tokens"),
-        n("output_tokens"),
-        n("cache_read_input_tokens"),
-        n("cache_creation_input_tokens"),
-    ]
 }
 
 fn add_to_nested(map: &mut Map<String, Value>, bucket: &str, model: &str, tokens: [i64; 4]) {
@@ -599,5 +618,35 @@ mod tests {
         let mut seen = std::collections::HashSet::new();
         parse_jsonl_chunk(&chunk, &mut days, &mut hourly, &mut lm, cutoff, &mut seen);
         assert!(days.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod bench_tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn bench_json_parsing() {
+        let chunk = r#"{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_1", "message": {"id": "m1", "model": "claude-opus-4-8", "usage": {"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}"#.repeat(10000).replace("}{", "}\n{");
+
+        // Baseline (current implementation)
+        let mut days = Map::new();
+        let mut hourly = Map::new();
+        let mut last_model = None;
+        let mut seen = std::collections::HashSet::new();
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(36500); // long ago
+
+        let start = Instant::now();
+        parse_jsonl_chunk(
+            &chunk,
+            &mut days,
+            &mut hourly,
+            &mut last_model,
+            cutoff,
+            &mut seen,
+        );
+        let elapsed = start.elapsed();
+        println!("Value parsing elapsed: {:?}", elapsed);
     }
 }
