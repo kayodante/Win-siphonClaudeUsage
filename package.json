@@ -37,5 +37,8 @@
     "eslint": "^9.0.0",
     "fallow": "^2.102.0",
     "globals": "^16.0.0"
+  },
+  "dependencies": {
+    "jsdom": "^29.1.1"
   }
 }
