@@ -429,7 +429,9 @@ pub fn merge_file_maps(files: &Map<String, Value>, key: &str) -> Value {
             };
             for (model, tokens) in model_map {
                 let get = |k: &[&str]| -> i64 {
-                    k.iter().find_map(|kk| tokens.get(*kk).and_then(|v| v.as_i64())).unwrap_or(0)
+                    k.iter()
+                        .find_map(|kk| tokens.get(*kk).and_then(|v| v.as_i64()))
+                        .unwrap_or(0)
                 };
                 add_to_nested(
                     &mut merged,
