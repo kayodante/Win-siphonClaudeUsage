@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-
 pub struct ClaudeSettings {
     exe_path: String,
     settings_path: PathBuf,
