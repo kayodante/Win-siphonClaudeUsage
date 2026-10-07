@@ -826,6 +826,16 @@ try {
   }
   window.siphon.onView(showView);
 
+
+  if (!i18nCache) {
+    i18nCache = {
+      text: document.querySelectorAll('[data-i18n]'),
+      title: document.querySelectorAll('[data-i18n-title]'),
+      tooltip: document.querySelectorAll('[data-i18n-tooltip]'),
+      ariaLabel: document.querySelectorAll('[data-i18n-aria-label]'),
+      placeholder: document.querySelectorAll('[data-i18n-placeholder]')
+    };
+  }
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
