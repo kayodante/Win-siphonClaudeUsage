@@ -106,11 +106,7 @@ pub struct PrefSet {
 }
 
 #[tauri::command]
-pub async fn prefs_set(
-    app: AppHandle,
-    ctx: State<'_, AppContext>,
-    args: PrefSet,
-) -> CommandResult {
+pub async fn prefs_set(app: AppHandle, ctx: State<'_, AppContext>, args: PrefSet) -> CommandResult {
     let PrefSet { path, value } = args;
     if !ALLOWED_PREFS.contains(&path.as_str()) {
         return Err(CommandError::UnknownPreference(path));
