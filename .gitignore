@@ -42,4 +42,3 @@ credentials.json
 *.pfx
 *.cer
 *.crt
-test_claude/

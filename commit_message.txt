@@ -1,5 +1,0 @@
-⚡ [performance] Optimize summarize_from_jsonl via threading
-
-💡 What: Parallelize the project directory reading using `std::thread::scope` with up to 8 threads in `summarize_from_jsonl`.
-🎯 Why: File I/O when looking up many projects in `~/.claude/projects/` block heavily and run sequentially, slowing down refresh loops.
-📊 Measured Improvement: Before the change, sequentially traversing 2000 project directories with 20 jsonl files each took ~179 ms. After using an 8-thread pool with `std::thread::scope`, it reduced to ~46 ms, achieving a ~4x speedup on project reading without requiring async runtime overhead.
