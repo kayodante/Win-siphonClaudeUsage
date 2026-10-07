@@ -18,6 +18,8 @@ import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
+let i18nCache = null;
+
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   settingsButton: document.querySelector('#settingsButton'),
@@ -823,6 +825,7 @@ try {
     elements.appVersionText.textContent = `Siphon - Claude Usage  —  v ${appInfo.version}`;
   }
   window.siphon.onView(showView);
+
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
@@ -1475,20 +1478,8 @@ function currentLanguage() {
   return SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
 }
 
-let i18nCache = null;
-
 function applyTranslations(lang) {
   document.documentElement.lang = lang;
-
-  if (!i18nCache) {
-    i18nCache = {
-      text: document.querySelectorAll('[data-i18n]'),
-      title: document.querySelectorAll('[data-i18n-title]'),
-      tooltip: document.querySelectorAll('[data-i18n-tooltip]'),
-      ariaLabel: document.querySelectorAll('[data-i18n-aria-label]'),
-      placeholder: document.querySelectorAll('[data-i18n-placeholder]')
-    };
-  }
 
   i18nCache.text.forEach(element => {
     const translated = t(element.dataset.i18n, lang);
