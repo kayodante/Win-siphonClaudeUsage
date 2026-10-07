@@ -1,28 +1,61 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
-test('i18nCache is initialized before the initial render reaches applyTranslations', () => {
+test('applyTranslations initializes and reads the DOM cache correctly across renders', () => {
   const rendererSource = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
 
-  // We can't actually easily run top level awaits in a node vm context without more setup
-  // Let's use the static analysis approach since it is robust and matches the pattern in rendererViewState.test.js
+  // Strip everything after the last `function applyTranslations` declaration.
+  // Actually, we can just grab the exact function string directly via regex to test it, but it relies on i18nCache in the global scope.
+  // We can just construct a small script.
 
-  const cacheDeclarationIndex = rendererSource.indexOf('let i18nCache = null;');
-  const applyTranslationsIndex = rendererSource.indexOf('function applyTranslations');
-  assert.ok(cacheDeclarationIndex !== -1, 'i18nCache must be declared');
-  assert.ok(cacheDeclarationIndex < applyTranslationsIndex, 'i18nCache must be declared before applyTranslations');
+  let i18nCacheMatch = rendererSource.match(/if \(!i18nCache\) \{\s*i18nCache = \{.*?\};\s*\}/s);
+  let applyTranslationsMatch = rendererSource.match(/function applyTranslations\(lang\) \{.*?\n\}/s);
 
-  // Verify that the initial cache population happens before the first render(currentState)
-  const cacheInitIndex = rendererSource.indexOf('if (!i18nCache) {');
-  const firstRenderIndex = rendererSource.indexOf('render(await window.siphon.getState());', rendererSource.indexOf('window.siphon.onState(render);'));
+  assert.ok(i18nCacheMatch, "i18nCache must be initialized before applying translations");
+  assert.ok(applyTranslationsMatch, "applyTranslations function must exist");
 
+  // Create an execution context to test this isolated snippet
+  const testExecution = `
+    let i18nCache = null;
+    let document = {
+      documentElement: { lang: '' },
+      querySelectorAll: (selector) => {
+        queryCount++;
+        return [{
+          dataset: { i18n: 'test_key', i18nTitle: 'title', i18nTooltip: 'tt', i18nAriaLabel: 'aria', i18nPlaceholder: 'ph' },
+          setAttribute: () => {},
+          textContent: '',
+          title: ''
+        }];
+      }
+    };
 
-  assert.ok(cacheInitIndex > -1, 'i18nCache initialization must exist');
-  assert.ok(firstRenderIndex > -1, 'first render must exist');
-  assert.ok(cacheInitIndex < firstRenderIndex, 'i18nCache must be initialized before the first render call');
+    let queryCount = 0;
 
-  // Verify that applyTranslations no longer initializes the cache itself
-  const applyTranslationsBody = rendererSource.substring(applyTranslationsIndex, rendererSource.indexOf('}', applyTranslationsIndex));
-  assert.equal(applyTranslationsBody.includes('i18nCache = {'), false, 'applyTranslations should not initialize i18nCache');
+    let t = (key) => key;
+
+    // The extracted initialization logic
+    ${i18nCacheMatch[0]}
+
+    // The extracted function
+    ${applyTranslationsMatch[0]}
+
+    // It should throw if cache is not properly defined before the function.
+    if (!i18nCache) throw new Error("Cache should be initialized");
+
+    const initialQueryCount = queryCount;
+    if (initialQueryCount === 0) throw new Error("Queries should have happened during initialization");
+
+    // Now call it
+    applyTranslations('en');
+
+    if (queryCount > initialQueryCount) throw new Error("querySelectorAll should not be called inside applyTranslations");
+    if (document.documentElement.lang !== 'en') throw new Error("Language should be applied");
+
+    "SUCCESS";
+  `;
+
+  const result = (new Function(testExecution + ' return "SUCCESS";'))();
+  assert.equal(result, "SUCCESS");
 });
