@@ -597,4 +597,48 @@ mod tests {
         parse_jsonl_chunk(&chunk, &mut days, &mut hourly, &mut lm, cutoff, &mut seen);
         assert!(days.is_empty());
     }
+    #[test]
+    fn parses_escaped_strings_and_fallbacks() {
+        let now = Utc.with_ymd_and_hms(2026, 7, 6, 12, 0, 0).unwrap();
+        let cutoff = now - Duration::days(35);
+
+        let chunk = r#"{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_1\\n", "message": {"id": "m1", "model": "claude-opus-4-8", "usage": {"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_2", "message": {"id": "m2", "model": 123, "usage": {"input_tokens": 50, "output_tokens": 20, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_3", "message": {"id": "m3", "model": "claude-opus-4-8", "usage": {"input_tokens": "not a number", "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_4", "message": {"id": "m4", "model": "claude-opus-4-8"}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_4", "message": {"id": "m4", "model": "claude-opus-4-8", "usage": {"input_tokens": 999}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z"#;
+
+        let mut days = Map::new();
+        let mut hourly = Map::new();
+        let mut last_model = None;
+        let mut seen = std::collections::HashSet::new();
+
+        let remainder = parse_jsonl_chunk(
+            chunk,
+            &mut days,
+            &mut hourly,
+            &mut last_model,
+            cutoff,
+            &mut seen,
+        );
+        assert_eq!(
+            remainder,
+            r#"{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z"#
+        );
+
+        let day = to_local_date_key(now);
+
+        // m1: 100
+        // m2: 50 (model 123 falls back to None, which falls back to last_model = claude-opus-4-8)
+        // m3: 0 (defaulted to 0 because "not a number" is not an i64)
+        // m4 (no usage): skipped, meaning the deduplication key is NOT consumed!
+        // m4 (with usage): 999
+        // Total input: 100 + 50 + 0 + 999 = 1149
+        let entry = &days[&day]["claude-opus-4-8"];
+        assert_eq!(entry["input"], 1149);
+
+        // m1: 50 + m2: 20 + m3: 50 + m4: 0 = 120
+        assert_eq!(entry["output"], 120);
+    }
 }
