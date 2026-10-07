@@ -563,7 +563,7 @@ mod bench_tests {
         let mut seen = std::collections::HashSet::new();
 
         let remainder = parse_jsonl_chunk(
-            &chunk,
+            chunk,
             &mut days,
             &mut hourly,
             &mut last_model,
