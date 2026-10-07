@@ -257,24 +257,85 @@ fn normalize_tokens(v: &Value) -> Tokens {
 /// Parse a JSONL chunk, folding assistant-usage records into `days`/`hourly`
 /// token maps. Returns the trailing partial line (`remainder`). Port of
 /// `parseJsonlChunk`. `seen` de-dups within a single parse by `messageId:requestId`.
-use std::borrow::Cow;
-
-#[derive(serde::Deserialize)]
-struct LogRecord<'a> {
-    #[serde(rename = "type")]
-    record_type: Option<Cow<'a, str>>,
-    timestamp: Option<Cow<'a, str>>,
-    #[serde(rename = "requestId")]
-    request_id: Option<Cow<'a, str>>,
-    #[serde(borrow)]
-    message: Option<MessageRecord<'a>>,
+pub fn parse_jsonl_chunk(
+    chunk: &str,
+    days: &mut Map<String, Value>,
+    hourly: &mut Map<String, Value>,
+    last_model: &mut Option<String>,
+    cutoff: DateTime<Utc>,
+    seen: &mut std::collections::HashSet<String>,
+) -> String {
+    let mut remainder = String::new();
+    let mut iter = chunk.split('\n').peekable();
+    while let Some(line) = iter.next() {
+        // The final element after the last '\n' is the partial line.
+        if iter.peek().is_none() {
+            remainder = line.to_string();
+            break;
+        }
+        if line.trim().is_empty() || !line.contains("\"assistant\"") {
+            continue;
+        }
+        let record: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        if record.get("type").and_then(|v| v.as_str()) != Some("assistant") {
+            continue;
+        }
+        let Some(message) = record.get("message") else {
+            continue;
+        };
+        let Some(usage) = message.get("usage") else {
+            continue;
+        };
+        let Some(timestamp) = record.get("timestamp").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let Some(entry_time) = parse_iso(timestamp) else {
+            continue;
+        };
+        if entry_time < cutoff {
+            continue;
+        }
+        let model = message
+            .get("model")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .or_else(|| last_model.clone())
+            .unwrap_or_else(|| "unknown".to_string());
+        if model == "<synthetic>" || model.starts_with("synthetic") {
+            continue;
+        }
+        let message_id = message.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        let request_id = record
+            .get("requestId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if !message_id.is_empty() && !request_id.is_empty() {
+            let dedup_key = format!("{message_id}:{request_id}");
+            if !seen.insert(dedup_key) {
+                continue;
+            }
+        }
+        let tokens = normalize_jsonl_usage(usage);
+        let date_key = to_local_date_key(entry_time);
+        let hour_key = to_hour_key(entry_time);
+        add_to_nested(days, &date_key, &model, tokens);
+        add_to_nested(hourly, &hour_key, &model, tokens);
+        *last_model = Some(model);
+    }
+    remainder
 }
 
-#[derive(serde::Deserialize)]
-struct MessageRecord<'a> {
-    id: Option<Cow<'a, str>>,
-    model: Option<Cow<'a, str>>,
-    usage: Option<serde_json::Value>,
+fn normalize_jsonl_usage(usage: &Value) -> [i64; 4] {
+    let n = |k: &str| usage.get(k).and_then(|v| v.as_i64()).unwrap_or(0);
+    [
+        n("input_tokens"),
+        n("output_tokens"),
+        n("cache_read_input_tokens"),
+        n("cache_creation_input_tokens"),
+    ]
 }
 
 fn add_to_nested(map: &mut Map<String, Value>, bucket: &str, model: &str, tokens: [i64; 4]) {
@@ -539,21 +600,15 @@ mod tests {
         parse_jsonl_chunk(&chunk, &mut days, &mut hourly, &mut lm, cutoff, &mut seen);
         assert!(days.is_empty());
     }
-}
-
-#[cfg(test)]
-mod bench_tests {
-    use super::*;
-    use chrono::TimeZone;
-
     #[test]
     fn parses_escaped_strings_and_fallbacks() {
         let now = Utc.with_ymd_and_hms(2026, 7, 6, 12, 0, 0).unwrap();
         let cutoff = now - Duration::days(35);
 
-        let chunk = r#"{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_1\n", "message": {"id": "m1", "model": "claude-opus-4-8", "usage": {"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}
-{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_2", "message": {"id": "m2", "model": "claude-opus-4-8"}}
+        let chunk = r#"{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_1\\n", "message": {"id": "m1", "model": "claude-opus-4-8", "usage": {"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_2", "message": {"id": "m2", "model": 123, "usage": {"input_tokens": 50, "output_tokens": 20, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}
 {"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_3", "message": {"id": "m3", "model": "claude-opus-4-8", "usage": {"input_tokens": "not a number", "output_tokens": 50, "cache_read_input_tokens": 10, "cache_creation_input_tokens": 5}}}
+{"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_4", "message": {"id": "m4", "model": "claude-opus-4-8"}}
 {"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z", "requestId": "req_4", "message": {"id": "m4", "model": "claude-opus-4-8", "usage": {"input_tokens": 999}}}
 {"type": "assistant", "timestamp": "2026-07-06T10:00:00.000Z"#;
 
@@ -576,86 +631,17 @@ mod bench_tests {
         );
 
         let day = to_local_date_key(now);
+
+        // m1: 100
+        // m2: 50 (model 123 falls back to None, which falls back to last_model = claude-opus-4-8)
+        // m3: 0 (defaulted to 0 because "not a number" is not an i64)
+        // m4 (no usage): skipped, meaning the deduplication key is NOT consumed!
+        // m4 (with usage): 999
+        // Total input: 100 + 50 + 0 + 999 = 1149
         let entry = &days[&day]["claude-opus-4-8"];
+        assert_eq!(entry["input"], 1149);
 
-        // m1: 100 + m3: 0 (defaulted) + m4: 999 = 1099
-        assert_eq!(entry["input"], 1099);
-        // m1: 50 + m3: 50 = 100
-        assert_eq!(entry["output"], 100);
+        // m1: 50 + m2: 20 + m3: 50 + m4: 0 = 120
+        assert_eq!(entry["output"], 120);
     }
-}
-pub fn parse_jsonl_chunk(
-    chunk: &str,
-    days: &mut Map<String, Value>,
-    hourly: &mut Map<String, Value>,
-    last_model: &mut Option<String>,
-    cutoff: DateTime<Utc>,
-    seen: &mut std::collections::HashSet<String>,
-) -> String {
-    let mut remainder = String::new();
-    let mut iter = chunk.split('\n').peekable();
-    while let Some(line) = iter.next() {
-        if iter.peek().is_none() {
-            remainder = line.to_string();
-            break;
-        }
-        if line.trim().is_empty() || !line.contains("\"assistant\"") {
-            continue;
-        }
-        let record: LogRecord = match serde_json::from_str(line) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-        if record.record_type.as_deref() != Some("assistant") {
-            continue;
-        }
-        let Some(message) = record.message else {
-            continue;
-        };
-        let Some(timestamp) = record.timestamp else {
-            continue;
-        };
-        let Some(entry_time) = parse_iso(timestamp.as_ref()) else {
-            continue;
-        };
-        if entry_time < cutoff {
-            continue;
-        }
-        let model = message
-            .model
-            .map(|s| s.into_owned())
-            .or_else(|| last_model.clone())
-            .unwrap_or_else(|| "unknown".to_string());
-        if model == "<synthetic>" || model.starts_with("synthetic") {
-            continue;
-        }
-        let message_id = message.id.as_deref().unwrap_or("");
-        let request_id = record.request_id.as_deref().unwrap_or("");
-
-        if !message_id.is_empty() && !request_id.is_empty() {
-            let dedup_key = format!("{message_id}:{request_id}");
-            if !seen.insert(dedup_key) {
-                continue;
-            }
-        }
-
-        // usage is Option<serde_json::Value> which we normalize manually
-        let mut tokens = [0, 0, 0, 0];
-        if let Some(usage) = message.usage {
-            let n = |k: &str| usage.get(k).and_then(|v| v.as_i64()).unwrap_or(0);
-            tokens = [
-                n("input_tokens"),
-                n("output_tokens"),
-                n("cache_read_input_tokens"),
-                n("cache_creation_input_tokens"),
-            ];
-        }
-
-        let date_key = to_local_date_key(entry_time);
-        let hour_key = to_hour_key(entry_time);
-        add_to_nested(days, &date_key, &model, tokens);
-        add_to_nested(hourly, &hour_key, &model, tokens);
-        *last_model = Some(model);
-    }
-    remainder
 }
