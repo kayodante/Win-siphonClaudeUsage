@@ -80,8 +80,6 @@ impl LocalDataService {
     ) -> Result<UsageSummary, LocalError> {
         let cutoff = now - Duration::days(LOOKBACK_DAYS);
         let cache = normalize_cache(self.cache_store.load().ok().flatten());
-        let mut next_files: Map<String, Value> = Map::new();
-
         let project_entries = match std::fs::read_dir(&self.projects_dir) {
             Ok(entries) => entries,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(LocalError::NoData),
@@ -89,38 +87,88 @@ impl LocalDataService {
             Err(_) => return Ok(summarize_usage(&Value::Object(Map::new()), pricing, now)),
         };
 
+        let mut project_paths = Vec::new();
         for project in project_entries.flatten() {
-            if !project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                continue;
-            }
-            let files = match std::fs::read_dir(project.path()) {
-                Ok(f) => f,
-                Err(_) => continue,
-            };
-            for file in files.flatten() {
-                let path = file.path();
-                if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
-                    continue;
-                }
-                let meta = match std::fs::metadata(&path) {
-                    Ok(m) => m,
-                    Err(_) => continue,
-                };
-                let mtime_ms = mtime_ms(&meta);
-                let size = meta.len();
-                if mtime_ms < cutoff.timestamp_millis() as f64 {
-                    continue;
-                }
-                let key = path.to_string_lossy().to_string();
-                let previous = cache.get(&key).cloned();
-                if is_unchanged(previous.as_ref(), mtime_ms, size) {
-                    next_files.insert(key.clone(), previous.unwrap());
-                    continue;
-                }
-                let aggregate = parse_jsonl_file(&path, previous.as_ref(), mtime_ms, size, cutoff);
-                next_files.insert(key, aggregate);
+            if project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                project_paths.push(project.path());
             }
         }
+
+        let mut next_files: Map<String, Value> = Map::new();
+
+        if project_paths.is_empty() {
+            let next_cache = json!({
+                "version": CACHE_VERSION,
+                "updatedAt": now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
+                "files": Value::Object(next_files.clone()),
+            });
+            let _ = self.cache_store.save(Some(&next_cache));
+            let days = merge_file_maps(&next_files, "days");
+            return Ok(summarize_usage(&days, pricing, now));
+        }
+
+        // Spawn a thread scope to read and process project directories in parallel.
+        // We use available_parallelism() but cap it to avoid excessive context switching,
+        // as file IO parallelism has diminishing returns. Also cap it by the number of projects.
+        let num_threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4)
+            .min(8)
+            .min(project_paths.len());
+
+        std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(num_threads);
+            let project_paths = &project_paths;
+            let cache = &cache;
+
+            for i in 0..num_threads {
+                handles.push(s.spawn(move || {
+                    let mut local_next_files: Map<String, Value> = Map::new();
+                    // Interleave the paths among threads.
+                    for (idx, path) in project_paths.iter().enumerate() {
+                        if idx % num_threads != i {
+                            continue;
+                        }
+                        let files = match std::fs::read_dir(path) {
+                            Ok(f) => f,
+                            Err(_) => continue,
+                        };
+                        for file in files.flatten() {
+                            let path = file.path();
+                            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                                continue;
+                            }
+                            let meta = match std::fs::metadata(&path) {
+                                Ok(m) => m,
+                                Err(_) => continue,
+                            };
+                            let mtime_ms = mtime_ms(&meta);
+                            let size = meta.len();
+                            if mtime_ms < cutoff.timestamp_millis() as f64 {
+                                continue;
+                            }
+                            let key = path.to_string_lossy().to_string();
+                            let previous = cache.get(&key).cloned();
+                            if is_unchanged(previous.as_ref(), mtime_ms, size) {
+                                local_next_files.insert(key.clone(), previous.unwrap());
+                                continue;
+                            }
+                            let aggregate =
+                                parse_jsonl_file(&path, previous.as_ref(), mtime_ms, size, cutoff);
+                            local_next_files.insert(key, aggregate);
+                        }
+                    }
+                    local_next_files
+                }));
+            }
+
+            for handle in handles {
+                let local_map = handle.join().unwrap();
+                for (k, v) in local_map {
+                    next_files.insert(k, v);
+                }
+            }
+        });
 
         let next_cache = json!({
             "version": CACHE_VERSION,
@@ -531,6 +579,88 @@ mod tests {
         let summary = summarize_usage(&json!({}), None, now);
         assert!(summary.today_stats.is_empty);
         assert!(summary.month_stats.is_empty);
+    }
+
+    #[test]
+    fn full_filesystem_scan_aggregates_multiple_projects() {
+        let dir = std::env::temp_dir().join(format!("siphon-local-data-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let store_path = dir.join("cache.json");
+        let claude_dir = dir.join(".claude");
+        let projects_dir = claude_dir.join("projects");
+        std::fs::create_dir_all(&projects_dir).unwrap();
+
+        // Project A: two files
+        let proj_a = projects_dir.join("proj_a");
+        std::fs::create_dir_all(&proj_a).unwrap();
+        let file_a1 = proj_a.join("1.jsonl");
+        let file_a2 = proj_a.join("2.jsonl");
+
+        let ts1 = "2026-07-06T10:00:00.000Z";
+        let record1 = json!({
+            "type": "assistant", "timestamp": ts1,
+            "message": { "model": "claude-opus", "usage": { "input_tokens": 100, "output_tokens": 50 } }
+        }).to_string();
+        std::fs::write(&file_a1, format!("{}\n", record1)).unwrap();
+
+        let ts2 = "2026-07-06T11:00:00.000Z";
+        let record2 = json!({
+            "type": "assistant", "timestamp": ts2,
+            "message": { "model": "claude-opus", "usage": { "input_tokens": 200, "output_tokens": 100 } }
+        }).to_string();
+        std::fs::write(&file_a2, format!("{}\n", record2)).unwrap();
+
+        // Project B: one file
+        let proj_b = projects_dir.join("proj_b");
+        std::fs::create_dir_all(&proj_b).unwrap();
+        let file_b1 = proj_b.join("1.jsonl");
+        let ts3 = "2026-07-06T12:00:00.000Z";
+        let record3 = json!({
+            "type": "assistant", "timestamp": ts3,
+            "message": { "model": "claude-sonnet", "usage": { "input_tokens": 500, "output_tokens": 0 } }
+        }).to_string();
+        std::fs::write(&file_b1, format!("{}\n", record3)).unwrap();
+
+        let svc = LocalDataService::new(Some(claude_dir.clone()), store_path.clone());
+        let now = chrono::Utc.with_ymd_and_hms(2026, 7, 6, 12, 0, 0).unwrap();
+
+        // 1. Initial load
+        let summary1 = svc.load(now).unwrap();
+        assert_eq!(
+            summary1.today_stats.total_tokens,
+            100 + 50 + 200 + 100 + 500
+        );
+
+        // 2. Unchanged cached files (simulate refresh)
+        let summary2 = svc.load(now).unwrap();
+        assert_eq!(
+            summary2.today_stats.total_tokens,
+            100 + 50 + 200 + 100 + 500
+        );
+
+        // 3. Appended record
+        let ts4 = "2026-07-06T12:30:00.000Z";
+        let record4 = json!({
+            "type": "assistant", "timestamp": ts4,
+            "message": { "model": "claude-sonnet", "usage": { "input_tokens": 0, "output_tokens": 100 } }
+        }).to_string();
+        let mut appended = std::fs::read_to_string(&file_b1).unwrap();
+        appended.push_str(&format!("{}\n", record4));
+        std::fs::write(&file_b1, appended).unwrap();
+
+        let summary3 = svc.load(now).unwrap();
+        assert_eq!(
+            summary3.today_stats.total_tokens,
+            100 + 50 + 200 + 100 + 500 + 100
+        );
+
+        // 4. Removed file
+        std::fs::remove_file(&file_a2).unwrap();
+        let summary4 = svc.load(now).unwrap();
+        // file_a2 had 300 tokens, so now we should have (total_prev - 300) = (950 + 100) - 300 = 750
+        assert_eq!(summary4.today_stats.total_tokens, 100 + 50 + 500 + 100);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
