@@ -5,10 +5,14 @@ import { readFileSync } from 'node:fs';
 test('applyTranslations caches DOM queries and updates text on subsequent renders', async () => {
   const rendererSource = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
 
-  let runnableSource = rendererSource.replace(/import\s+.*?\s+from\s+['"].*?['"];?/gs, '');
-  runnableSource = runnableSource.replace(/appInfo = await window\.siphon\.getAppInfo\(\);/g, 'appInfo = {version: "1.0"};');
-  runnableSource = runnableSource.replace(/render\(await window\.siphon\.getState\(\)\);/g, 'window.siphon.getState().then(s => render(s));'); runnableSource = runnableSource.replace(/await /g, '');
+  // We are going to construct a test environment that supports top level awaits via async IIFE
+  // without blindly removing all 'await's, as that changes bootstrap execution logic.
 
+  // Strip imports so we can run the code block using eval
+  let runnableSource = rendererSource.replace(/import\s+.*?\s+from\s+['"].*?['"];?/gs, '');
+  runnableSource = runnableSource.replace('let i18nCache = null;', 'var i18nCache = null;');
+
+  // Provide dependencies
   const scriptEnv = `
     const document = {
       createDocumentFragment: () => ({ appendChild: () => {} }),
@@ -64,7 +68,9 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
         onUpdateProgress: () => {},
         onUpdateDownloaded: () => {},
         installUpdate: () => {},
-        onUpdateError: () => {}
+        onUpdateError: () => {},
+        setPreference: () => Promise.resolve(),
+        submitCode: () => Promise.resolve()
       }
     };
     const console = { log: () => {}, warn: () => {} };
@@ -105,42 +111,41 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
   const testExecution = `
     ${scriptEnv}
 
-    ${runnableSource}
-
-    let result = "PENDING";
-
-    console.log(mockElements['[data-i18n]'][0].textContent);
-
-
-    // Provide a synchronous test outcome instead of setTimeout
+    // We execute the module inside an async IIFE to support top level await.
+    // If it throws an error during bootstrap, we catch it and fail the test.
     try {
-      if (!i18nCache) throw new Error("i18nCache should be populated after bootstrap");
+      ${runnableSource}
+    } catch(e) {
+      return "BOOTSTRAP_ERROR: " + e.message;
+    }
+
+    // Now verify the state after initial await resolution
+    try {
+      if (typeof i18nCache === 'undefined' || !i18nCache) throw new Error("i18nCache should be populated after bootstrap");
 
       const initialQueryCount = queryCount;
       if (initialQueryCount === 0) throw new Error("DOM queries should have executed during initialization");
 
-      // Ensure translations are awaited or properly mock the t translation method to just append _lang
-      // skip
-      // skip
+      if (mockElements['[data-i18n]'][0].textContent !== 'test_key_en') throw new Error("Text content not translated to EN: " + mockElements['[data-i18n]'][0].textContent);
+      if (mockElements['[data-i18n-title]'][0].title !== 'test_title_en') throw new Error("Title not translated to EN");
+      if (mockElements['[data-i18n-aria-label]'][0]['aria-label'] !== 'test_aria_en') throw new Error("Aria label not translated to EN");
 
+      // Simulate language change
       currentStateCallback({ preferences: { language: 'pt-BR' } });
 
       if (queryCount > initialQueryCount) throw new Error("querySelectorAll should not be called again after initial cache");
 
       if (document.documentElement.lang !== 'pt-BR') throw new Error("documentElement.lang did not update");
-      // skip
-      // skip
+      if (mockElements['[data-i18n]'][0].textContent !== 'test_key_pt-BR') throw new Error("Text content not translated to pt-BR");
+      if (mockElements['[data-i18n-title]'][0].title !== 'test_title_pt-BR') throw new Error("Title not translated to pt-BR");
+      if (mockElements['[data-i18n-aria-label]'][0]['aria-label'] !== 'test_aria_pt-BR') throw new Error("Aria label not translated to pt-BR");
 
-      result = "SUCCESS";
+      return "SUCCESS";
     } catch (e) {
-      result = e.message;
+      return e.message;
     }
-
-
-
-
-      return result;
   `;
+
   const result = await (new Function('return (async function() {' + testExecution + '})();'))();
   assert.equal(result, "SUCCESS");
 });
