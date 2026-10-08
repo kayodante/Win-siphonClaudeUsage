@@ -3,22 +3,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Track Claude Code session quota, weekly limits, reset times, and local usage from the Windows system tray.">
-    <meta name="theme-color" content="#080a08">
-    <meta property="og:title" content="Siphon | Claude Code quota, in view.">
-    <meta property="og:description" content="A native Windows tray app for Claude Code quota, reset alerts, and local usage.">
+    <meta name="description" content="Keep Claude Code quota, reset countdowns, and local usage in view with Siphon for Windows." data-pt-content="Acompanhe a cota do Claude Code, contagem de reset e uso local com o Siphon para Windows.">
+    <meta name="theme-color" content="#0c0c0e">
+    <meta property="og:title" content="Siphon — Stay in your flow.">
+    <meta property="og:description" content="Claude Code quota, live widgets, and Windows reset alerts. Free and open source for Windows.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://raw.githubusercontent.com/kayodante/Win-siphonClaudeUsage/main/src/assets/Hero.png">
     <meta property="og:image:alt" content="Siphon showing Claude Code session and weekly usage on Windows">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Siphon | Claude Code quota, in view.">
-    <meta name="twitter:description" content="A native Windows tray app for Claude Code quota, reset alerts, and local usage.">
+    <meta name="twitter:title" content="Siphon — Stay in your flow.">
+    <meta name="twitter:description" content="Claude Code quota, live widgets, and Windows reset alerts. Free and open source for Windows.">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/kayodante/Win-siphonClaudeUsage/main/src/assets/Hero.png">
     <meta name="twitter:image:alt" content="Siphon showing Claude Code session and weekly usage on Windows">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles.css">
-    <title>Siphon | Claude Code quota, in view.</title>
+    <title data-pt="Siphon — O monitor nativo do Claude Code para Windows">Siphon — Native Claude Code monitor for Windows</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -36,195 +37,666 @@
     </script>
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content" data-pt="Pular para o conteúdo principal">Skip to main content</a>
 
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="Siphon home">
-        <img src="assets/Logo.png" alt="" width="103" height="24">
-      </a>
+    <!-- Floating Navigation Shell (CoolDock Style) -->
+    <header class="cd-header" data-cd-header>
+      <div class="cd-nav-shell">
+        <a class="brand" href="#top" aria-label="Siphon home" data-pt-label="Página inicial do Siphon">
+          <img class="brand-icon" src="assets/favicon.svg" alt="" width="26" height="26">
+          <span class="brand-text">siphon.</span>
+        </a>
 
-      <nav class="site-nav" aria-label="Primary navigation">
-        <a href="#features">Features</a>
-        <a href="#privacy">Privacy</a>
-        <a href="#install">Install</a>
-        <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in a new tab)</span></a>
-      </nav>
-
-      <a class="button button-compact button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download>
-        <img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">
-        Download Siphon
-      </a>
-
-      <details class="mobile-menu" data-mobile-menu>
-        <summary>Menu</summary>
-        <nav aria-label="Mobile navigation">
-          <a href="#features">Features</a>
-          <a href="#privacy">Privacy</a>
-          <a href="#install">Install</a>
-          <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in a new tab)</span></a>
+        <nav class="site-nav" aria-label="Primary navigation" data-pt-label="Navegação principal">
+          <a href="#features" data-pt="Recursos">Features</a>
+          <a href="#showcase" data-pt="Demonstração">Showcase</a>
+          <a href="#widgets" data-pt="Widgets">Widgets</a>
+          <a href="#install" data-pt="Instalação">Install</a>
+          <a href="#faq" data-pt="FAQ">FAQ</a>
+          <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub</a>
         </nav>
-      </details>
+
+        <div class="header-actions">
+          <div class="language-switch" role="group" aria-label="Language" data-pt-label="Idioma" data-language-switch hidden>
+            <button type="button" lang="en" data-language="en" aria-label="English" aria-pressed="true">EN</button>
+            <button type="button" lang="pt-BR" data-language="pt-BR" aria-label="Português do Brasil" aria-pressed="false">PT-BR</button>
+          </div>
+          <a class="button button-compact cd-nav-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download>
+            <svg class="button-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>
+            <span data-pt="Baixar">Download</span>
+          </a>
+          <details class="mobile-menu" data-mobile-menu>
+            <summary aria-label="Open navigation" data-pt-label="Abrir navegação">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg>
+            </summary>
+            <nav aria-label="Mobile navigation" data-pt-label="Navegação no celular">
+              <a href="#features" data-pt="Recursos">Features</a>
+              <a href="#showcase" data-pt="Demonstração">Showcase</a>
+              <a href="#widgets" data-pt="Widgets">Widgets</a>
+              <a href="#install" data-pt="Instalação">Install</a>
+              <a href="#faq" data-pt="FAQ">FAQ</a>
+              <a href="https://github.com/kayodante/Win-siphonClaudeUsage">GitHub</a>
+            </nav>
+          </details>
+        </div>
+      </div>
     </header>
 
     <main id="main-content" tabindex="-1">
-      <section class="hero section-grid" id="top" aria-labelledby="hero-title" data-asciify-hero>
-        <div class="hero-intro">
-          <h1 id="hero-title">Keep your quota<br>in view.</h1>
-          <p class="hero-copy">Track your Claude Code session, weekly quota, and reset time without leaving your flow.</p>
-          <div class="hero-actions">
-            <a class="button button-primary button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download><img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">Download Siphon</a>
-            <a class="button button-secondary" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">View releases</a>
+      <!-- Atmospheric Hero Section -->
+      <section class="cd-hero" id="top" tabindex="-1" aria-labelledby="hero-title">
+        <div class="hero-glow-backdrop" aria-hidden="true"></div>
+
+        <div class="hero-inner page-width">
+          <div class="hero-eyebrow">
+            <span class="eyebrow-pill">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span data-pt="App Nativo para Windows 10 e 11">Native App for Windows 10 &amp; 11</span>
+            </span>
           </div>
-        </div>
 
-        <video class="hero-video" data-hero-video src="assets/Home_Depleted.mp4" width="322" height="698" autoplay loop muted playsinline aria-label="Siphon showing a depleted Claude Code session quota on Windows"></video>
+          <h1 id="hero-title" class="hero-heading">
+            <span data-pt="Sua cota do Claude Code,">Your Claude Code quota,</span>
+            <span class="muted" data-pt="sempre no seu ritmo.">always in your flow.</span>
+          </h1>
 
-        <canvas class="hero-asciify" data-asciify-output aria-hidden="true"></canvas>
-      </section>
+          <p class="hero-description" data-pt="Cota da sessão de 5 horas, limite semanal e contagem regressiva para o reset direto na bandeja do Windows — com alertas nativos quando a cota atinge 100%.">
+            5-hour session quota, weekly limits, and countdown to your next reset — right in your Windows tray with native toast notifications.
+          </p>
 
-      <aside class="platform-strip section-grid" aria-label="Product facts">
-        <p><strong>Windows 10 and 11</strong><span>Native Tauri desktop app</span></p>
-        <p><strong>Local usage data</strong><span>No Siphon analytics</span></p>
-        <p><strong>Free and open source</strong><span>MIT licensed</span></p>
-      </aside>
+          <div class="hero-cta-group">
+            <a class="button button-primary hero-button" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>
+              <span data-pt="Baixar para Windows">Download for Windows</span>
+            </a>
+            <div class="winget-inline">
+              <span class="winget-label">winget</span>
+              <code class="winget-inline-code">winget install win-siphon</code>
+            </div>
+          </div>
 
-      <section class="features-section section-grid" id="features" tabindex="-1" aria-labelledby="features-title">
-        <header class="section-heading">
-          <h2 id="features-title">Know the limit before it breaks your flow.</h2>
-          <p>Read the signal, respond at the right moment, and keep Claude Code usage within reach.</p>
-        </header>
-        <div class="feature-story">
-          <article class="feature-chapter feature-chapter-state app-demo" data-product-demo>
-            <div class="chapter-copy">
-              <p class="chapter-index">01 · Read</p>
-              <h3>Read the signal.</h3>
-              <p>Session pressure, weekly runway, reset time, pace, and peak hours stay legible in one quiet window.</p>
-              <div class="demo-state-controls" role="group" aria-label="Quota state preview">
-                <button type="button" data-demo-state="ok" aria-controls="demo-panel-ok" aria-pressed="true">OK</button>
-                <button type="button" data-demo-state="warn" aria-controls="demo-panel-warn" aria-pressed="false">Warn</button>
-                <button type="button" data-demo-state="high" aria-controls="demo-panel-high" aria-pressed="false">High</button>
-                <button type="button" data-demo-state="critical" aria-controls="demo-panel-critical" aria-pressed="false">Critical</button>
-                <button type="button" data-demo-state="depleted" aria-controls="demo-panel-depleted" aria-pressed="false">Depleted</button>
-                <button class="demo-autoplay-toggle" type="button" data-demo-toggle aria-pressed="false" aria-label="Pause the quota state preview">Pause</button>
-              </div>
-              <div class="demo-signal-excerpt" data-demo-signal role="img" aria-label="Example session signal: 25 percent used, on track">
-                <div class="demo-signal-meta">
-                  <span class="demo-pace" data-demo-pace>On track</span>
-                  <span class="demo-peak">Peak hours</span>
-                  <span class="demo-signal-value" data-demo-value>25% used</span>
+          <ul class="hero-trust-list" aria-label="Siphon highlights" data-pt-label="Destaques do Siphon">
+            <li class="trust-item"><span class="check-mark" aria-hidden="true">✓</span> <span data-pt="100% Gratuito &amp; Código Aberto">100% Free &amp; Open Source</span></li>
+            <li class="trust-item"><span class="check-mark" aria-hidden="true">✓</span> <span data-pt="Leitura Local · Sem Telemetria">Local-First · Zero Telemetry</span></li>
+            <li class="trust-item"><span class="check-mark" aria-hidden="true">✓</span> <span data-pt="Feito em Rust e Tauri 2">Engineered in Rust &amp; Tauri</span></li>
+            <li class="trust-item"><span class="check-mark" aria-hidden="true">✓</span> <span data-pt="Windows 10 e 11 Nativo">Windows 10 &amp; 11 Native</span></li>
+          </ul>
+
+          <!-- Hero Stage: Siphon Floating Alone -->
+          <div class="hero-stage">
+            <div class="hero-floating-card" data-asset-slot="brand-3d">
+              <div class="floating-aura" aria-hidden="true"></div>
+              <div class="mockup-window">
+                <div class="mockup-header">
+                  <div class="mockup-brand">
+                    <img src="assets/favicon.svg" alt="" width="18" height="18">
+                    <span>siphon.</span>
+                  </div>
+                  <div class="mockup-badge">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    <span data-pt="Claude Code Ativo">Claude Code Active</span>
+                  </div>
                 </div>
-                <div class="demo-meter" aria-hidden="true"><span data-demo-meter></span></div>
+
+                <div class="mockup-body">
+                  <!-- Session Quota Card -->
+                  <div class="quota-block">
+                    <div class="quota-row">
+                      <span class="quota-title" data-pt="Sessão Atual (5 Horas)">Current Session (5h)</span>
+                      <span class="pace-pill" data-pt="No Ritmo">On Track</span>
+                    </div>
+                    <div class="quota-reading">
+                      <span class="reading-num">25</span><span class="reading-sym">%</span>
+                      <small data-pt="utilizado">used</small>
+                    </div>
+                    <div class="meter-track">
+                      <div class="meter-bar" style="--progress: 25%"></div>
+                    </div>
+                    <div class="quota-footer">
+                      <span data-pt="Reset em 2h 14m">Resets in 2h 14m</span>
+                      <span class="footer-target" data-pt="Alarme armado">Alarm armed</span>
+                    </div>
+                  </div>
+
+                  <!-- Weekly Quota Card -->
+                  <div class="quota-block">
+                    <div class="quota-row">
+                      <span class="quota-title" data-pt="Limite Semanal">Weekly Limit</span>
+                      <span class="weekly-stat">128.4k <span data-pt="tokens">tokens</span></span>
+                    </div>
+                    <div class="quota-reading quota-reading-weekly">
+                      <span class="reading-num">50</span><span class="reading-sym">%</span>
+                      <small data-pt="utilizado">used</small>
+                    </div>
+                    <div class="meter-track meter-track-weekly">
+                      <div class="meter-bar meter-bar-weekly" style="--progress: 50%"></div>
+                    </div>
+                    <div class="quota-footer">
+                      <span data-pt="Reset em 4 dias">Resets in 4 days</span>
+                      <span class="footer-target">Anthropic API</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mockup-statusline">
+                  <span data-pt="Atualizado agora mesmo">Updated just now</span>
+                  <span class="status-ver">v1.14.6 · Windows x64</span>
+                </div>
+              </div>
+
+              <!-- Satellite Telemetry Chips -->
+              <div class="satellite-card satellite-left" aria-hidden="true">
+                <span class="sat-icon">🔔</span>
+                <div>
+                  <strong data-pt="Toast do Windows">Windows Toast</strong>
+                  <p data-pt="Dispara no reset às 00:00">Triggers right at reset 00:00</p>
+                </div>
+              </div>
+
+              <div class="satellite-card satellite-right" aria-hidden="true">
+                <span class="sat-icon">⚡</span>
+                <div>
+                  <strong data-pt="Uso Local Hoje">Local Cost Today</strong>
+                  <p>$4.28 · 18.2k tokens</p>
+                </div>
               </div>
             </div>
-            <div class="demo-state-stage">
-              <figure id="demo-panel-ok" data-demo-panel="ok" data-active="true" aria-hidden="false"><img src="assets/home-Ok.png" width="361" height="419" alt="Siphon at an OK quota state with session usage at 25 percent" loading="lazy" decoding="async"></figure>
-              <figure id="demo-panel-warn" data-demo-panel="warn" data-active="false" aria-hidden="true"><img src="assets/home-Warn.png" width="361" height="419" alt="Siphon warning state with session usage at 50 percent and a high pace" loading="lazy" decoding="async"></figure>
-              <figure id="demo-panel-high" data-demo-panel="high" data-active="false" aria-hidden="true"><img src="assets/home-High.png" width="361" height="419" alt="Siphon high state with session usage at 83 percent and likely to run out" loading="lazy" decoding="async"></figure>
-              <figure id="demo-panel-critical" data-demo-panel="critical" data-active="false" aria-hidden="true"><img src="assets/home-Critical.png" width="361" height="419" alt="Siphon critical state with session usage at 90 percent" loading="lazy" decoding="async"></figure>
-              <figure id="demo-panel-depleted" data-demo-panel="depleted" data-active="false" aria-hidden="true"><img src="assets/home-Depleted.png" width="361" height="419" alt="Siphon depleted state with the current session at 100 percent" loading="lazy" decoding="async"></figure>
+            <p class="asset-caption" data-pt="Painel nativo do Siphon · dados de cota ilustrativos">Native Siphon panel · illustrative quota data</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Engineering & Trust Badges (Inspired by CoolDock's Recognition Bar) -->
+      <section class="cd-engineering-section" aria-label="Engineered for Windows" data-pt-label="Projetado para o Windows">
+        <div class="page-width">
+          <ul class="engineering-grid">
+            <li class="eng-card">
+              <div class="eng-icon" aria-hidden="true">🦀</div>
+              <div class="eng-copy">
+                <h3 data-pt="Rust &amp; Tauri v2">Rust &amp; Tauri v2</h3>
+                <p data-pt="Menos de 30MB de memória. Sem Electron, sem lentidão no sistema.">Under 30MB of memory. Zero Electron, zero slowdown for your Windows system.</p>
+              </div>
+            </li>
+            <li class="eng-card">
+              <div class="eng-icon" aria-hidden="true">🔒</div>
+              <div class="eng-copy">
+                <h3 data-pt="Criptografia DPAPI">DPAPI Security</h3>
+                <p data-pt="Tokens OAuth protegidos com a API de segurança nativa do Windows.">OAuth tokens encrypted locally with Windows Data Protection API.</p>
+              </div>
+            </li>
+            <li class="eng-card">
+              <div class="eng-icon" aria-hidden="true">🌐</div>
+              <div class="eng-copy">
+                <h3 data-pt="Conexão Direta">Direct Connection</h3>
+                <p data-pt="Comunicação ponto a ponto com a Anthropic. Sem servidores ou proxies no meio.">Direct endpoint communication with Anthropic. Zero middleman proxies.</p>
+              </div>
+            </li>
+            <li class="eng-card">
+              <div class="eng-icon" aria-hidden="true">📁</div>
+              <div class="eng-copy">
+                <h3 data-pt="Zero Telemetria">Zero Telemetry</h3>
+                <p data-pt="Estimativas de custos calculadas offline a partir de ~/.claude.">Cost estimations calculated offline straight from your ~/.claude files.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Product Showcase / Interactive Video Stage (CoolDock Style) -->
+      <section class="cd-showcase-section page-width" id="showcase" aria-labelledby="showcase-title">
+        <header class="cd-section-header">
+          <h2 id="showcase-title" class="cd-section-title">
+            <span data-pt="Tudo o que importa,">Everything useful,</span>
+            <span class="muted" data-pt="a um clique na sua bandeja.">one click in your tray.</span>
+          </h2>
+          <p class="cd-section-intro" data-pt="Acompanhe sessões, cotas semanais, previsão de reset e widgets flutuantes sem perder o foco no terminal.">
+            Keep an eye on sessions, weekly quotas, reset countdowns, and floating widgets without breaking your terminal flow.
+          </p>
+
+          <ul class="capability-chips" aria-label="Siphon features" data-pt-label="Recursos do Siphon">
+            <li class="chip" data-pt="Cota 5 Horas">5h Session Quota</li>
+            <li class="chip" data-pt="Limite Semanal">Weekly Limit</li>
+            <li class="chip" data-pt="Alertas Toast">Windows Toast</li>
+            <li class="chip" data-pt="Widget Flutuante">Floating Widget</li>
+            <li class="chip" data-pt="Modo Pílula">Pill Layout</li>
+            <li class="chip" data-pt="Custos Locais">Local Costs</li>
+            <li class="chip" data-pt="Indicador de Ritmo">Pace Indicator</li>
+            <li class="chip" data-pt="16 Ícones de Bandeja">16 Tray Icons</li>
+          </ul>
+        </header>
+
+        <!-- Product Demo Tabbed Canvas -->
+        <div class="product-showcase-box" data-product-demo>
+          <div class="demo-stage-topline">
+            <div class="stage-brand-pill">
+              <img src="assets/favicon.svg" alt="" width="16" height="16">
+              <span>siphon.preview</span>
+            </div>
+            <div class="stage-window-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <!-- Dashboard Panel -->
+          <div class="demo-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" tabindex="0" data-demo-panel>
+            <div class="panel-content-wrap" data-asset-slot="demo-dashboard">
+              <div class="showcase-preview-frame">
+                <picture>
+                  <source srcset="assets/Hero-720.webp" type="image/webp">
+                  <img class="showcase-media-image" src="assets/Hero.png" alt="Siphon main dashboard showing session quota and weekly limits" width="720" height="480" loading="lazy">
+                </picture>
+              </div>
+            </div>
+            <p class="asset-caption" data-pt="Demonstração do painel · cota de sessão de 5h e limite semanal">Dashboard demonstration · 5h session quota and weekly limits</p>
+          </div>
+
+          <!-- Widgets Panel -->
+          <div class="demo-panel" id="panel-widgets" role="tabpanel" aria-labelledby="tab-widgets" tabindex="0" data-demo-panel hidden>
+            <div class="panel-content-wrap" data-asset-slot="demo-widgets">
+              <div class="widgets-duo-frame">
+                <figure class="widget-figure">
+                  <img src="assets/floating_widget_classic.png" alt="Classic floating widget showing current quota and reset timer" width="340" height="180" loading="lazy">
+                  <figcaption data-pt="Widget Clássico Flutuante">Classic Floating Widget</figcaption>
+                </figure>
+                <figure class="widget-figure">
+                  <img src="assets/floating_widget_pill.png" alt="Compact pill floating widget showing quota meter" width="260" height="56" loading="lazy">
+                  <figcaption data-pt="Widget Pílula Compacto">Compact Pill Widget</figcaption>
+                </figure>
+              </div>
+            </div>
+            <p class="asset-caption" data-pt="Demonstração dos widgets · layouts clássico e pílula sempre no topo">Widgets demonstration · classic and pill layouts always on top</p>
+          </div>
+
+          <!-- Alerts Panel -->
+          <div class="demo-panel" id="panel-alerts" role="tabpanel" aria-labelledby="tab-alerts" tabindex="0" data-demo-panel hidden>
+            <div class="panel-content-wrap" data-asset-slot="demo-alerts">
+              <div class="alerts-preview-composition">
+                <div class="alert-countdown-display" aria-hidden="true">
+                  <span class="countdown-digit">00</span>
+                  <span class="countdown-sep">:</span>
+                  <span class="countdown-digit">00</span>
+                </div>
+                <div class="alert-notification-card">
+                  <div class="toast-icon-wrap">
+                    <img src="assets/favicon.svg" alt="" width="28" height="28">
+                  </div>
+                  <div class="toast-body">
+                    <span class="toast-meta">Siphon · Windows Notification</span>
+                    <strong data-pt="Sua sessão do Claude Code está pronta.">Your Claude Code session is ready.</strong>
+                    <p data-pt="A cota de 5 horas foi restaurada. Você pode continuar criando agora mesmo.">Your 5-hour quota has fully reset. You can pick up right where you left off.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="asset-caption" data-pt="Demonstração de alertas · notificação de reset agendada para o segundo exato">Alerts demonstration · reset notification scheduled for the exact second</p>
+          </div>
+
+          <!-- Accessible Demo Tabs -->
+          <div class="demo-tabs" role="tablist" aria-label="Product demonstrations" data-pt-label="Demonstrações do produto" hidden>
+            <button id="tab-dashboard" type="button" role="tab" aria-controls="panel-dashboard" aria-selected="true" tabindex="0" data-pt="Painel">Dashboard</button>
+            <button id="tab-widgets" type="button" role="tab" aria-controls="panel-widgets" aria-selected="false" tabindex="-1">Widgets</button>
+            <button id="tab-alerts" type="button" role="tab" aria-controls="panel-alerts" aria-selected="false" tabindex="-1" data-pt="Alertas">Alerts</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bento Grid Features (CoolDock Categories Style) -->
+      <section class="cd-features-section page-width" id="features" tabindex="-1" aria-labelledby="features-heading">
+        <header class="cd-section-header">
+          <h2 id="features-heading" class="cd-section-title">
+            <span data-pt="Projetado para quem cria">Built for makers</span>
+            <span class="muted" data-pt="com o Claude Code.">with Claude Code.</span>
+          </h2>
+          <p class="cd-section-intro" data-pt="Tudo o que você precisa para gerenciar o ritmo de trabalho sem interromper sua concentração.">
+            Everything you need to pace your workflow without disrupting your terminal focus.
+          </p>
+        </header>
+
+        <div class="cd-bento-grid">
+          <!-- Card 1: 5-Hour Quota -->
+          <article class="bento-card bento-card-large">
+            <div class="card-visual-header">
+              <div class="visual-meter-gauge">
+                <div class="gauge-number">25<span>%</span></div>
+                <div class="meter-bar-track"><span style="--progress: 25%"></span></div>
+              </div>
+              <span class="card-tag" data-pt="Sessão de 5 Horas">5-Hour Session</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="A cota de 5h sem adivinhação.">Know your limits before you pause.</h3>
+              <p data-pt="Visualize a porcentagem atual e o ritmo do seu uso. Saiba exatamente quanto tempo resta antes da janela renovar.">
+                Track current usage percentage and your work pace. Know exactly how many minutes remain before your session window resets.
+              </p>
             </div>
           </article>
-          <article class="feature-chapter feature-chapter-alerts app-demo">
-            <div class="chapter-copy"><p class="chapter-index">02 · Respond</p><h3>Act at the right moment.</h3><p>Choose banners, Windows notifications, and sounds for the thresholds that matter to you.</p></div>
-            <ol class="threshold-sequence" aria-label="Session alert sequence"><li data-level="warn"><strong>70%</strong><span>Warning</span></li><li data-level="high"><strong>90%</strong><span>Critical alert</span></li><li data-level="critical"><strong>100%</strong><span>Session exhausted</span></li><li data-level="reset"><strong>Reset</strong><span>Ready again</span></li></ol>
-            <p class="chapter-note">Each notification and sound can be configured independently.</p>
+
+          <!-- Card 2: Reset Toast Alarms -->
+          <article class="bento-card">
+            <div class="card-visual-header">
+              <div class="visual-clock-mini">02<span>:</span>14</div>
+              <span class="card-tag" data-pt="Próximo Reset">Next Reset</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="Volte na hora exata.">Come back at the right time.</h3>
+              <p data-pt="O Siphon agenda uma notificação do Windows para o segundo exato do reset. Se você abrir o app depois, ele avisa que já passou.">
+                Siphon schedules a native Windows notification for the exact second of your reset. If you launch later, it catches you up.
+              </p>
+            </div>
           </article>
-          <article class="feature-chapter feature-chapter-presence app-demo">
-            <div class="chapter-copy"><p class="chapter-index">03 · Glance</p><h3>Keep it within reach.</h3><p>The tray icon carries session and weekly pressure at once. Pin a classic widget, expand its details, or keep only the pill.</p></div>
-            <figure class="widget-shot widget-shot-classic"><img src="assets/floating_widget_classic.png" width="330" height="158" alt="Compact classic Siphon floating widget" loading="lazy" decoding="async"></figure>
-            <figure class="widget-shot widget-shot-expanded"><img src="assets/floating_widget_classic-open.png" width="330" height="291" alt="Expanded classic Siphon widget with weekly, daily, and monthly usage" loading="lazy" decoding="async"></figure>
-            <figure class="widget-shot widget-shot-pill"><img src="assets/floating_widget_pill.png" width="107" height="48" alt="Siphon pill widget showing a depleted session" loading="lazy" decoding="async"></figure>
-            <div class="tray-spectrum" aria-label="Examples of session and weekly tray states"><img src="assets/tray-ok-ok@2x.png" alt="Both quotas OK" width="33" height="33"><img src="assets/tray-ok-warn@2x.png" alt="Session OK and weekly warning" width="33" height="33"><img src="assets/tray-warn-high@2x.png" alt="Session warning and weekly high" width="33" height="33"><img src="assets/tray-high-critical@2x.png" alt="Session high and weekly critical" width="33" height="33"></div>
+
+          <!-- Card 3: Floating Widgets -->
+          <article class="bento-card" id="widgets">
+            <div class="card-visual-header">
+              <div class="visual-pill-mockup">
+                <img src="assets/favicon.svg" alt="" width="22" height="22">
+                <div class="mini-progress-bar"><span style="--progress: 25%"></span></div>
+                <span>25%</span>
+              </div>
+              <span class="card-tag" data-pt="Sempre no Topo">Always on Top</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="Pequeno. Sempre à vista.">Small. Always in view.</h3>
+              <p data-pt="Escolha entre o widget clássico com contagem ou uma pílula minimalista que fica flutuando discretamente no seu monitor.">
+                Choose between a classic widget with full countdowns or a discreet pill that stays anchored anywhere on your screen.
+              </p>
+            </div>
           </article>
-          <article class="feature-chapter feature-chapter-usage app-demo">
-            <div class="chapter-copy"><p class="chapter-index">04 · Account</p><h3>Understand your usage.</h3><p>Daily and monthly estimates come from Claude Code usage and pricing files on your machine.</p></div>
-            <figure class="usage-shot"><img src="assets/home-usage.png" width="542" height="314" alt="Siphon account view showing daily and monthly local usage estimates" loading="lazy" decoding="async"></figure>
+
+          <!-- Card 4: Threshold Alerts -->
+          <article class="bento-card">
+            <div class="card-visual-header">
+              <div class="threshold-strip">
+                <div class="t-item"><span class="t-badge warn">70%</span><span data-pt="Aviso">Heads up</span></div>
+                <div class="t-item"><span class="t-badge critical">90%</span><span data-pt="Crítico">Critical</span></div>
+                <div class="t-item"><span class="t-badge depleted">100%</span><span data-pt="Esgotado">Depleted</span></div>
+              </div>
+              <span class="card-tag" data-pt="Limiares de Alerta">Thresholds</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="Avisos antes da parada.">A heads-up before the stop.</h3>
+              <p data-pt="Defina sons e notificações nos marcos de 70%, 90% e 100% para não ser pego de surpresa no meio de uma tarefa complexa.">
+                Set distinct sounds and tray cues for 70%, 90%, and 100% so you are never surprised midway through a complex task.
+              </p>
+            </div>
           </article>
-          <article class="feature-chapter feature-chapter-routine app-demo">
-            <div class="chapter-copy"><p class="chapter-index">05 · Adapt</p><h3>Fit it to your routine.</h3><p>Choose the refresh rhythm, startup behavior, display mode, and language that match how you work.</p></div>
-            <div class="settings-excerpt" aria-label="Example Siphon settings"><div class="settings-demo-row"><span>Refresh interval</span><strong>30 seconds</strong></div><div class="settings-demo-row"><span>Open with Claude Code</span><span class="demo-switch" aria-hidden="true"></span></div><div class="settings-demo-row"><span>Start with Windows</span><span class="demo-switch" aria-hidden="true"></span></div><div class="settings-demo-row"><span>Percentage display</span><strong>Used</strong></div><div class="settings-demo-row"><span>Language</span><strong>EN · PT-BR · 日本語 · 한국어</strong></div></div>
+
+          <!-- Card 5: Local Cost Estimation -->
+          <article class="bento-card">
+            <div class="card-visual-header">
+              <div class="usage-stat-display">
+                <div><span class="stat-meta" data-pt="Hoje">Today</span><strong>$4.28</strong></div>
+                <div><span class="stat-meta" data-pt="Este Mês">This Month</span><strong>$38.60</strong></div>
+              </div>
+              <span class="card-tag" data-pt="Histórico Local">Local History</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="Entenda seus custos.">Make sense of your usage.</h3>
+              <p data-pt="Estimativas financeiras e contagem de tokens calculadas localmente a partir dos arquivos de cache do Claude Code no seu disco.">
+                Token estimates and daily/monthly spending calculated directly from your local Claude Code logs on your drive.
+              </p>
+            </div>
+          </article>
+
+          <!-- Card 6: Native Integration & Settings -->
+          <article class="bento-card bento-card-large">
+            <div class="card-visual-header">
+              <div class="settings-strip">
+                <div class="setting-row"><span data-pt="Iniciar com o Windows">Start with Windows</span><span class="toggle-pill active" aria-hidden="true"></span></div>
+                <div class="setting-row"><span data-pt="Iniciar junto ao Claude Code">Launch with Claude Code</span><span class="toggle-pill active" aria-hidden="true"></span></div>
+                <div class="setting-row"><span data-pt="Intervalo de Atualização">Refresh Interval</span><span class="setting-val">30s</span></div>
+              </div>
+              <span class="card-tag" data-pt="Configurações">Preferences</span>
+            </div>
+            <div class="card-text-body">
+              <h3 data-pt="Do seu jeito no Windows.">Tailored to your workspace.</h3>
+              <p data-pt="Ajuste a inicialização automática, posicione as janelas entre múltiplos monitores e conecte-se com o fluxo natural do CLI.">
+                Control startup behavior, configure multi-monitor positions, and integrate smoothly with your command-line workflow.
+              </p>
+            </div>
           </article>
         </div>
       </section>
 
-      <section class="privacy-section section-grid" id="privacy" tabindex="-1" aria-labelledby="privacy-title">
-        <header class="privacy-heading">
-          <p class="chapter-index">06 · Trust</p>
-          <h2 id="privacy-title">Your usage stays yours.</h2>
-          <p>Siphon reads known Claude Code paths and connects directly to Anthropic. There is no Siphon account or analytics service in between.</p>
-          <div class="trust-boundary" role="img" aria-label="Claude Code local files are read by Siphon on this Windows PC. Quota requests connect directly from Siphon to Anthropic, with no Siphon server in the path.">
-            <div class="trust-route" aria-hidden="true">
-              <span class="trust-node"><strong>Local files</strong><small>Claude Code</small></span>
-              <span class="trust-node"><strong>Siphon</strong><small>This PC</small></span>
-              <span class="trust-node"><strong>Anthropic</strong><small>Quota API</small></span>
+      <!-- Visual State Marquee / Gallery (CoolDock Marquee Style) -->
+      <section class="cd-marquee-section" aria-label="Siphon States Gallery" data-pt-label="Galeria de Estados do Siphon">
+        <div class="page-width">
+          <p class="marquee-caption" data-pt="16 estados no ícone da bandeja refletem sua sessão e cota semanal em tempo real">
+            16 two-channel tray icons reflect both session and weekly usage in real time
+          </p>
+        </div>
+        <div class="marquee-track-wrap" tabindex="0" aria-label="Visual states preview" data-pt-label="Prévia visual de estados">
+          <div class="marquee-track">
+            <div class="marquee-card">
+              <span class="status-indicator-tag ok" data-pt="Normal">Ok</span>
+              <img src="assets/home-Ok.png" alt="Siphon state Ok" width="220" height="340" loading="lazy">
+              <span class="m-card-label" data-pt="Cota Saudável (0–69%)">Healthy Quota (0–69%)</span>
             </div>
-            <p class="trust-boundary-note" aria-hidden="true"><span>Siphon server</span><strong>Not in the path</strong></p>
+            <div class="marquee-card">
+              <span class="status-indicator-tag warn" data-pt="Atenção">Warn</span>
+              <img src="assets/home-Warn.png" alt="Siphon state Warn" width="220" height="340" loading="lazy">
+              <span class="m-card-label" data-pt="Alerta Moderado (70–89%)">Moderate Alert (70–89%)</span>
+            </div>
+            <div class="marquee-card">
+              <span class="status-indicator-tag critical" data-pt="Crítico">Critical</span>
+              <img src="assets/home-Critical.png" alt="Siphon state Critical" width="220" height="340" loading="lazy">
+              <span class="m-card-label" data-pt="Cota Quase no Fim (90–99%)">Quota Low (90–99%)</span>
+            </div>
+            <div class="marquee-card">
+              <span class="status-indicator-tag depleted" data-pt="Esgotado">Depleted</span>
+              <img src="assets/home-Depleted.png" alt="Siphon state Depleted" width="220" height="340" loading="lazy">
+              <span class="m-card-label" data-pt="Aguardando Reset (100%)">Awaiting Reset (100%)</span>
+            </div>
           </div>
-          <a class="text-link" href="privacy-policy.html">Read the privacy policy</a>
-        </header>
-
-        <ol class="privacy-list">
-          <li>
-            <span class="privacy-order" aria-hidden="true">01</span>
-            <div><h3>No Siphon account</h3><p>No profile, telemetry, or third-party analytics.</p></div>
-            <span class="privacy-state">None</span>
-          </li>
-          <li>
-            <span class="privacy-order" aria-hidden="true">02</span>
-            <div><h3>Local-first calculations</h3><p>Token and cost estimates are computed from your local Claude Code usage files.</p></div>
-            <span class="privacy-state">Local</span>
-          </li>
-          <li>
-            <span class="privacy-order" aria-hidden="true">03</span>
-            <div><h3>Protected OAuth</h3><p>Windows DPAPI encrypts stored credentials when available.</p></div>
-            <span class="privacy-state">DPAPI</span>
-          </li>
-          <li>
-            <span class="privacy-order" aria-hidden="true">04</span>
-            <div><h3>Direct connections</h3><p>Quota requests go to Anthropic, never through a Siphon server.</p></div>
-            <span class="privacy-state">Direct</span>
-          </li>
-        </ol>
+        </div>
       </section>
 
-      <section class="install-section section-grid" id="install" aria-labelledby="install-title">
-        <header class="install-intro">
-          <h2 id="install-title">Install once. Stay informed.</h2>
-          <p>The standard installer needs no admin elevation. Portable and winget options are available too.</p>
+      <!-- Privacy & Local Data Philosophy -->
+      <section class="cd-privacy-section page-width" id="privacy" tabindex="-1" aria-labelledby="privacy-title">
+        <div class="privacy-container">
+          <div class="privacy-copy">
+            <h2 id="privacy-title" class="cd-section-title">
+              <span data-pt="Seu trabalho.">Your usage.</span>
+              <span class="muted" data-pt="Apenas na sua máquina.">On your machine only.</span>
+            </h2>
+            <p data-pt="Sem contas adicionais. Sem telemetria ou analytics. Suas estimativas de uso são computadas localmente no seu computador e a autenticação acontece diretamente com a Anthropic.">
+              No extra accounts. Zero telemetry or background trackers. Your usage estimates are computed right on your PC and authentication talks directly with Anthropic.
+            </p>
+            <a class="text-link" href="privacy-policy.html">
+              <span data-pt="Leia a política de privacidade completa">Read the complete privacy policy</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </a>
+          </div>
+
+          <div class="privacy-proof-cards">
+            <div class="proof-card">
+              <div class="proof-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="3" width="16" height="13" rx="2"/><path d="M8 21h8m-4-5v5"/></svg>
+              </div>
+              <div>
+                <h3 data-pt="Leitura 100% Local">100% Local Reading</h3>
+                <p data-pt="Os arquivos de cache do Claude Code são lidos e agregados diretamente no seu disco, sem envio para terceiros.">Claude Code cache files are parsed and aggregated on disk without transmitting anywhere.</p>
+              </div>
+            </div>
+
+            <div class="proof-card">
+              <div class="proof-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="m12 3 8 3v6c0 4-8 9-8 9S4 16 4 12V6zM8 12l3 3 5-6"/></svg>
+              </div>
+              <div>
+                <h3 data-pt="Autenticação PKCE Segura">Secure PKCE Auth</h3>
+                <p data-pt="Fluxo OAuth seguro com callback em porta de loopback efêmera e armazenamento no cofre DPAPI do Windows.">Secure OAuth flow with ephemeral loopback callback and Windows DPAPI protected storage.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Install & Download Section (Replaces CoolDock's Pricing) -->
+      <section class="cd-install-section" id="install" tabindex="-1" aria-labelledby="install-title">
+        <div class="page-width">
+          <header class="cd-section-header">
+            <div class="brand-placeholder" data-asset-slot="brand-3d-footer">
+              <img src="assets/favicon.svg" alt="" width="56" height="56">
+            </div>
+            <h2 id="install-title" class="cd-section-title">
+              <span data-pt="Mantenha o foco.">Stay in your flow.</span>
+              <span class="muted" data-pt="O Siphon cuida das cotas.">Siphon will watch the numbers.</span>
+            </h2>
+            <p class="cd-section-intro" data-pt="Instale uma vez, conecte sua conta do Claude Code e tenha o controle absoluto na sua bandeja.">
+              Install once, connect your Claude Code account, and keep absolute clarity in your tray.
+            </p>
+          </header>
+
+          <div class="install-cards-grid">
+            <!-- Card 1: Official Installer -->
+            <div class="install-card install-card-highlight">
+              <span class="card-pill-tag" data-pt="Recomendado">Recommended</span>
+              <h3 data-pt="Instalador Oficial">Official Setup</h3>
+              <p data-pt="Instalador por usuário do Windows. Sem necessidade de privilégios de administrador, com atualizações automáticas.">
+                Per-user Windows installer. No administrator elevation needed, with seamless update checks.
+              </p>
+              <a class="button button-primary button-full" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>
+                <span data-pt="Baixar Instalador (.exe)">Download Setup (.exe)</span>
+              </a>
+              <span class="card-meta-note" data-pt="Windows 10 &amp; 11 (64-bit)">Windows 10 &amp; 11 (64-bit)</span>
+            </div>
+
+            <!-- Card 2: Winget Command -->
+            <div class="install-card">
+              <span class="card-pill-tag">CLI / Terminal</span>
+              <h3 data-pt="Gerenciador Winget">Windows Package Manager</h3>
+              <p data-pt="Instale ou atualize o Siphon em um único comando através do terminal do Windows.">
+                Install or upgrade Siphon with a single command straight through the Windows terminal.
+              </p>
+              <div class="winget-box">
+                <code id="winget-command-text">winget install win-siphon</code>
+                <button type="button" class="copy-button" data-copy-target="winget-command-text" data-copy-label="Copy" data-copied-label="Copied" data-error-label="Select and copy manually" data-pt-copy-label="Copiar" data-pt-copied-label="Copiado" data-pt-error-label="Selecione e copie manualmente" aria-live="polite" data-pt="Copiar">Copy</button>
+              </div>
+              <span class="card-meta-note" data-pt="Atualize via: winget upgrade win-siphon">Upgrade via: winget upgrade win-siphon</span>
+            </div>
+
+            <!-- Card 3: Portable Build -->
+            <div class="install-card">
+              <span class="card-pill-tag" data-pt="Portátil">Portable</span>
+              <h3 data-pt="Edição Portátil">Portable Edition</h3>
+              <p data-pt="Executável autônomo sem instalador. Ideal para usar a partir de pendrives ou ambientes restritos.">
+                Standalone executable with no installer. Ideal to run from USB drives or restricted developer environments.
+              </p>
+              <a class="releases-link button-secondary" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases" target="_blank" rel="noopener noreferrer">
+                <span data-pt="Ver no GitHub Releases →">View on GitHub Releases →</span>
+              </a>
+              <span class="card-meta-note" data-pt="Arquivos binários e somas SHA256">Binary files &amp; SHA256 checksums</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Frequently Asked Questions (CoolDock Style FAQ) -->
+      <section class="cd-faq-section page-width" id="faq" tabindex="-1" aria-labelledby="faq-title">
+        <header class="cd-section-header">
+          <h2 id="faq-title" class="cd-section-title" data-pt="Perguntas Frequentes">Frequently Asked Questions</h2>
+          <p class="cd-section-intro" data-pt="Tudo o que você precisa saber sobre como o Siphon funciona.">Everything you need to know about how Siphon runs on your machine.</p>
         </header>
 
-        <ol class="install-steps">
-          <li><h3>Install Siphon</h3><p>Run the per-user installer or choose the portable build.</p></li>
-          <li><h3>Connect Claude Code</h3><p>Sign in once for live quota alongside local usage.</p></li>
-          <li><h3>Stay in flow</h3><p>Leave Siphon in the tray and let reset alerts come to you.</p></li>
-        </ol>
+        <div class="faq-accordion">
+          <details class="faq-item">
+            <summary>
+              <span data-pt="Como o Siphon se conecta à minha conta do Claude Code?">How does Siphon connect to my Claude Code account?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-content">
+              <p data-pt="O Siphon usa o fluxo padrão de OAuth PKCE da Anthropic. Ele inicia um servidor local temporário (loopback), abre o navegador para você autorizar o acesso e recebe o token de leitura de cota com segurança, exatamente como o próprio Claude Code faz.">
+                Siphon uses Anthropic's standard PKCE OAuth flow. It opens an ephemeral loopback port, directs your browser to Anthropic's authorization page, and safely captures the usage token — identical to how Claude Code authorizes.
+              </p>
+            </div>
+          </details>
 
-        <aside class="install-action" aria-label="Download options">
-          <p>Ready for Windows 10 and 11.</p>
-          <a class="button button-primary button-download" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases/download/v1.14.6/Siphon.Setup.1.14.6.exe" download><img class="button-icon" src="download.svg" alt="" width="16" height="16" aria-hidden="true">Download Siphon</a>
-          <div class="winget-command">
-            <span>winget</span>
-            <code id="winget-command-text">winget install win-siphon</code>
-            <button class="copy-button" type="button" data-copy-target="winget-command-text" data-copy-label="Copy" data-copied-label="Copied" aria-label="Copy the winget install command">Copy</button>
-          </div>
-          <a class="text-link" href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">Portable and previous releases</a>
-        </aside>
+          <details class="faq-item">
+            <summary>
+              <span data-pt="O Siphon substitui a interface do Claude Code?">Does Siphon replace Claude Code's terminal interface?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-content">
+              <p data-pt="Não. O Siphon trabalha como um monitor complementar na sua bandeja do Windows ou em um widget flutuante, para que você nunca precise digitar /cost ou interromper seu raciocínio enquanto trabalha.">
+                No. Siphon is a companion tray monitor and floating widget, designed so you never have to type /cost or pause your work to check when your session resets.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>
+              <span data-pt="Meus tokens e dados de código ficam seguros?">Are my tokens and coding data safe?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-content">
+              <p data-pt="Sim. O Siphon não possui servidores intermediários, banco de dados na nuvem ou telemetria. Suas credenciais são salvas criptografadas pela DPAPI nativa do Windows no seu computador.">
+                Yes. Siphon has no cloud servers, intermediate relays, or tracking telemetry. Your credentials are encrypted on your local machine using the native Windows DPAPI cipher.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>
+              <span data-pt="Como funcionam as notificações de reset no Windows?">How do the Windows reset notifications work?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-content">
+              <p data-pt="Quando sua cota de sessão de 5 horas atinge 100%, o Siphon lê a data e hora do resets_at da API da Anthropic e agenda uma notificação nativa do Windows (WinRT Toast) para o segundo exato.">
+                When your 5-hour session reaches 100%, Siphon reads the exact resets_at timestamp from Anthropic's API and schedules a native Windows toast notification to alert you the moment you are unblocked.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>
+              <span data-pt="Quais versões do Windows são suportadas?">Which versions of Windows are supported?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </summary>
+            <div class="faq-content">
+              <p data-pt="O Siphon foi desenvolvido nativamente para Windows 10 e Windows 11 (64-bit), suportando múltiplos monitores e escalas de DPI diferentes.">
+                Siphon is built natively for Windows 10 and Windows 11 (64-bit), with full support for multi-monitor setups and varied DPI scaling.
+              </p>
+            </div>
+          </details>
+        </div>
       </section>
     </main>
 
-    <footer class="site-footer section-grid">
-      <a class="brand" href="#top" aria-label="Back to top">
-        <img src="assets/Logo.png" alt="" width="103" height="24">
-      </a>
-      <p>Claude Code quota, always within reach.</p>
-      <div class="footer-links">
-        <a href="https://github.com/kayodante/Win-siphonClaudeUsage">GitHub</a>
-        <a href="https://github.com/kayodante/Win-siphonClaudeUsage/releases">Releases</a>
-        <a href="#install">Install</a>
-        <a href="#privacy">Privacy</a>
+    <!-- Site Footer (CoolDock Multi-Column Clean Style) -->
+    <footer class="site-footer page-width">
+      <div class="footer-primary">
+        <a class="brand" href="#top" aria-label="Siphon home" data-pt-label="Página inicial do Siphon">
+          <img src="assets/favicon.svg" alt="" width="22" height="22">
+          <span class="brand-text">siphon.</span>
+        </a>
+        <p class="footer-tagline" data-pt="Criado com carinho para quem constrói o futuro com o Claude Code.">
+          Crafted for builders and designers creating with Claude Code.
+        </p>
       </div>
+
+      <div class="footer-links">
+        <div class="footer-col">
+          <span class="footer-col-title" data-pt="Produto">Product</span>
+          <a href="#features" data-pt="Recursos">Features</a>
+          <a href="#showcase" data-pt="Demonstração">Showcase</a>
+          <a href="#widgets" data-pt="Widgets">Widgets</a>
+          <a href="#install" data-pt="Downloads">Downloads</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title" data-pt="Projeto">Project</span>
+          <a href="https://github.com/kayodante/Win-siphonClaudeUsage" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/kayodante/Win-siphonClaudeUsage/releases" target="_blank" rel="noopener noreferrer" data-pt="Lançamentos">Releases</a>
+          <a href="privacy-policy.html" data-pt="Privacidade (EN)">Privacy Policy</a>
+          <a href="https://github.com/kayodante/Win-siphonClaudeUsage/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-pt="Licença MIT">MIT License</a>
+        </div>
+      </div>
+
+      <p class="footer-credit" data-pt="Siphon é um projeto independente de código aberto. Não é afiliado à Anthropic PBC.">
+        Siphon is an independent, open-source project. Not affiliated with Anthropic PBC.
+      </p>
     </footer>
+
     <script type="module" src="product-demo.js"></script>
-    <script type="module" src="hero-asciify.js"></script>
   </body>
 </html>
