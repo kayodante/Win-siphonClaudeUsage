@@ -16,6 +16,7 @@ const elements = {
   logo: document.querySelector('#floatingLogo'),
   miniLogo: document.querySelector('#floatingMiniLogo'),
   miniPercent: document.querySelector('#floatingMiniPercent'),
+  miniWeekly: document.querySelector('#floatingMiniWeekly'),
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
   expandButton: document.querySelector('#floatingExpandButton'),
@@ -115,6 +116,13 @@ function render(state) {
   elements.logo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
   if (elements.miniLogo) elements.miniLogo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
   if (elements.miniPercent) elements.miniPercent.textContent = numberText;
+  if (elements.miniWeekly) {
+    // Weekly (7-day) quota next to the session one; the number is tinted by
+    // the weekly level so a filling week stands out even while the session
+    // icon is still green.
+    elements.miniWeekly.textContent = weekly ? formatQuotaPercent(weekly.percent, mode) : '--';
+    elements.miniWeekly.dataset.level = weekly ? levelForPercent(clampPercent(weekly.percent ?? 0)) : 'ok';
+  }
 }
 
 function buildFloatingReset(session, lang) {

@@ -3393,6 +3393,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
 
 body[data-style="mini"] .floating-mini-row {
   display: flex;
+  justify-content: center;
   width: 100%;
   height: 100%;
 }
@@ -3421,3 +3422,30 @@ body[data-style="mini"] .floating-widget {
   color: var(--foreground);
   -webkit-app-region: drag;
 }
+
+/* Weekly (7-day) quota beside the session percent, split off by a hairline. */
+.floating-mini-weekly-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-1);
+  -webkit-app-region: drag;
+}
+
+.floating-mini-weekly-group::before {
+  content: "";
+  width: 1px;
+  height: var(--space-5);
+  margin-right: var(--space-0);
+  background: var(--border-strong);
+}
+
+.floating-mini-weekly-icon {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex-shrink: 0;
+}
+
+.floating-mini-weekly[data-level="warn"]     { color: var(--level-warn); }
+.floating-mini-weekly[data-level="high"]     { color: var(--level-high); }
+.floating-mini-weekly[data-level="critical"] { color: var(--level-critical); }

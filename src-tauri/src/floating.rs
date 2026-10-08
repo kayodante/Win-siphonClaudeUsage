@@ -7,7 +7,8 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use siphon_core::state::AppState;
 
-const MINI: (f64, f64) = (71.0, 32.0);
+// Wide enough for the session and weekly percents side by side ("100% | 100%").
+const MINI: (f64, f64) = (136.0, 32.0);
 const COMPACT: (f64, f64) = (220.0, 104.0);
 const EXPANDED: (f64, f64) = (220.0, 192.0);
 
@@ -264,6 +265,19 @@ fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppStat
     ) {
         x = default_x;
         y = default_y;
+    }
+
+    // The pill got wider when the weekly percent was added; a position saved
+    // flush against a monitor's right edge would now hang off it. Pull the
+    // widget back inside the monitor it sits on.
+    if let Some((mx, _, mw, _)) = siphon_core::geometry::monitor_containing(
+        &crate::windows_ctl::monitor_rects(app),
+        x,
+        y,
+        w,
+        h,
+    ) {
+        x = x.min(mx + mw - w).max(mx);
     }
 
     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
