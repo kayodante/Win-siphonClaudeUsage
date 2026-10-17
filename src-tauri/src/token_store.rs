@@ -190,13 +190,25 @@ mod tests {
     #[test]
     fn dpapi_protect_unprotect_roundtrip() {
         let cipher = DpapiCipher;
-        let original_json = r#"{"access_token":"sk-ant-test","expires_at":"2026-09-10T15:00:00.000Z"}"#;
+        let original_json =
+            r#"{"access_token":"sk-ant-test","expires_at":"2026-09-10T15:00:00.000Z"}"#;
 
-        let encrypted = cipher.encrypt(original_json).expect("DPAPI encryption must succeed");
+        let encrypted = cipher
+            .encrypt(original_json)
+            .expect("DPAPI encryption must succeed");
         assert_eq!(encrypted[0], MARKER_DPAPI, "Marker must be MARKER_DPAPI");
-        assert_ne!(&encrypted[1..], original_json.as_bytes(), "Payload must be encrypted ciphertext");
+        assert_ne!(
+            &encrypted[1..],
+            original_json.as_bytes(),
+            "Payload must be encrypted ciphertext"
+        );
 
-        let decrypted = cipher.decrypt(&encrypted).expect("DPAPI decryption must succeed");
-        assert_eq!(decrypted, original_json, "Decrypted text must match original payload");
+        let decrypted = cipher
+            .decrypt(&encrypted)
+            .expect("DPAPI decryption must succeed");
+        assert_eq!(
+            decrypted, original_json,
+            "Decrypted text must match original payload"
+        );
     }
 }

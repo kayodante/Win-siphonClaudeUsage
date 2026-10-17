@@ -18,6 +18,8 @@ import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { resolveView } from './viewState.js';
 
+let i18nCache = null;
+
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   settingsButton: document.querySelector('#settingsButton'),
@@ -823,6 +825,17 @@ try {
     elements.appVersionText.textContent = `Siphon - Claude Usage  —  v ${appInfo.version}`;
   }
   window.siphon.onView(showView);
+
+
+  if (!i18nCache) {
+    i18nCache = {
+      text: document.querySelectorAll('[data-i18n]'),
+      title: document.querySelectorAll('[data-i18n-title]'),
+      tooltip: document.querySelectorAll('[data-i18n-tooltip]'),
+      ariaLabel: document.querySelectorAll('[data-i18n-aria-label]'),
+      placeholder: document.querySelectorAll('[data-i18n-placeholder]')
+    };
+  }
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
@@ -1478,23 +1491,23 @@ function currentLanguage() {
 function applyTranslations(lang) {
   document.documentElement.lang = lang;
 
-  document.querySelectorAll('[data-i18n]').forEach(element => {
+  i18nCache.text.forEach(element => {
     const translated = t(element.dataset.i18n, lang);
     if (element.textContent !== translated) element.textContent = translated;
   });
-  document.querySelectorAll('[data-i18n-title]').forEach(element => {
+  i18nCache.title.forEach(element => {
     element.title = t(element.dataset.i18nTitle, lang);
   });
   // Custom-tooltip triggers: write into dataset.tooltip instead of .title, or
   // the OS tooltip would reappear on top of the designed one on every
   // language change.
-  document.querySelectorAll('[data-i18n-tooltip]').forEach(element => {
+  i18nCache.tooltip.forEach(element => {
     element.dataset.tooltip = t(element.dataset.i18nTooltip, lang);
   });
-  document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+  i18nCache.ariaLabel.forEach(element => {
     element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel, lang));
   });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+  i18nCache.placeholder.forEach(element => {
     element.setAttribute('placeholder', t(element.dataset.i18nPlaceholder, lang));
   });
 }
