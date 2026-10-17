@@ -29,7 +29,7 @@ The Windows-specific addition is a **reset notification**: when your five-hour s
 
 This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
 
-**[Visit the website →](https://kayodante.github.io/Win-siphonClaudeUsage/)**
+**[Visit the website →](https://kayodante.github.io/Win-siphonClaudeUsage/)** — available in English and Brazilian Portuguese, with a dark-only design. The redesign currently uses labeled media placeholders.
 
 ## Features
 

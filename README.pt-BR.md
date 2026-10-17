@@ -29,7 +29,7 @@ O recurso específico do Windows é a **notificação de redefinição**: quando
 
 Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://github.com/appariciojunior/siphonClaudeUsage).
 
-**[Visite o site →](https://kayodante.github.io/Win-siphonClaudeUsage/)**
+**[Visite o site →](https://kayodante.github.io/Win-siphonClaudeUsage/)** — disponível em inglês e português do Brasil, apenas em modo escuro. O redesign usa, por enquanto, espaços identificados para as mídias finais.
 
 ## Recursos
 

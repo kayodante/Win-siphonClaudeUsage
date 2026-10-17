@@ -71,6 +71,8 @@
   --success-soft:     oklch(0.6959 0.1491 162.48 / 0.18);
   --warning:          oklch(0.8591 0.1147 79.19);
   --warning-soft:     oklch(76.86% 0.1647 70.08 / 0.18);
+  --message:          oklch(0.7637 0.1165 249.47);
+  --message-soft:     oklch(0.6088 0.1976 255.15 / 0.18);
 
   /* ── Colors: Level scale ── */
   --level-ok:           oklch(84.59% 0.2026 156.3);
@@ -125,9 +127,21 @@
   --space-10: 32px;
   --space-11: 40px;
 
+  /* ── Border width ── */
+  --border-width-0: 0px;
+  --border-width:   1px;
+  --border-width-2: 2px;
+  --border-width-3: 3px;
+  --border-width-4: 4px;
+  --border-width-5: 5px;
+  --border-width-6: 6px;
+  --border-width-7: 7px;
+  --border-width-8: 8px;
+
   /* ── Radius ── */
   --radius:      12px;
   --radius-none: 0px;
+  --radius-xxs:  2px;
   --radius-xs:   4px;
   --radius-sm:   8px;
   --radius-lg:   16px;
