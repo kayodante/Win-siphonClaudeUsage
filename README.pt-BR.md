@@ -42,7 +42,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 * **Widget flutuante** | Widget sempre visível que você pode arrastar para qualquer lugar. Dois formatos: clássico (progresso da sessão e painel de estatísticas expansível) ou pílula (porcentagem da sessão e cota semanal opcional). A cota semanal começa ativada e pode ser ocultada em Configurações → Widget; ao ocultá-la, o ícone mostra só a sessão e a pílula volta à largura compacta
 * **Atualização configurável** | A cada 30 segundos por padrão; opções de 1, 5 e 15 minutos em Configurações
 * **Iniciar com o Windows** | Inicialização automática opcional, com uma configuração separada para abrir ou não a janela ao entrar no sistema
-* **Abrir com o Claude Code** | Integração opcional que registra um hook `SessionStart` em `~/.claude/settings.json` para abrir o Siphon quando você inicia uma sessão
+* **Abrir com o Claude Code** | Hook `SessionStart` opcional que abre o Siphon se estiver fechado e preserva a janela e o foco quando já estiver em execução. Usa o executável diretamente, sem PowerShell; requer Claude Code com suporte a hooks no formato exec (`command` + `args`)
 * **Indicador de ritmo** | Mostra se seu ritmo de uso está adequado ou se você provavelmente atingirá o limite antes da hora
 * **Indicador de horário de pico** | Sinaliza o período de pico da Anthropic (dias úteis, das 5h às 11h no horário do Pacífico), quando as cotas se esgotam mais rápido; ajusta automaticamente o horário de verão
 * **Ícone colorido na bandeja** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="Exemplo do ícone na bandeja" /> - Mostra simultaneamente os níveis das cotas da sessão e da semana por meio de duas cores independentes

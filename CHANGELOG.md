@@ -11,6 +11,8 @@ is added above it.
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-10-19
+
 ### Added
 
 - Mini floating widget shows session and weekly quotas together, with neutral
@@ -20,6 +22,10 @@ is added above it.
 
 ### Fixed
 
+- Claude Code sessions no longer bring an already-running Siphon window to
+  the foreground or reset its current view. The hook launches the executable
+  directly without PowerShell and exits immediately; a cold start still opens
+  the app, which keeps running independently of the Claude Code session.
 - Restore the wider mini widget on its saved monitor using the destination DPI
   and keep it inside the display edges.
 - "Update & restart" no longer opens the full installer wizard with its
@@ -693,7 +699,8 @@ Merged PRs with improvements and fixes.
 
 - Fixed winget arch override and enforced artifact name in the build.
 
-[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.4...HEAD
+[Unreleased]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.15.1...HEAD
+[1.15.1]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.6...v1.15.1
 [1.14.4]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.3...v1.14.4
 [1.14.3]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.2...v1.14.3
 [1.14.2]: https://github.com/kayodante/Win-siphonClaudeUsage/compare/v1.14.1...v1.14.2

@@ -42,7 +42,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Floating widget** | Always-on-top widget you can drag anywhere. Two layouts: classic (session progress + expandable stats panel) or pill (session and optional weekly percentages). Weekly quota starts enabled and can be hidden in Settings → Widget; hiding it restores the session-only icon and compact width
 * **Configurable refresh** | Defaults to 30 seconds; 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window opens on login
-* **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json` so Siphon opens when you start a session
+* **Launch with Claude Code** | Optional `SessionStart` hook that opens Siphon if it is closed and leaves an already-running app's window and focus alone. Uses a direct executable hook without PowerShell; requires Claude Code with exec-form hook support (`command` + `args`)
 * **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
 * **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
 * **Color-coded tray icon** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels

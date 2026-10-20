@@ -554,10 +554,10 @@ and cleared when the timer fires, when a new session starts
 
 ### `~/.claude/settings.json` (the one exception outside `%APPDATA%`)
 
-Written by `ClaudeSettingsService` (not `JsonStore`) when the
-`integration.launchWithClaudeCode` preference is on and the build is
-packaged. It adds a `SessionStart` hook that runs the Siphon exe so Claude
-Code launches/refreshes Siphon when a session starts. Siphon edits only its
+Written by `ClaudeSettings` (not `JsonStore`) when the
+`integration.launchWithClaudeCode` preference is on. It adds a `SessionStart`
+hook that starts Siphon if it is closed and preserves an already-running app's
+visibility, focus, and current view. Siphon edits only its
 own entry and leaves any other hooks untouched.
 
 ```jsonc
@@ -569,9 +569,8 @@ own entry and leaves any other hooks untouched.
         "hooks": [
           {
             "type": "command",
-            "command": "Start-Process 'C:\\…\\Siphon.exe'",
-            "shell": "powershell",
-            "async": true
+            "command": "C:\\…\\Siphon.exe",
+            "args": ["--claude-hook"]
           }
         ]
       }
@@ -580,18 +579,24 @@ own entry and leaves any other hooks untouched.
 }
 ```
 
-`Start-Process` detaches Siphon from the hook process, and `shell: powershell`
-reuses the shell Claude Code already spawns rather than nesting a second one —
-that extra console is what used to flash at every session start. There is no
-`--hidden` argument, so a Claude Code session opens Siphon's window like a
-manual launch; only the Windows autostart launch passes it, and there
-`startup.showWindowOnLogin` decides.
+This requires Claude Code's [exec-form hook support](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form):
+`command` is an executable path and `args` is a separate argument list, so no
+PowerShell or other shell is created by this hook. The `--claude-hook` entry
+point starts the same executable with `--from-claude`, null standard streams,
+and Windows `DETACHED_PROCESS`, then exits before Tauri initializes. There is
+no long-lived hook for Claude Code to wait for or cancel. A detached cold start
+opens the window; an existing instance ignores `--from-claude` relaunches.
+Concurrent session starts are still deduplicated by the single-instance plugin.
+Manual launches continue to show the window. Windows autostart still uses
+`--hidden`, with `startup.showWindowOnLogin` deciding first-launch visibility.
 
 `enable()` appends this entry idempotently; `disable()` filters Siphon
 entries back out and prunes the now-empty `SessionStart` / `hooks` keys.
 Siphon recognizes its own entries by their command — the current exe path, or
-any command launching another Siphon build (dev, portable, an older install
-dir) — so one build's stale hook cannot linger and start a second Siphon.
+legacy shell commands or exec-form commands launching another Siphon build
+(dev, portable, an older install dir) — so one build's stale hook cannot linger
+and start a second Siphon. Enabled hooks are migrated on app startup or when
+the integration is enabled in Settings.
 Writes go through a `.tmp` file + `rename` so a partial write can't corrupt
 the user's Claude Code settings.
 
