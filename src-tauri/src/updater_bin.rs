@@ -169,7 +169,17 @@ pub fn install(app: &AppHandle) -> bool {
     }
     #[cfg(windows)]
     {
-        match std::process::Command::new(&path).spawn() {
+        // Flags understood by Tauri's NSIS template:
+        //   /P      passive — progress bar only, no wizard pages;
+        //   /UPDATE install over the existing copy without uninstalling it
+        //           first (keeps shortcuts/pins, skips the WebView2 step);
+        //   /R      relaunch Siphon once the install finishes.
+        // Without them the full wizard ran, including the "uninstall before
+        // installing" page, which buys Siphon nothing on an in-place update.
+        match std::process::Command::new(&path)
+            .args(["/P", "/UPDATE", "/R"])
+            .spawn()
+        {
             Ok(_) => {
                 // Consumed only once the installer is actually running: a
                 // rejected path or a failed spawn leaves the verified installer
