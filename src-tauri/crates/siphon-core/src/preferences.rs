@@ -27,6 +27,8 @@ pub struct Floating {
     pub enabled: bool,
     pub expanded: bool,
     pub style: String,
+    #[serde(default = "default_show_weekly")]
+    pub show_weekly: bool,
     pub x: Option<i64>,
     pub y: Option<i64>,
 }
@@ -115,6 +117,7 @@ impl Default for Preferences {
                 enabled: false,
                 expanded: false,
                 style: "classic".to_string(),
+                show_weekly: true,
                 x: None,
                 y: None,
             },
@@ -137,6 +140,10 @@ impl Default for Preferences {
             window: None,
         }
     }
+}
+
+fn default_show_weekly() -> bool {
+    true
 }
 
 /// `auto_check` defaults on — it matches how the update check behaved before
@@ -314,5 +321,35 @@ mod tests {
         let mut v = json!({ "language": "en" });
         set_path(&mut v, "language.nested", Value::Bool(true));
         assert_eq!(get_path(&v, "language.nested"), Some(&Value::Bool(true)));
+    }
+
+    #[test]
+    fn legacy_floating_preferences_default_to_showing_weekly_quota() {
+        let mut legacy = Preferences::default_value();
+        legacy["language"] = json!("pt-BR");
+        legacy["floating"]["enabled"] = json!(true);
+        legacy["floating"]
+            .as_object_mut()
+            .unwrap()
+            .remove("showWeekly");
+        let prefs: Preferences = serde_json::from_value(legacy).unwrap();
+        assert!(prefs.floating.show_weekly);
+        assert!(prefs.floating.enabled);
+        assert_eq!(prefs.language, "pt-BR");
+    }
+
+    #[test]
+    fn pill_weekly_choice_survives_merge_and_serialization() {
+        for show_weekly in [false, true] {
+            let mut stored = json!({"language": "ja", "floating": {"style": "mini"}});
+            set_path(&mut stored, "floating.showWeekly", json!(show_weekly));
+            let prefs = merged(Some(stored));
+            assert_eq!(prefs.floating.show_weekly, show_weekly);
+            assert_eq!(prefs.language, "ja");
+            assert_eq!(
+                serde_json::to_value(prefs).unwrap()["floating"]["showWeekly"],
+                show_weekly
+            );
+        }
     }
 }

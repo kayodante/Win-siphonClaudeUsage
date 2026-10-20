@@ -84,6 +84,7 @@ const ALLOWED_PREFS: &[&str] = &[
     "floating.x",
     "floating.y",
     "floating.style",
+    "floating.showWeekly",
     "window.x",
     "window.y",
     "window.width",
@@ -110,6 +111,12 @@ pub async fn prefs_set(app: AppHandle, ctx: State<'_, AppContext>, args: PrefSet
     let PrefSet { path, value } = args;
     if !ALLOWED_PREFS.contains(&path.as_str()) {
         return Err(CommandError::UnknownPreference(path));
+    }
+    if path == "floating.showWeekly" && !value.is_boolean() {
+        return Err(CommandError::InvalidPreferenceValue {
+            path,
+            value: value.to_string(),
+        });
     }
     // Value guards matching main.js registerPrefsIpc.
     if path == "refresh.intervalSeconds" {

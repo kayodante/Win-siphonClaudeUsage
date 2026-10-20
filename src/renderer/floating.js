@@ -16,6 +16,9 @@ const elements = {
   logo: document.querySelector('#floatingLogo'),
   miniLogo: document.querySelector('#floatingMiniLogo'),
   miniPercent: document.querySelector('#floatingMiniPercent'),
+  miniWeekly: document.querySelector('#floatingMiniWeekly'),
+  miniSessionGroup: document.querySelector('#floatingMiniSessionGroup'),
+  miniWeeklyGroup: document.querySelector('#floatingMiniWeeklyGroup'),
   openButton: document.querySelector('#floatingOpenButton'),
   closeButton: document.querySelector('#floatingCloseButton'),
   expandButton: document.querySelector('#floatingExpandButton'),
@@ -89,6 +92,8 @@ function render(state) {
 
   const session = hydrateSlot(state.quota?.session);
   const weekly = hydrateSlot(state.quota?.weeklyAll);
+  const showWeekly = state.preferences?.floating?.showWeekly ?? true;
+  elements.miniWeeklyGroup.hidden = !showWeekly;
   const percent = clampPercent(session?.percent ?? 0);
   const mode = state?.preferences?.display?.quotaMode ?? 'used';
   const suffix = t(`quota.suffix.${mode}`, currentLang);
@@ -113,8 +118,26 @@ function render(state) {
 
   renderMeter(percent);
   elements.logo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
-  if (elements.miniLogo) elements.miniLogo.src = LEVEL_ICONS[levelForPercent(percent)] ?? LEVEL_ICONS.ok;
-  if (elements.miniPercent) elements.miniPercent.textContent = numberText;
+  const sessionLevel = levelForPercent(percent);
+  const weeklyLevel = levelForPercent(clampPercent(weekly?.percent ?? 0));
+  const miniIcon = showWeekly
+    ? `../assets/tray-icon/tray-${sessionLevel}-${weeklyLevel}`
+    : `../assets/f-icon/f-icon-${sessionLevel}`;
+  elements.miniLogo.src = `${miniIcon}.png`;
+  elements.miniLogo.srcset = `${miniIcon}@2x.png 2x`;
+  elements.miniPercent.textContent = numberText;
+  elements.miniWeekly.textContent = weekly ? formatQuotaPercent(weekly.percent, mode) : '--';
+
+  for (const [group, slot, label] of [
+    [elements.miniSessionGroup, session, t('home.session', currentLang)],
+    [elements.miniWeeklyGroup, weekly, t('home.weekly', currentLang)]
+  ]) {
+    group.setAttribute('aria-label', slot ? `${label} (${suffix})` : label);
+    group.title = `${label}: ${slot ? formatQuotaPercent(slot.percent, mode, suffix) : '--'}`;
+  }
+  elements.miniLogo.title = showWeekly
+    ? `${elements.miniSessionGroup.title} · ${elements.miniWeeklyGroup.title}`
+    : elements.miniSessionGroup.title;
 }
 
 function buildFloatingReset(session, lang) {

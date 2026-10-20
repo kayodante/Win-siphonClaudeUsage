@@ -121,6 +121,7 @@ const STRINGS = Object.freeze({
     'settings.widget.style': 'Style',
     'settings.widget.styleClassic': 'Classic',
     'settings.widget.styleMini': 'Pill',
+    'settings.widget.showWeekly': 'Show weekly quota in Pill',
 
     'footer.openClaude': 'Open claude.ai',
     'footer.quit': 'Shut down',
@@ -298,6 +299,7 @@ const STRINGS = Object.freeze({
     'settings.widget.style': 'Estilo',
     'settings.widget.styleClassic': 'Clássico',
     'settings.widget.styleMini': 'Pill',
+    'settings.widget.showWeekly': 'Exibir cota semanal no Pill',
 
     'footer.openClaude': 'Abrir claude.ai',
     'footer.quit': 'Desligar',
@@ -475,6 +477,7 @@ const STRINGS = Object.freeze({
     'settings.widget.style': 'スタイル',
     'settings.widget.styleClassic': 'クラシック',
     'settings.widget.styleMini': 'ピル',
+    'settings.widget.showWeekly': 'ピルに週間の使用状況を表示',
 
     'footer.openClaude': 'claude.ai を開く',
     'footer.quit': '終了',
@@ -652,6 +655,7 @@ const STRINGS = Object.freeze({
     'settings.widget.style': '스타일',
     'settings.widget.styleClassic': '클래식',
     'settings.widget.styleMini': '알약형',
+    'settings.widget.showWeekly': '알약형에 주간 할당량 표시',
 
     'footer.openClaude': 'claude.ai 열기',
     'footer.quit': '종료',

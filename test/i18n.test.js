@@ -183,3 +183,11 @@ test('the sign-in copy no longer tells the user to paste the code', () => {
   assert.doesNotMatch(t('onboarding.redirect', 'en'), /paste/i);
   assert.doesNotMatch(t('onboarding.redirect', 'pt-BR'), /cole/i);
 });
+
+
+test('Pill weekly option is translated in every supported language', () => {
+  assert.equal(t('settings.widget.showWeekly', 'pt-BR'), 'Exibir cota semanal no Pill');
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.notEqual(t('settings.widget.showWeekly', lang), 'settings.widget.showWeekly');
+  }
+});

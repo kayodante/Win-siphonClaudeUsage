@@ -39,7 +39,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Quota alerts** | Warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100%, each configurable on its own
 * **Reset notification** | Windows toast when your session resets. If the app was closed during the reset window, it fires on next launch
 * **Sound alerts** | Three audio cues (session reset, exhausted, and quota warnings at 70%/90%), each with its own toggle, test button, and volume slider
-* **Floating widget** | Always-on-top widget you can drag anywhere. Two layouts: classic (session progress + expandable stats panel) or pill (compact icon + percentage bar)
+* **Floating widget** | Always-on-top widget you can drag anywhere. Two layouts: classic (session progress + expandable stats panel) or pill (session and optional weekly percentages). Weekly quota starts enabled and can be hidden in Settings → Widget; hiding it restores the session-only icon and compact width
 * **Configurable refresh** | Defaults to 30 seconds; 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window opens on login
 * **Launch with Claude Code** | Optional integration that registers a `SessionStart` hook in `~/.claude/settings.json` so Siphon opens when you start a session

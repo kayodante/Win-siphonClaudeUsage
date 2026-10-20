@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use siphon_core::state::AppState;
 
 const MINI: (f64, f64) = (71.0, 32.0);
+const MINI_WEEKLY: (f64, f64) = (136.0, 32.0);
 const COMPACT: (f64, f64) = (220.0, 104.0);
 const EXPANDED: (f64, f64) = (220.0, 192.0);
 
@@ -92,9 +93,13 @@ fn round_corners(win: &tauri::WebviewWindow) {
     }
 }
 
-fn size_for(style: &str, expanded: bool) -> (f64, f64) {
+fn size_for(style: &str, expanded: bool, show_weekly: bool) -> (f64, f64) {
     if style == "mini" {
-        MINI
+        if show_weekly {
+            MINI_WEEKLY
+        } else {
+            MINI
+        }
     } else if expanded {
         EXPANDED
     } else {
@@ -114,7 +119,7 @@ pub fn sync(app: &AppHandle, state: &AppState) {
     }
 
     if let Some(win) = app.get_webview_window("floating") {
-        apply_size(&win, state);
+        apply_size(app, &win, state);
         let _ = win.emit("state-changed", state);
         raise(&win);
     } else {
@@ -124,7 +129,11 @@ pub fn sync(app: &AppHandle, state: &AppState) {
 
 fn create(app: &AppHandle, state: &AppState) {
     let style = state.preferences.floating.style.clone();
-    let (w, h) = size_for(&style, state.preferences.floating.expanded);
+    let (w, h) = size_for(
+        &style,
+        state.preferences.floating.expanded,
+        state.preferences.floating.show_weekly,
+    );
     let builder = WebviewWindowBuilder::new(
         app,
         "floating",
@@ -148,7 +157,16 @@ fn create(app: &AppHandle, state: &AppState) {
         }
     };
 
-    restore_position(app, &win, state);
+    restore_position(
+        app,
+        &win,
+        state,
+        state
+            .preferences
+            .floating
+            .x
+            .zip(state.preferences.floating.y),
+    );
 
     #[cfg(windows)]
     if style != "mini" {
@@ -214,57 +232,95 @@ fn create(app: &AppHandle, state: &AppState) {
     });
 }
 
-fn apply_size(win: &tauri::WebviewWindow, state: &AppState) {
+fn apply_size(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppState) {
     let (w, h) = size_for(
         &state.preferences.floating.style,
         state.preferences.floating.expanded,
+        state.preferences.floating.show_weekly,
     );
-    let _ = win.set_size(tauri::LogicalSize::new(w, h));
+    let size = tauri::LogicalSize::new(w, h);
+    let physical_size = size.to_physical::<u32>(win.scale_factor().unwrap_or(1.0));
+    if win.inner_size().ok() == Some(physical_size) {
+        return;
+    }
+    let position = win.outer_position().ok().map(|p| (p.x as i64, p.y as i64));
+    if win.set_size(size).is_ok() && state.preferences.floating.style == "mini" {
+        // Use the live position: a recent drag may still be waiting for its save.
+        restore_position(app, win, state, position);
+    }
 }
 
-fn restore_position(app: &AppHandle, win: &tauri::WebviewWindow, state: &AppState) {
-    // Physical pixels throughout, matching what the move handler saved — see
-    // `windows_ctl::monitor_rects` for why logical coordinates cannot be
-    // compared across monitors.
-    let (w, h) = win
-        .outer_size()
-        .map(|s| (s.width as f64, s.height as f64))
-        .unwrap_or_else(|_| {
-            size_for(
-                &state.preferences.floating.style,
-                state.preferences.floating.expanded,
-            )
+fn restore_position(
+    app: &AppHandle,
+    win: &tauri::WebviewWindow,
+    state: &AppState,
+    saved_position: Option<(i64, i64)>,
+) {
+    let style = &state.preferences.floating.style;
+    let (w, h) = size_for(
+        style,
+        state.preferences.floating.expanded,
+        state.preferences.floating.show_weekly,
+    );
+    let monitors = app.available_monitors().unwrap_or_default();
+
+    if let Some((x, y)) = saved_position {
+        let (x, y) = (x as f64, y as f64);
+        let restored = monitors.iter().find_map(|monitor| {
+            let position = monitor.position();
+            let size = monitor.size();
+            let rect = (
+                position.x as f64,
+                position.y as f64,
+                size.width as f64,
+                size.height as f64,
+            );
+            // The destination monitor owns the physical size, not the screen we booted on.
+            let (w, h) = (w * monitor.scale_factor(), h * monitor.scale_factor());
+            if style == "mini" {
+                siphon_core::geometry::fit_position(rect, x, y, w, h)
+            } else {
+                siphon_core::geometry::monitor_containing(&[rect], x, y, w, h).map(|_| (x, y))
+            }
         });
-
-    // Default top-right anchor on the primary monitor, inset by a 20px margin
-    // scaled to that monitor's DPI.
-    let (mut default_x, mut default_y) = (20.0_f64, 20.0_f64);
-    if let Ok(Some(monitor)) = app.primary_monitor() {
-        let margin = 20.0 * monitor.scale_factor();
-        let (mx, my) = (monitor.position().x as f64, monitor.position().y as f64);
-        default_x = (mx + monitor.size().width as f64 - w - margin).max(mx);
-        default_y = my + margin;
+        if let Some((x, y)) = restored.or_else(|| monitors.is_empty().then_some((x, y))) {
+            let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
+            return;
+        }
     }
 
-    // Saved position, else the default anchor.
-    let (mut x, mut y) = match (state.preferences.floating.x, state.preferences.floating.y) {
-        (Some(sx), Some(sy)) => (sx as f64, sy as f64),
-        _ => (default_x, default_y),
-    };
-
-    // Clamp: if the saved position lands (mostly) off every connected monitor,
-    // fall back to the default anchor. Self-heals stale/corrupt coordinates,
-    // while keeping a widget parked on a secondary display where it was.
-    if !siphon_core::geometry::position_is_visible(
-        &crate::windows_ctl::monitor_rects(app),
-        x,
-        y,
-        w,
-        h,
-    ) {
-        x = default_x;
-        y = default_y;
-    }
-
+    let (x, y) = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| {
+            let scale = monitor.scale_factor();
+            let margin = 20.0 * scale;
+            let (mx, my) = (monitor.position().x as f64, monitor.position().y as f64);
+            (
+                (mx + monitor.size().width as f64 - w * scale - margin).max(mx),
+                (my + margin)
+                    .min(my + monitor.size().height as f64 - h * scale)
+                    .max(my),
+            )
+        })
+        .unwrap_or((20.0, 20.0));
     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn weekly_option_only_changes_the_pill_width() {
+        assert_eq!(size_for("mini", false, false), (71.0, 32.0));
+        assert_eq!(size_for("mini", true, false), (71.0, 32.0));
+        assert_eq!(size_for("mini", false, true), (136.0, 32.0));
+        assert_eq!(size_for("mini", true, true), (136.0, 32.0));
+        for show_weekly in [false, true] {
+            assert_eq!(size_for("classic", false, show_weekly), COMPACT);
+            assert_eq!(size_for("classic", true, show_weekly), EXPANDED);
+        }
+    }
 }
