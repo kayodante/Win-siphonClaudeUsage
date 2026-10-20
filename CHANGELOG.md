@@ -11,6 +11,11 @@ is added above it.
 
 ## [Unreleased]
 
+### Fixed
+
+- Update the TLS dependency to reject handshake messages sent at the wrong
+  encryption level (GHSA-2mjx-qc3c-rqvc).
+
 ## [1.15.1] - 2026-10-19
 
 ### Added
