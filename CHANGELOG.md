@@ -22,6 +22,11 @@ is added above it.
 
 - Restore the wider mini widget on its saved monitor using the destination DPI
   and keep it inside the display edges.
+- "Update & restart" no longer opens the full installer wizard with its
+  "uninstall before installing" choice. The installer now runs in passive
+  update mode: a progress bar, an in-place install that keeps your Start Menu
+  and desktop shortcuts and taskbar pin, and Siphon reopens on its own when
+  it finishes. Running the downloaded installer by hand is unchanged.
 
 ## [1.14.6] - 2026-09-22
 
