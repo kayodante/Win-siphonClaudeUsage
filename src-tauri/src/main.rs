@@ -11,6 +11,7 @@ mod commands;
 mod controller;
 mod floating;
 mod http;
+mod launch;
 mod notify;
 mod oauth_server;
 mod prefs;
@@ -28,11 +29,10 @@ use tauri::{Emitter, Manager};
 
 use claude_settings::ClaudeSettings;
 use controller::{Controller, ALLOWED_REFRESH_INTERVALS, MIN_QUOTA_INTERVAL_SECS};
+use launch::STARTUP_HIDDEN_ARG;
 use prefs::{Change, PrefsStore};
 use siphon_core::json_store::config_dir;
 use token_store::TokenStore;
-
-const STARTUP_HIDDEN_ARG: &str = "--hidden";
 
 /// Latest main-window position waiting to be persisted. `Some` also means a
 /// flush task is already scheduled (trailing debounce, one write per drag burst).
@@ -58,19 +58,21 @@ pub struct AppContext {
 }
 
 fn main() {
+    if std::env::args().any(|arg| arg == launch::CLAUDE_HOOK_ARG) {
+        if let Err(error) = launch::run_claude_hook() {
+            eprintln!("Claude Code hook could not launch Siphon: {error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let launch_hidden = std::env::args().any(|a| a == STARTUP_HIDDEN_ARG);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            // A second launch normally means the user asked for the app, so
-            // show it. A `--hidden` relaunch does not: that is autostart or the
-            // Claude Code SessionStart hook only making sure Siphon is running,
-            // and popping the window on top of whatever the user is doing (plus
-            // resetting the view to `main`) is exactly what they did not ask for.
-            if argv.iter().any(|a| a == STARTUP_HIDDEN_ARG) {
-                return;
+            // Automated launches must preserve visibility, focus and view.
+            if launch::show_window_on_relaunch(&argv) {
+                windows_ctl::show_main(app);
             }
-            windows_ctl::show_main(app);
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
