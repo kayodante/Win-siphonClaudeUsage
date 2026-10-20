@@ -11,6 +11,18 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- Mini floating widget shows session and weekly quotas together, with neutral
+  percentages, the two-channel tray icon, and localized labels and tooltips.
+- A Pill-only switch can hide the weekly quota and restore the compact
+  session-only widget. The choice is saved and defaults to showing both quotas.
+
+### Fixed
+
+- Restore the wider mini widget on its saved monitor using the destination DPI
+  and keep it inside the display edges.
+
 ## [1.14.6] - 2026-09-22
 
 ### Fixed

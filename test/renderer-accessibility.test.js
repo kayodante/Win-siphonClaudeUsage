@@ -28,7 +28,8 @@ test('main-window form controls use existing visible copy as accessible names', 
     'settingsStartupShowWindowToggle', 'settingsUpdatesAutoCheckToggle',
     'settingsUpdatesAutoDownloadToggle', 'settingsNotificationsToggle',
     'settingsSoundToggle', 'settingsLimitAlertToggle', 'settingsLimitSoundToggle',
-    'settingsExpireAlertToggle', 'settingsExpireSoundToggle', 'settingsFloatingToggle'
+    'settingsExpireAlertToggle', 'settingsExpireSoundToggle', 'settingsFloatingToggle',
+    'settingsPillWeeklyToggle'
   ];
   for (const id of checkboxIds) assert.match(elementWithId(id), /aria-labelledby="[^"]+"/);
 
@@ -150,4 +151,14 @@ test('the sign-in waiting block exposes the authorize URL and its controls acces
 test('the escape hatch notice and headline are addressable for runtime copy swaps', () => {
   assert.match(elementWithId('onboardWaitingHeadline'), /data-i18n="onboarding\.waitingBrowser"/);
   assert.match(elementWithId('onboardHatchNotice'), /hidden/);
+});
+
+
+test('Pill weekly switch uses a visible translated label and is limited to the Pill style', () => {
+  assert.match(elementWithId('settingsPillWeeklyOption'), /hidden/);
+  assert.match(elementWithId('settingsPillWeeklyLabel'), /data-i18n="settings\.widget\.showWeekly"/);
+  assert.match(elementWithId('settingsPillWeeklyToggle'), /type="checkbox"[^>]*aria-labelledby="settingsPillWeeklyLabel"/);
+  assert.match(renderer, /settingsPillWeeklyOption\.hidden = floatingStyle !== 'mini'/);
+  assert.match(renderer, /settingsPillWeeklyToggle\.checked = state\.preferences\?\.floating\?\.showWeekly \?\? true/);
+  assert.match(renderer, /setPreference\('floating\.showWeekly', event\.target\.checked\)/);
 });

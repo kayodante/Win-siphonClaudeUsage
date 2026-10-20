@@ -3428,7 +3428,6 @@ body[data-style="mini"] .floating-widget {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: var(--space-1);
   -webkit-app-region: drag;
 }
 
@@ -3436,16 +3435,14 @@ body[data-style="mini"] .floating-widget {
   content: "";
   width: 1px;
   height: var(--space-5);
-  margin-right: var(--space-0);
+  flex-shrink: 0;
   background: var(--border-strong);
 }
 
 .floating-mini-weekly-icon {
+  color: var(--subtle-foreground);
+  fill: currentColor;
   width: var(--space-5);
   height: var(--space-5);
   flex-shrink: 0;
 }
-
-.floating-mini-weekly[data-level="warn"]     { color: var(--level-warn); }
-.floating-mini-weekly[data-level="high"]     { color: var(--level-high); }
-.floating-mini-weekly[data-level="critical"] { color: var(--level-critical); }

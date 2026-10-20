@@ -86,6 +86,8 @@ const elements = {
   settingsRefreshInterval: document.querySelector('#settingsRefreshInterval'),
   settingsQuotaMode: document.querySelector('#settingsQuotaMode'),
   settingsFloatingToggle: document.querySelector('#settingsFloatingToggle'),
+  settingsPillWeeklyOption: document.querySelector('#settingsPillWeeklyOption'),
+  settingsPillWeeklyToggle: document.querySelector('#settingsPillWeeklyToggle'),
   settingsStartupToggle: document.querySelector('#settingsStartupToggle'),
   settingsStartupShowWindowToggle: document.querySelector('#settingsStartupShowWindowToggle'),
   settingsUpdatesAutoCheckToggle: document.querySelector('#settingsUpdatesAutoCheckToggle'),
@@ -616,6 +618,14 @@ elements.settingsFloatingToggle.addEventListener('change', async event => {
     handleToggleError('Failed to save floating widget preference:', error, event, 'error.saveFloating');
   }
 });
+elements.settingsPillWeeklyToggle.addEventListener('change', async event => {
+  try {
+    await window.siphon.setPreference('floating.showWeekly', event.target.checked);
+  } catch (error) {
+    handleToggleError('Failed to save Pill weekly quota preference:', error, event, 'error.saveFloating');
+  }
+});
+
 elements.settingsStyleClassic.addEventListener('click', async () => {
   try {
     await window.siphon.setPreference('floating.style', 'classic');
@@ -1106,6 +1116,8 @@ function renderSettingsControls(state, lang) {
   elements.settingsRefreshInterval.value = String(state.preferences?.refresh?.intervalSeconds ?? 30);
   elements.settingsQuotaMode.value = state.preferences?.display?.quotaMode ?? 'used';
   elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
+  elements.settingsPillWeeklyOption.hidden = floatingStyle !== 'mini';
+  elements.settingsPillWeeklyToggle.checked = state.preferences?.floating?.showWeekly ?? true;
   elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
   elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
   elements.settingsStyleClassic.setAttribute('aria-checked', String(floatingStyle === 'classic'));

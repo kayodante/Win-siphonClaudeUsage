@@ -415,6 +415,7 @@ with defaults on load so old files remain valid.
     "enabled": false,
     "expanded": false,
     "style": "classic",
+    "showWeekly": true,
     "x": null,
     "y": null
   },
@@ -459,10 +460,21 @@ the background. `display.quotaMode` is `used` or `remaining` and flips only the
 displayed percentage and its suffix — meters, colors, pace, and alert thresholds
 stay on the raw *used* percent. `window.x/y` is the main window's **physical**
 position, accepted on restore when at least half the window still lands on a
-connected monitor (`siphon_core::geometry`), same rule as `floating.x/y`. A spot
-that lands on no monitor — a display unplugged since the save — and a first launch
-with nothing stored both fall back to the primary monitor's top-right corner,
-16px in.
+connected monitor (`siphon_core::geometry`), also the rule for the classic
+floating widget. The mini widget accepts a saved origin on a connected monitor
+and pulls its 71×32 or 136×32 logical-pixel footprint inside that monitor using its DPI;
+a larger pill does not discard a position saved by the old 71px-wide widget.
+Both floating layouts show used or remaining percentages according to
+`display.quotaMode`. `floating.showWeekly` defaults to `true`: mini shows both
+quotas with the two-channel tray icon. Setting it to `false` hides the weekly
+group and restores the 71×32 session-only Pill, including its session icon. The
+switch is available only when Pill is selected, and changes apply immediately.
+Resizing uses the live window position so a recent drag is not undone. Classic
+keeps its own weekly row and size regardless of this preference.
+A disconnected display or a first launch falls back to the primary monitor's
+top-right corner: 16 physical pixels in for the main window and 20 logical
+pixels in for the floating widget. With no monitor information, the floating
+widget trusts its saved position.
 `window.width/height` is its size in **logical** pixels — physical position,
 logical size, because a position is a point in the shared virtual desktop while
 a size is a measurement Windows rescales across a DPI boundary. Size is restored

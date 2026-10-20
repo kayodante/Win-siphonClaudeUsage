@@ -52,6 +52,16 @@ pub fn monitor_containing(
     })
 }
 
+/// Keep a window whose saved origin is on this monitor inside its edges.
+/// Returns `None` when the origin belongs to a different or disconnected display.
+pub fn fit_position(monitor: MonitorRect, x: f64, y: f64, w: f64, h: f64) -> Option<(f64, f64)> {
+    let (mx, my, mw, mh) = monitor;
+    if !(mx..mx + mw).contains(&x) || !(my..my + mh).contains(&y) {
+        return None;
+    }
+    Some((x.min(mx + mw - w).max(mx), y.min(my + mh - h).max(my)))
+}
+
 /// A `w`×`h` window shrunk to fit inside `monitor`, keeping `EDGE_MARGIN` free
 /// on both sides of each axis. Only ever shrinks.
 ///
@@ -186,5 +196,50 @@ mod tests {
     fn the_result_is_always_visible_on_its_monitor() {
         let (x, y) = right_edge_position(TWO[1], 328.0, 732.0);
         assert!(position_is_visible(&TWO, x, y, 328.0, 732.0));
+    }
+
+    #[test]
+    fn keeps_a_widened_pill_on_its_saved_secondary_monitor() {
+        let saved_x = 4480.0 - 71.0;
+        // A new window born on a 150% primary used to reject this saved spot.
+        assert!(monitor_containing(&TWO, saved_x, 20.0, 136.0 * 1.5, 32.0 * 1.5).is_none());
+        assert_eq!(
+            fit_position(TWO[1], saved_x, 20.0, 136.0, 32.0),
+            Some((4344.0, 20.0))
+        );
+    }
+
+    #[test]
+    fn fits_the_pill_using_the_destination_scale_and_bottom_edge() {
+        assert_eq!(
+            fit_position(TWO[1], 4400.0, 1420.0, 136.0 * 2.0, 32.0 * 2.0),
+            Some((4208.0, 1376.0))
+        );
+    }
+
+    #[test]
+    fn keeps_an_interior_saved_position_unchanged() {
+        assert_eq!(
+            fit_position(TWO[1], 3260.0, 368.0, 136.0, 32.0),
+            Some((3260.0, 368.0))
+        );
+    }
+
+    #[test]
+    fn rejects_disconnected_origins_and_assigns_shared_edges_to_the_next_monitor() {
+        assert_eq!(fit_position(TWO[0], 3260.0, 368.0, 136.0, 32.0), None);
+        assert_eq!(fit_position(TWO[0], 1920.0, 20.0, 136.0, 32.0), None);
+        assert_eq!(
+            fit_position(TWO[1], 1920.0, 20.0, 136.0, 32.0),
+            Some((1920.0, 20.0))
+        );
+    }
+
+    #[test]
+    fn fits_on_a_monitor_left_of_the_primary() {
+        assert_eq!(
+            fit_position((-1920.0, 0.0, 1920.0, 1080.0), -71.0, 20.0, 136.0, 32.0),
+            Some((-136.0, 20.0))
+        );
     }
 }

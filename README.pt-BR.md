@@ -39,7 +39,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 * **Alertas de cota** | Avisos na interface quando o uso da sessão chega a 70% e 90% (dispensáveis por sessão); notificações opcionais do Windows aos 70%, 90% e 100%, cada uma configurável separadamente
 * **Notificação de redefinição** | Notificação do Windows quando a sessão é redefinida. Se o aplicativo estava fechado, ela aparece na próxima abertura
 * **Alertas sonoros** | Três sons (sessão redefinida, cota esgotada e avisos aos 70%/90%), cada um com controle próprio para ativar, testar e ajustar o volume
-* **Widget flutuante** | Widget sempre visível que você pode arrastar para qualquer lugar. Dois formatos: clássico (progresso da sessão e painel de estatísticas expansível) ou pílula (ícone compacto e barra de porcentagem)
+* **Widget flutuante** | Widget sempre visível que você pode arrastar para qualquer lugar. Dois formatos: clássico (progresso da sessão e painel de estatísticas expansível) ou pílula (porcentagem da sessão e cota semanal opcional). A cota semanal começa ativada e pode ser ocultada em Configurações → Widget; ao ocultá-la, o ícone mostra só a sessão e a pílula volta à largura compacta
 * **Atualização configurável** | A cada 30 segundos por padrão; opções de 1, 5 e 15 minutos em Configurações
 * **Iniciar com o Windows** | Inicialização automática opcional, com uma configuração separada para abrir ou não a janela ao entrar no sistema
 * **Abrir com o Claude Code** | Integração opcional que registra um hook `SessionStart` em `~/.claude/settings.json` para abrir o Siphon quando você inicia uma sessão
