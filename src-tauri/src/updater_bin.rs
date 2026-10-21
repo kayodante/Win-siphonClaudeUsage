@@ -62,18 +62,18 @@ async fn download_inner(app: AppHandle, payload: Value) {
         .build()
         .expect("reqwest client");
     if let Err(e) = fetch_to_file(&client, download_url, &dest, Some(&app)).await {
-        let _ = std::fs::remove_file(&dest);
+        let _ = tokio::fs::remove_file(&dest).await;
         return emit_error(&app, &e);
     }
     if let Err(e) = fetch_to_file(&client, &effective_checksum, &checksum_path, None).await {
-        let _ = std::fs::remove_file(&dest);
+        let _ = tokio::fs::remove_file(&dest).await;
         return emit_error(&app, &e);
     }
 
     let expected = std::fs::read_to_string(&checksum_path)
         .ok()
         .and_then(|t| t.split_whitespace().next().map(|s| s.to_string()));
-    let _ = std::fs::remove_file(&checksum_path);
+    let _ = tokio::fs::remove_file(&checksum_path).await;
     let actual = sha256_file(&dest);
     match (expected, actual) {
         (Some(exp), Ok(act)) if exp == act => {
@@ -84,7 +84,7 @@ async fn download_inner(app: AppHandle, payload: Value) {
             );
         }
         _ => {
-            let _ = std::fs::remove_file(&dest);
+            let _ = tokio::fs::remove_file(&dest).await;
             emit_error(&app, "Checksum verification failed");
         }
     }
