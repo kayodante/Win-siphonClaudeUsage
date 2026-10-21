@@ -11,16 +11,16 @@ is added above it.
 
 ## [Unreleased]
 
+### Security
+
+- The updater downloads only the installer and checksum URLs it fetched from
+  the GitHub release API itself, ignoring URLs sent by the renderer, and
+  refuses an update whose release has no `.sha256` checksum.
+
 ### Fixed
 
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
-
-## [1.15.2]
-
-### Security
-
-- Prevent auto-updater from downloading arbitrary assets. It now strictly enforces that updates use URLs fetched directly from the known-safe GitHub release API, ignoring potentially compromised renderer payloads.
 
 ## [1.15.1] - 2026-10-19
 
