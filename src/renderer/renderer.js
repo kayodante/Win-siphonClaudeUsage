@@ -849,12 +849,6 @@ try {
   window.siphon.onState(render);
   window.siphon.onResetSound(playResetSound);
   render(await window.siphon.getState());
-  console.log(
-    '%c⚡ Siphon %creads your Claude session before you think to check.',
-    'font-family:monospace;font-weight:bold;font-size:12px;color:oklch(84.1% 0.238 128.85)',
-    'font-family:monospace;font-size:12px;color:#555'
-  );
-  console.log('%cgithub.com/kayodante/Win-siphonClaudeUsage', 'font-family:monospace;font-size:10px;color:#3a3a3a');
 } catch (error) {
   logSafeError('Renderer bootstrap failed:', error);
   if (elements.errorText) {
