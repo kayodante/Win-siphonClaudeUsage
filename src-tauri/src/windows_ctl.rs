@@ -161,6 +161,7 @@ pub fn restore_main_position(app: &AppHandle) {
     // which is where the window-in-a-random-corner half of the bug came from.
     let (x, y) = saved_xy
         .filter(|_| saved_monitor.is_some())
+        .and_then(|(x, y)| siphon_core::geometry::fit_position(monitor, x, y, ww, wh))
         .unwrap_or_else(|| siphon_core::geometry::right_edge_position(monitor, ww, wh));
     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
 }
