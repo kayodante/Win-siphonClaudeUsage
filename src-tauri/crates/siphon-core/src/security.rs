@@ -40,7 +40,16 @@ pub fn is_safe_external_url(url: &str) -> bool {
 pub fn is_trusted_download_url(url: &str) -> bool {
     match host_of(url) {
         Some((scheme, host)) => {
-            scheme == "https" && TRUSTED_DOWNLOAD_HOSTS.contains(&host.as_str())
+            if scheme != "https" || !TRUSTED_DOWNLOAD_HOSTS.contains(&host.as_str()) {
+                return false;
+            }
+            // Strict check: if it's github.com, it must be our repo.
+            if host == "github.com"
+                && !url.starts_with(&format!("https://github.com/{}/", crate::updater::REPO))
+            {
+                return false;
+            }
+            true
         }
         None => false,
     }
@@ -74,6 +83,13 @@ mod tests {
     fn download_urls() {
         assert!(is_trusted_download_url(
             "https://objects.githubusercontent.com/a/b"
+        ));
+        assert!(is_trusted_download_url(&format!(
+            "https://github.com/{}/releases/download/v1.0.0/file.exe",
+            crate::updater::REPO
+        )));
+        assert!(!is_trusted_download_url(
+            "https://github.com/some/other/repo"
         ));
         assert!(!is_trusted_download_url("https://cdn.example.com/x"));
         assert!(!is_trusted_download_url("http://github.com/x"));

@@ -54,7 +54,12 @@ async fn download_inner(app: AppHandle, payload: Value) {
     let checksum_path = temp.join(format!("Siphon-Setup-{version}.exe.sha256"));
     let effective_checksum = checksum_url
         .map(|s| s.to_string())
-        .unwrap_or_else(|| format!("{download_url}.sha256"));
+        .unwrap_or_else(|| {
+            format!(
+                "https://github.com/{}/releases/download/v{version}/Siphon.Setup.{version}.exe.sha256",
+                siphon_core::updater::REPO
+            )
+        });
 
     let client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(15))
