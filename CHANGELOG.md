@@ -16,6 +16,12 @@ is added above it.
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
 
+## [1.15.2]
+
+### Security
+
+- Prevent auto-updater from downloading arbitrary assets. It now strictly enforces that updates use URLs fetched directly from the known-safe GitHub release API, ignoring potentially compromised renderer payloads.
+
 ## [1.15.1] - 2026-10-19
 
 ### Added

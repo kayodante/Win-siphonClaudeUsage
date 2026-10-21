@@ -44,6 +44,22 @@ impl UpdateInfo {
     }
 }
 
+pub fn verify_download_request(
+    pending: Option<&UpdateInfo>,
+    requested_version: &str,
+) -> Option<(String, String)> {
+    let update = pending?;
+
+    if update.version != requested_version {
+        return None;
+    }
+
+    let download_url = update.download_url.clone()?;
+    let checksum_url = update.checksum_url.clone()?;
+
+    Some((download_url, checksum_url))
+}
+
 /// Parse a GitHub release payload into `UpdateInfo` when it is a newer,
 /// non-draft, non-prerelease build. Mirrors the asset-selection in
 /// `checkForUpdate` (the `.exe` asset that is not the Portable one, plus its
@@ -94,6 +110,41 @@ pub fn parse_release(release: &Value, current_version: &str) -> Option<UpdateInf
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn verify_download_request_matches_version_and_requires_both_urls() {
+        let update = UpdateInfo {
+            version: "2.0.0".into(),
+            url: "https://...".into(),
+            download_url: Some("https://down.exe".into()),
+            checksum_url: Some("https://check.sha256".into()),
+        };
+
+        // Matches
+        let res = verify_download_request(Some(&update), "2.0.0");
+        assert_eq!(
+            res,
+            Some(("https://down.exe".into(), "https://check.sha256".into()))
+        );
+
+        // Mismatched version
+        assert_eq!(verify_download_request(Some(&update), "1.9.0"), None);
+
+        // Missing checksum fails closed
+        let update_missing_checksum = UpdateInfo {
+            version: "2.0.0".into(),
+            url: "https://...".into(),
+            download_url: Some("https://down.exe".into()),
+            checksum_url: None,
+        };
+        assert_eq!(
+            verify_download_request(Some(&update_missing_checksum), "2.0.0"),
+            None
+        );
+
+        // Missing pending
+        assert_eq!(verify_download_request(None, "2.0.0"), None);
+    }
 
     #[test]
     fn semver_comparison() {
