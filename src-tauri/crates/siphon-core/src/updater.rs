@@ -6,10 +6,6 @@ use serde_json::{json, Value};
 
 pub const REPO: &str = "kayodante/Win-siphonClaudeUsage";
 
-lazy_static::lazy_static! {
-    pub static ref PENDING_UPDATE: std::sync::Mutex<Option<UpdateInfo>> = std::sync::Mutex::new(None);
-}
-
 /// Everything the renderer needs to offer an update. Matches the object returned
 /// by `checkForUpdate`.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,9 +44,11 @@ impl UpdateInfo {
     }
 }
 
-pub fn verify_download_request(requested_version: &str) -> Option<(String, String)> {
-    let pending = PENDING_UPDATE.lock().unwrap();
-    let update = pending.as_ref()?;
+pub fn verify_download_request(
+    pending: Option<&UpdateInfo>,
+    requested_version: &str,
+) -> Option<(String, String)> {
+    let update = pending?;
 
     if update.version != requested_version {
         return None;
@@ -121,29 +119,31 @@ mod tests {
             download_url: Some("https://down.exe".into()),
             checksum_url: Some("https://check.sha256".into()),
         };
-        *PENDING_UPDATE.lock().unwrap() = Some(update);
 
         // Matches
-        let res = verify_download_request("2.0.0");
+        let res = verify_download_request(Some(&update), "2.0.0");
         assert_eq!(
             res,
             Some(("https://down.exe".into(), "https://check.sha256".into()))
         );
 
         // Mismatched version
-        assert_eq!(verify_download_request("1.9.0"), None);
+        assert_eq!(verify_download_request(Some(&update), "1.9.0"), None);
 
         // Missing checksum fails closed
-        *PENDING_UPDATE.lock().unwrap() = Some(UpdateInfo {
+        let update_missing_checksum = UpdateInfo {
             version: "2.0.0".into(),
             url: "https://...".into(),
             download_url: Some("https://down.exe".into()),
             checksum_url: None,
-        });
-        assert_eq!(verify_download_request("2.0.0"), None);
+        };
+        assert_eq!(
+            verify_download_request(Some(&update_missing_checksum), "2.0.0"),
+            None
+        );
 
-        // Clear state
-        *PENDING_UPDATE.lock().unwrap() = None;
+        // Missing pending
+        assert_eq!(verify_download_request(None, "2.0.0"), None);
     }
 
     #[test]

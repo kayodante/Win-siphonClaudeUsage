@@ -37,7 +37,10 @@ async fn download_inner(app: AppHandle, payload: Value) {
         return emit_error(&app, "invalid version");
     }
 
-    let (download_url, checksum_url) = match siphon_core::updater::verify_download_request(version) {
+    let (download_url, checksum_url) = match siphon_core::updater::verify_download_request(
+        crate::update_check::PENDING_UPDATE.lock().unwrap().as_ref(),
+        version,
+    ) {
         Some(urls) => urls,
         None => return emit_error(&app, "invalid or untrusted update payload"),
     };

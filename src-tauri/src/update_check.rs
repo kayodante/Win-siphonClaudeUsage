@@ -40,6 +40,11 @@ pub fn check_now(app: AppHandle) {
 /// the same installer while the user leaves the banner sitting there.
 static DOWNLOADED: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 
+/// Latest parsed update info from check_once, used by updater_bin to securely
+/// verify download URLs against the exact payload that was returned by GitHub API.
+pub static PENDING_UPDATE: std::sync::Mutex<Option<siphon_core::updater::UpdateInfo>> =
+    std::sync::Mutex::new(None);
+
 async fn check_once(app: &AppHandle) {
     let prefs = match app.try_state::<crate::AppContext>() {
         Some(ctx) => ctx.prefs.load().updates,
@@ -55,7 +60,7 @@ async fn check_once(app: &AppHandle) {
     let Some(info) = parse_release(&release, &current) else {
         return;
     };
-    *siphon_core::updater::PENDING_UPDATE.lock().unwrap() = Some(info.clone());
+    *PENDING_UPDATE.lock().unwrap() = Some(info.clone());
     let payload = info.to_payload();
     let _ = app.emit("update-available", payload.clone());
 

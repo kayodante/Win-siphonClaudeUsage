@@ -1947,12 +1947,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lazy_static"
-version = "1.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
-
-[[package]]
 name = "libappindicator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3558,7 +3552,6 @@ version = "1.15.2"
 dependencies = [
  "base64 0.22.1",
  "chrono",
- "lazy_static",
  "rand 0.9.5",
  "regex-lite",
  "serde",
