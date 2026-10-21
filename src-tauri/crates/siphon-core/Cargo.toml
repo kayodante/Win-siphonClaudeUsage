@@ -1,6 +1,6 @@
 [package]
 name = "siphon-core"
-version = "1.15.1"
+version = "1.15.2"
 description = "Pure, cross-platform business logic for Siphon (usage parsing, pricing, OAuth/PKCE, quota, preferences)."
 license = "MIT"
 edition = "2021"
@@ -11,6 +11,7 @@ rust-version = "1.77"
 # library exposes the pure functions (URL building, PKCE, response parsing,
 # pricing, JSONL summarisation, preference merge) that back them.
 [dependencies]
+lazy_static = "1.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["clock"] }

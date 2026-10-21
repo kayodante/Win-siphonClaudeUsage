@@ -28,11 +28,6 @@ pub async fn download(app: AppHandle, payload: Value) {
 }
 
 async fn download_inner(app: AppHandle, payload: Value) {
-    let download_url = payload
-        .get("downloadUrl")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let checksum_url = payload.get("checksumUrl").and_then(|v| v.as_str());
     let version = payload
         .get("version")
         .and_then(|v| v.as_str())
@@ -41,36 +36,30 @@ async fn download_inner(app: AppHandle, payload: Value) {
     if !is_valid_version(version) {
         return emit_error(&app, "invalid version");
     }
-    if !is_trusted_download_url(download_url)
-        || checksum_url
-            .map(|u| !is_trusted_download_url(u))
-            .unwrap_or(false)
-    {
+
+    let (download_url, checksum_url) = match siphon_core::updater::verify_download_request(version) {
+        Some(urls) => urls,
+        None => return emit_error(&app, "invalid or untrusted update payload"),
+    };
+
+    if !is_trusted_download_url(&download_url) || !is_trusted_download_url(&checksum_url) {
         return emit_error(&app, "untrusted download URL");
     }
 
     let temp = std::env::temp_dir();
     let dest = temp.join(format!("Siphon-Setup-{version}.exe"));
     let checksum_path = temp.join(format!("Siphon-Setup-{version}.exe.sha256"));
-    let effective_checksum = checksum_url
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| {
-            format!(
-                "https://github.com/{}/releases/download/v{version}/Siphon.Setup.{version}.exe.sha256",
-                siphon_core::updater::REPO
-            )
-        });
 
     let client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(15))
         .read_timeout(std::time::Duration::from_secs(30))
         .build()
         .expect("reqwest client");
-    if let Err(e) = fetch_to_file(&client, download_url, &dest, Some(&app)).await {
+    if let Err(e) = fetch_to_file(&client, &download_url, &dest, Some(&app)).await {
         let _ = std::fs::remove_file(&dest);
         return emit_error(&app, &e);
     }
-    if let Err(e) = fetch_to_file(&client, &effective_checksum, &checksum_path, None).await {
+    if let Err(e) = fetch_to_file(&client, &checksum_url, &checksum_path, None).await {
         let _ = std::fs::remove_file(&dest);
         return emit_error(&app, &e);
     }

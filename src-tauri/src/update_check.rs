@@ -55,6 +55,7 @@ async fn check_once(app: &AppHandle) {
     let Some(info) = parse_release(&release, &current) else {
         return;
     };
+    *siphon_core::updater::PENDING_UPDATE.lock().unwrap() = Some(info.clone());
     let payload = info.to_payload();
     let _ = app.emit("update-available", payload.clone());
 
