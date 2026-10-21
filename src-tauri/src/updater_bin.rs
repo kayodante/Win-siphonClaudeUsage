@@ -70,7 +70,8 @@ async fn download_inner(app: AppHandle, payload: Value) {
         return emit_error(&app, &e);
     }
 
-    let expected = std::fs::read_to_string(&checksum_path)
+    let expected = tokio::fs::read_to_string(&checksum_path)
+        .await
         .ok()
         .and_then(|t| t.split_whitespace().next().map(|s| s.to_string()));
     let _ = std::fs::remove_file(&checksum_path);
