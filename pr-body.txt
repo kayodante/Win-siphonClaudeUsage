@@ -1,0 +1,4 @@
+🎯 **What:** Removed leftover `console.log` statements in `src/renderer/renderer.js`.
+💡 **Why:** These statements are mostly for debugging and branding output. Removing them cleans up the production build, keeps the console quiet, and improves code readability.
+✅ **Verification:** All tests passed via `npm test` and the lint check via `npm run lint` was successful, ensuring that no functionality was broken.
+✨ **Result:** Clean production console without leftover debug text, improving code health.
