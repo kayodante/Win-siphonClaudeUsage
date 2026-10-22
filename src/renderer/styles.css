@@ -262,21 +262,42 @@ h3 {
    LAYOUT
 ═══════════════════════════════════════════════════════════ */
 
-/* The window is undecorated + transparent (tauri.conf.json), so this box is the
-   app's visible frame — it paints the page background and draws the rounded edge.
-   Keep both here, not on `body`: CSS propagates a body background up to the
-   canvas, which fills the whole viewport square and ignores any radius, so a
-   frame defined on `body` renders as square corners no matter the border-radius. */
+/* The window is undecorated + transparent (tauri.conf.json) with a DWM acrylic
+   backdrop (windows_ctl::apply_backdrop), so this box is the app's visible
+   frame. Keep it here, not on `body`: CSS propagates a body background up to
+   the canvas, which fills the whole viewport square and ignores any radius.
+   The fill is translucent so the acrylic shows through — on Windows 11 builds
+   that ignore the acrylic tint, this alpha is the only thing darkening it.
+   The radius is 8px because DWM rounds the window itself at ~8px; a larger
+   CSS radius would leave acrylic wedges showing in the four corners. */
 .shell {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-2);
   flex: 1 0 0;
   min-height: 0;
   overflow: hidden;
+  background: oklch(0% 0 0 / 0.75);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--inner-light);
+}
+
+.shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The content well: solid page black, carved into the shell at its top-left
+   corner only, so it reads as one folder opened from the rail. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--bg-page);
-  border-radius: var(--radius-2xl);
+  border-top-left-radius: var(--radius-2xl);
   box-shadow: var(--inner-light);
 }
 
@@ -291,15 +312,23 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  padding: var(--space-3);
 }
 
-body[data-view="onboard"] .shell {
-  padding: 0;
-  overflow: hidden;
+/* Onboarding has no rail and no well: the copy sits straight on the frame. */
+body[data-view="onboard"] .rail {
+  display: none;
+}
+
+body[data-view="onboard"] .panel {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 body[data-view="onboard"] .shell-scroll {
   overflow: hidden;
+  padding: 0;
 }
 
 .view {
@@ -314,72 +343,30 @@ body[data-view="onboard"] .shell-scroll {
 ═══════════════════════════════════════════════════════════ */
 
 .topbar {
-  padding: var(--space-none);
-  flex-shrink: 0;
-  -webkit-app-region: drag;
-}
-
-.topbar-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-0);
-  padding: var(--space-5) var(--space-8) 11px var(--space-8);
-  background: var(--card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--inner-light);
+  flex-shrink: 0;
+  /* 48px tall: 28px controls + 10px. Their 20px glyphs sit 4px inside the
+     button, so the visible edges land 14px/20px in, as designed. */
+  padding: var(--space-4) var(--space-7);
   -webkit-app-region: drag;
 }
 
-body[data-view="onboard"] .topbar {
-  padding: var(--space-3) var(--space-3) 0;
-}
-
-body[data-view="onboard"] .topbar-card {
-  justify-content: flex-end;
-  background: transparent;
-  padding: var(--space-3) var(--space-7);
-}
-
-body[data-view="onboard"] .topbar .brand,
-body[data-view="onboard"] #notificationState,
-body[data-view="onboard"] #refreshButton,
-body[data-view="onboard"] #settingsButton {
-  display: none;
-}
-
-body[data-view="onboard"] .top-actions {
-  gap: var(--space-1);
-}
-
-body[data-view="onboard"] .window-controls {
-  gap: var(--space-1);
-  margin-left: 0;
-  padding-left: 0;
-  border-left: none;
-}
-
-body[data-view="onboard"] .window-control-btn {
-  width: var(--space-9);
-  height: var(--space-9);
-  border-radius: var(--radius-xs);
-  color: oklch(52% 0 0);
-}
-
-body[data-view="onboard"] .window-control-btn svg {
-  width: var(--space-9);
-  height: var(--space-9);
+/* The centred onboarding logo replaces it; hidden rather than removed so the
+   window controls keep their place on the right. */
+body[data-view="onboard"] .topbar .brand {
+  visibility: hidden;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  padding-left: var(--space-1);
 }
 
 .brand-logo {
-  /* 78×18 keeps the 103×24 source's aspect and leaves room for the
-     notification button in the topbar. */
+  /* 78×18 keeps the 103×24 source's aspect. */
   height: 18px;
   width: 78px;
   display: block;
@@ -387,35 +374,13 @@ body[data-view="onboard"] .window-control-btn svg {
   -webkit-user-drag: none;
 }
 
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-none);
-  -webkit-app-region: no-drag;
-}
-
-/* ─── Topbar divider ─── */
-
-.top-actions-divider {
-  width: 1px;
-  height: 14px;
-  background: var(--border-strong);
-  flex-shrink: 0;
-  margin: 0 var(--space-1);
-}
-
-body[data-view="onboard"] .top-actions-divider {
-  display: none;
-}
-
 /* ─── Window controls ─── */
 
 .window-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-0);
-  border-left: none;
-  padding-left: 0;
+  gap: var(--space-1);
+  -webkit-app-region: no-drag;
 }
 
 .window-control-btn {
@@ -446,9 +411,101 @@ body[data-view="onboard"] .top-actions-divider {
 }
 
 .window-control-btn svg {
-  width: var(--space-7);
-  height: var(--space-7);
+  width: var(--space-8);
+  height: var(--space-8);
   fill: currentColor;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RAIL
+═══════════════════════════════════════════════════════════ */
+
+/* Provider tabs on top, app actions pinned to the bottom. Every target is
+   40×40 around a 20px glyph, stacked 8px apart. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  flex-shrink: 0;
+  width: 64px;
+  padding: var(--space-8) var(--space-5) var(--space-9);
+}
+
+.rail-providers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.rail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rail-divider {
+  width: 40px;
+  height: 1px;
+  flex-shrink: 0;
+  background: var(--border-subtle);
+}
+
+.rail-provider {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: oklch(100% 0 0 / 0.03);
+  color: var(--subtle-foreground);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
+}
+
+.rail-provider[aria-current="page"] {
+  background: oklch(100% 0 0 / 0.12);
+  color: var(--accent);
+  box-shadow: var(--inner-light);
+}
+
+.rail-provider:hover {
+  filter: brightness(1.15);
+}
+
+.rail-provider:focus-visible,
+.rail-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: var(--space-0);
+}
+
+.rail-provider svg {
+  width: var(--space-8);
+  height: var(--space-8);
+  fill: currentColor;
+}
+
+/* .icon-button owns colour, hover and press; the rail only grows the target.
+   Doubled class: `.icon-button` comes later in the file at 28×28. */
+.icon-button.rail-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.icon-button.rail-btn svg,
+.icon-button.rail-btn .notif-icon-wrap {
+  width: var(--space-8);
+  height: var(--space-8);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -456,18 +513,8 @@ body[data-view="onboard"] .top-actions-divider {
 ═══════════════════════════════════════════════════════════ */
 
 .app-footer {
-  padding: var(--space-none);
   flex-shrink: 0;
-}
-
-.footer-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  background: var(--card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--inner-light);
+  padding: var(--space-5);
 }
 
 body[data-view="onboard"] .app-footer {
@@ -478,8 +525,7 @@ body[data-view="onboard"] .app-footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-5);
+  gap: var(--space-3);
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -495,67 +541,6 @@ body[data-view="onboard"] .app-footer {
   flex: 1;
   height: 1px;
   background: var(--border-subtle);
-}
-
-.footer-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-1);
-}
-
-.footer-link,
-.footer-quit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: auto;
-  min-width: 0;
-  padding: var(--space-7) var(--space-8);
-  border-radius: var(--radius-lg);
-  /* Two fills, as the design has them: a 3% white wash over the tonal
-     surface, which lifts the button a step without adding a sixth grey. */
-  background: linear-gradient(oklch(100% 0 0 / 0.03), oklch(100% 0 0 / 0.03)), var(--card-foreground);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  text-decoration: none;
-  box-shadow: var(--inner-light);
-  transition: filter var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
-}
-
-.footer-link span,
-.footer-quit-btn span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.footer-link:hover,
-.footer-quit-btn:hover {
-  filter: brightness(1.15);
-  color: var(--foreground);
-}
-
-.footer-link:active,
-.footer-quit-btn:active {
-  transform: scale(0.97);
-  filter: brightness(0.88);
-}
-
-.footer-link:focus-visible,
-.footer-quit-btn:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: var(--space-0);
-}
-
-.footer-link svg,
-.footer-quit-btn svg {
-  width: var(--space-5);
-  height: var(--space-5);
-  fill: currentColor;
-  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1010,7 +995,7 @@ body[data-view="onboard"] .app-footer {
 
 .quota-percent {
   font-family: var(--font-pixel);
-  font-size: var(--text-4xl);
+  font-size: var(--text-3xl);
   font-weight: var(--weight-normal);
   line-height: 0.9;
   letter-spacing: -0.02em;
@@ -1194,7 +1179,7 @@ body[data-view="onboard"] .app-footer {
   margin-bottom: var(--space-2);
   gap: 0;
   font-family: var(--font-pixel);
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: var(--weight-normal);
   line-height: var(--leading-none);
   letter-spacing: -0.06em;
@@ -1495,7 +1480,7 @@ body[data-refreshing="true"] .card::after {
    NOTIFICATION BADGE
 ═══════════════════════════════════════════════════════════ */
 
-/* Sits in the topbar next to refresh and settings, so it is an .icon-button
+/* Sits in the rail next to refresh and settings, so it is an .icon-button
    first: that rule owns the 28×28 footprint, colour and hover. What is left
    here is the toggle's own behaviour — the label it carries for assistive
    tech, and the crossfade between the two bells. */
@@ -2541,6 +2526,7 @@ button:focus-visible {
    a deeper scale — at 28px, 0.97 is under a pixel and reads as nothing. */
 .window-control-btn:active,
 .icon-button:active,
+.rail-provider:active,
 .floating-action-btn:active,
 .usage-alert-dismiss:active,
 .offline-banner-dismiss:active,
@@ -3156,8 +3142,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   .usage-alert-dismiss:active,
   .offline-banner-dismiss:active,
   .update-banner-dismiss:active,
-  .footer-link:active,
-  .footer-quit-btn:active,
+  .rail-provider:active,
   .btn-primary:active,
   .btn-secondary:active,
   .auth-button-stack .btn-save:active,
@@ -3187,8 +3172,6 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
    carries the feedback there — drop the lift rather than let it linger. */
 @media (hover: none) {
   button:hover,
-  .footer-link:hover,
-  .footer-quit-btn:hover,
   .btn-primary:hover,
   .btn-secondary:hover,
   .auth-button-stack .btn-save:hover {

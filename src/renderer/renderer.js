@@ -456,6 +456,8 @@ elements.settingsTabs.addEventListener('keydown', event => {
   switchSettingsTab(tabs[nextIndex][0], { focus: true });
 });
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
+// The only provider tab so far, so selecting it just means "go home".
+document.querySelector('#providerClaudeButton').addEventListener('click', () => window.siphon.showMainView());
 async function beginSignIn() {
   try {
     const result = await window.siphon.startSignIn();
@@ -517,7 +519,7 @@ elements.editClaudePathButton.addEventListener('click', async () => {
 document.querySelector('#minimizeButton').addEventListener('click', () => window.siphon.minimize());
 document.querySelector('#closeButton').addEventListener('click', () => window.siphon.closeWindow());
 
-// Footer
+// Rail: usage page + quit
 document.querySelector('#openClaudeLink').addEventListener('click', event => {
   event.preventDefault();
   openExternal('https://claude.ai/settings/usage');
@@ -1179,8 +1181,8 @@ function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   const label = t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
   elements.notificationStateText.textContent = label;
-  // The topbar shows only the bell, so the state that used to be readable in
-  // the footer now lives in the tooltip (and in the hidden label above).
+  // The rail shows only the bell, so the state lives in the tooltip (and in
+  // the hidden label above).
   elements.notificationState.title = label;
   if (enabled) {
     delete elements.notificationState.dataset.notifOff;

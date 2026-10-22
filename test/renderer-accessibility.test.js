@@ -162,3 +162,25 @@ test('Pill weekly switch uses a visible translated label and is limited to the P
   assert.match(renderer, /settingsPillWeeklyToggle\.checked = state\.preferences\?\.floating\?\.showWeekly \?\? true/);
   assert.match(renderer, /setPreference\('floating\.showWeekly', event\.target\.checked\)/);
 });
+
+test('icon-only rail buttons carry translated accessible names and tooltips', () => {
+  for (const [id, key] of [
+    ['refreshButton', 'topbar.refresh'],
+    ['settingsButton', 'topbar.settings'],
+    ['openClaudeLink', 'footer.openClaude'],
+    ['footerQuitButton', 'footer.quit']
+  ]) {
+    const el = elementWithId(id);
+    assert.match(el, new RegExp(`data-i18n-aria-label="${key.replace('.', '\.')}"`), `#${id} aria-label`);
+    assert.match(el, new RegExp(`data-i18n-title="${key.replace('.', '\.')}"`), `#${id} title`);
+  }
+  assert.match(elementWithId('providerClaudeButton'), /aria-current="page"[^>]*aria-label="Claude"/);
+});
+
+test('the main window min width matches the Rust restore floor', () => {
+  const conf = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+  const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
+  const main = conf.app.windows.find(w => w.label === 'main');
+  assert.equal(Number(rust.match(/pub const MIN_W: f64 = ([\d.]+);/)[1]), main.minWidth);
+  assert.equal(Number(rust.match(/pub const MIN_H: f64 = ([\d.]+);/)[1]), main.minHeight);
+});

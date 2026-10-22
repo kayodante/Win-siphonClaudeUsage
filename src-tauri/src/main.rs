@@ -119,6 +119,12 @@ fn main() {
             let initial_state = controller.get_state();
             tray::build(&handle, &initial_state)?;
 
+            // Acrylic before first show, so the frame never paints without it.
+            #[cfg(windows)]
+            if let Some(win) = handle.get_webview_window("main") {
+                windows_ctl::apply_backdrop(&win);
+            }
+
             // Put the window back where the user left it before first paint.
             // Runs even when launching hidden so a later tray-show is anchored.
             windows_ctl::restore_main_position(&handle);

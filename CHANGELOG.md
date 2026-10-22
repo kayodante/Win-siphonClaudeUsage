@@ -11,6 +11,21 @@ is added above it.
 
 ## [Unreleased]
 
+### Changed
+
+- The main window gains a side rail: the Claude provider tab on top, and
+  refresh, notifications, settings, the claude.ai usage page and quit at the
+  bottom, all icon-only with tooltips. The topbar keeps just the logo and
+  window controls, and the footer keeps just the "Updated" stamp.
+- The main window now has the same acrylic backdrop as the floating widget,
+  with 8px corners to match the Windows 11 window rounding.
+- The window is 352px wide (minimum 352px); windows saved at the old 320px
+  widen on the next launch.
+- In Settings › System, "Start with Windows" now sits above "Open with Claude
+  Code".
+- Quota percentages drop from 56px to 36px and the Today / This Month costs
+  from 20px to 18px, to fit the narrower cards.
+
 ### Security
 
 - The updater downloads only the installer and checksum URLs it fetched from

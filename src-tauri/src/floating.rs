@@ -59,40 +59,6 @@ fn raise(win: &tauri::WebviewWindow) {
     let _ = win.set_always_on_top(true);
 }
 
-/// Round the window itself, so the acrylic backdrop stops squaring off the
-/// widget's corners.
-///
-/// `apply_acrylic` hands the backdrop to DWM, which paints it across the whole
-/// window rect. The webview's `border-radius` only clips the HTML layer, so the
-/// acrylic kept showing through outside the radius as four grey corners.
-/// `DWMWCP_ROUND` is ~8px, matching `--radius-sm` on `.floating-widget` — keep
-/// the two in step. The attribute sticks for the window's lifetime, so resizing
-/// between compact and expanded does not need to re-apply it.
-///
-/// Windows 11 only: on 10 the call fails and the corners stay square, which is
-/// exactly today's rendering, so the failure needs no handling beyond ignoring
-/// it.
-#[cfg(windows)]
-fn round_corners(win: &tauri::WebviewWindow) {
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-        DWM_WINDOW_CORNER_PREFERENCE,
-    };
-
-    let Ok(handle) = win.hwnd() else { return };
-    let preference = DWMWCP_ROUND;
-    // Same raw-pointer rebuild as `raise`, for the same version-skew reason.
-    unsafe {
-        let _ = DwmSetWindowAttribute(
-            HWND(handle.0 as _),
-            DWMWA_WINDOW_CORNER_PREFERENCE,
-            std::ptr::addr_of!(preference).cast(),
-            std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>() as u32,
-        );
-    }
-}
-
 fn size_for(style: &str, expanded: bool, show_weekly: bool) -> (f64, f64) {
     if style == "mini" {
         if show_weekly {
@@ -170,9 +136,7 @@ fn create(app: &AppHandle, state: &AppState) {
 
     #[cfg(windows)]
     if style != "mini" {
-        use window_vibrancy::apply_acrylic;
-        let _ = apply_acrylic(&win, Some((0, 0, 0, 190)));
-        round_corners(&win);
+        crate::windows_ctl::apply_backdrop(&win);
     }
 
     let _ = win.show();
