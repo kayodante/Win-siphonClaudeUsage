@@ -461,6 +461,7 @@ body[data-view="onboard"] .topbar .brand {
 }
 
 .rail-provider {
+  position: relative;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -474,6 +475,25 @@ body[data-view="onboard"] .topbar .brand {
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease),
     transform var(--duration-press) var(--ease-press);
+}
+
+.rail-provider[data-alert]::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+.rail-provider[data-alert="high"]::after {
+  background: var(--level-high);
+}
+
+.rail-provider[data-alert="critical"]::after {
+  background: var(--level-critical);
 }
 
 .rail-provider[aria-current="page"] {
@@ -3123,7 +3143,8 @@ body[data-refreshing="true"] #refreshButton svg {
   100% { opacity: 1;    filter: brightness(1); }
 }
 
-#sessionPercent[data-just-reset] {
+#sessionPercent[data-just-reset],
+.quota-percent[data-just-reset] {
   animation: sessionResetReveal 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -3147,13 +3168,15 @@ body[data-refreshing="true"] #refreshButton svg {
   50%      { opacity: 0.5; }
 }
 
-body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
+body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active,
+body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="critical"][data-filled="40"] .meter-segment.active {
   animation: criticalPulse 1700ms ease-in-out infinite;
   animation-delay: calc(var(--i, 0) * 42.5ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active {
+  body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"] .meter-segment.active,
+  body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="critical"][data-filled="40"] .meter-segment.active {
     animation: none;
   }
 }
@@ -3222,6 +3245,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   body[data-refreshing="true"] #refreshButton svg,
   .notif-badge.notif-pop,
   #sessionPercent[data-just-reset],
+  .quota-percent[data-just-reset],
   .floating-body[data-expanded="true"] .floating-metric,
   #onboardCodeInput.is-shaking {
     animation: none;

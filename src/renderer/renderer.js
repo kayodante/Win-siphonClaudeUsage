@@ -43,6 +43,7 @@ const elements = {
   onboardHatchNotice: document.querySelector('#onboardHatchNotice'),
   mainView: document.querySelector('#mainView'),
   providerView: document.querySelector('#providerView'),
+  providerHeading: document.querySelector('#providerHeading'),
   providerGroups: document.querySelector('#providerGroups'),
   providerCostGrid: document.querySelector('#providerCostGrid'),
   providerTodayCost: document.querySelector('#providerTodayCost'),
@@ -51,6 +52,7 @@ const elements = {
   providerMonthTokens: document.querySelector('#providerMonthTokens'),
   providerStatus: document.querySelector('#providerStatus'),
   quotaGroupTemplate: document.querySelector('#quotaGroupTemplate'),
+  railProviders: document.querySelector('.rail-providers'),
   providerClaudeButton: document.querySelector('#providerClaudeButton'),
   providerCodexButton: document.querySelector('#providerCodexButton'),
   providerAntigravityButton: document.querySelector('#providerAntigravityButton'),
@@ -127,8 +129,10 @@ const elements = {
   appVersionText: document.querySelector('#appVersionText'),
   githubLink: document.querySelector('#githubLink'),
   highUsageBanner: document.querySelector('#highUsageBanner'),
+  highUsageBannerTitle: document.querySelector('#highUsageBanner .usage-alert-title'),
   highUsageBannerDismiss: document.querySelector('#highUsageBannerDismiss'),
   criticalBanner: document.querySelector('#criticalBanner'),
+  criticalBannerTitle: document.querySelector('#criticalBanner .usage-alert-title'),
   criticalBannerDismiss: document.querySelector('#criticalBannerDismiss'),
   offlineBanner: document.querySelector('#offlineBanner'),
   offlineBannerDismiss: document.querySelector('#offlineBannerDismiss'),
@@ -164,8 +168,8 @@ let renderedView = null;
 let settingsReturnFocus = null;
 let offlineDismissed = false;
 let updateDismissed = false;
-let highUsageDismissed = false;
-let criticalDismissed = false;
+const highUsageDismissed = new Set();
+const criticalDismissed = new Set();
 let currentSettingsTab = 'system';
 let _tabTransitioning = false;
 let _tabTransitionTimer = null;
@@ -348,9 +352,8 @@ async function openExternal(url) {
     }
   }
 }
-function triggerResetFlash() {
-  if (reducedMotion()) return;
-  const el = elements.sessionPercent;
+function triggerResetFlash(el = elements.sessionPercent) {
+  if (reducedMotion() || !el) return;
   el.removeAttribute('data-just-reset');
   void el.offsetWidth;
   el.dataset.justReset = '';
@@ -501,6 +504,32 @@ for (const [provider, button] of [
     window.siphon.showMainView();
   });
 }
+elements.railProviders?.addEventListener('keydown', event => {
+  const buttons = [
+    elements.providerClaudeButton,
+    elements.providerCodexButton,
+    elements.providerAntigravityButton
+  ].filter(btn => btn && !btn.hidden);
+  const currentIndex = buttons.indexOf(event.target);
+  if (currentIndex < 0) return;
+
+  let nextIndex;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    nextIndex = (currentIndex + 1) % buttons.length;
+  } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+  } else if (event.key === 'Home') {
+    nextIndex = 0;
+  } else if (event.key === 'End') {
+    nextIndex = buttons.length - 1;
+  } else {
+    return;
+  }
+
+  event.preventDefault();
+  buttons[nextIndex].focus();
+  buttons[nextIndex].click();
+});
 async function beginSignIn() {
   try {
     const result = await window.siphon.startSignIn();
@@ -640,11 +669,11 @@ elements.settingsLimitAlertToggle.addEventListener('change', async event => {
   }
 });
 elements.highUsageBannerDismiss.addEventListener('click', () => {
-  highUsageDismissed = true;
+  highUsageDismissed.add(activeProvider());
   hideBanner(elements.highUsageBanner);
 });
 elements.criticalBannerDismiss.addEventListener('click', () => {
-  criticalDismissed = true;
+  criticalDismissed.add(activeProvider());
   hideBanner(elements.criticalBanner);
 });
 elements.settingsRefreshInterval.addEventListener('change', async event => {
@@ -1043,6 +1072,26 @@ function render(state) {
   renderSettings(state, lang);
 }
 
+function providerSessionPeak(state, provider) {
+  if (provider === 'claude') {
+    const pct = clampPercent(state?.quota?.session?.percent ?? 0);
+    return { percent: pct, sectionId: null };
+  }
+  let bestPercent = 0;
+  let bestSectionId = null;
+  for (const section of state?.[provider]?.sections ?? []) {
+    const win = section?.session;
+    if (win && win.percent != null && !win.rolledOver) {
+      const pct = clampPercent(win.percent);
+      if (pct > bestPercent || bestSectionId === null) {
+        bestPercent = pct;
+        bestSectionId = section.id;
+      }
+    }
+  }
+  return { percent: bestPercent, sectionId: bestSectionId };
+}
+
 function handleThresholdSounds(state, sessionPercent) {
   const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
   const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
@@ -1053,12 +1102,15 @@ function handleThresholdSounds(state, sessionPercent) {
     else if (limitSoundEnabled && prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
     else if (limitSoundEnabled && prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
   }
-  // Reset dismissed state when percent drops back below threshold
-  if (sessionPercent < 70) {
-    highUsageDismissed = false;
-    criticalDismissed = false;
-  } else if (sessionPercent < 90) {
-    criticalDismissed = false;
+  // Reset dismissed state per provider when percent drops back below threshold
+  for (const provider of ['claude', 'codex', 'antigravity']) {
+    const { percent } = providerSessionPeak(state, provider);
+    if (percent < 70) {
+      highUsageDismissed.delete(provider);
+      criticalDismissed.delete(provider);
+    } else if (percent < 90) {
+      criticalDismissed.delete(provider);
+    }
   }
   prevSessionPercent = sessionPercent;
 }
@@ -1204,13 +1256,22 @@ function renderSettingsControls(state, lang) {
   elements.settingsUpdatesAutoDownloadToggle.disabled = !autoCheck;
 }
 
-function renderBannersAndErrors(state, sessionPercent, lang) {
-  // Claude's banners say "Session has reached 70%" with no name on it, which
-  // would read as the other provider's on its tab. Those get native toasts.
-  const onClaude = activeProvider() === 'claude';
-  if (onClaude && sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
+function renderBannersAndErrors(state, _sessionPercent, lang) {
+  const active = activeProvider();
+  const { percent: activePct, sectionId } = providerSessionPeak(state, active);
+  const titlePrefix = active === 'antigravity' && sectionId ? `${groupTitle(sectionId, lang)} · ` : '';
+  if (titlePrefix) {
+    if (elements.highUsageBannerTitle) {
+      elements.highUsageBannerTitle.textContent = `${titlePrefix}${t('alert.highUsage.title', lang)}`;
+    }
+    if (elements.criticalBannerTitle) {
+      elements.criticalBannerTitle.textContent = `${titlePrefix}${t('alert.critical.title', lang)}`;
+    }
+  }
+
+  if (activePct >= 90 && !criticalDismissed.has(active)) showBanner(elements.criticalBanner);
   else hideBanner(elements.criticalBanner);
-  if (onClaude && sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
+  if (activePct >= 70 && activePct < 90 && !highUsageDismissed.has(active)) showBanner(elements.highUsageBanner);
   else hideBanner(elements.highUsageBanner);
 
   if (!state.isOffline) offlineDismissed = false;
@@ -1247,7 +1308,8 @@ function updateLastUpdatedLine() {
   const time = at.toDateString() === new Date().toDateString()
     ? formatClockTime(at)
     : formatWeekdayClock(at, lang);
-  const key = provider === 'codex' ? 'provider.lastReading' : 'time.updated.at';
+  const isLive = provider === 'antigravity' && currentState.antigravity?.status === 'live';
+  const key = isLive ? 'time.updated.at' : 'provider.lastReading';
   elements.lastUpdated.textContent = tFormat(key, lang, { time });
 }
 
@@ -1263,8 +1325,16 @@ function renderProviderTabs(state) {
     ['antigravity', elements.providerAntigravityButton]
   ]) {
     if (provider !== 'claude') button.hidden = !state[provider];
-    if (provider === active) button.setAttribute('aria-current', 'page');
-    else button.removeAttribute('aria-current');
+    if (provider === active) {
+      button.setAttribute('aria-current', 'page');
+      delete button.dataset.alert;
+    } else {
+      button.removeAttribute('aria-current');
+      const { percent } = providerSessionPeak(state, provider);
+      if (percent >= 90) button.dataset.alert = 'critical';
+      else if (percent >= 70) button.dataset.alert = 'high';
+      else delete button.dataset.alert;
+    }
   }
 }
 
@@ -1298,9 +1368,29 @@ function renderQuotaRow(row, label, window, kind, ctx) {
   const percent = clampPercent(measured ? window.percent : 0);
   row.querySelector('[data-label]').textContent = label;
   const value = row.querySelector('[data-percent]');
+  const prevPct = value.dataset.prevPercent != null ? Number(value.dataset.prevPercent) : null;
   value.textContent = measured ? formatPercent(quotaDisplayValue(percent, ctx.mode)) : '--';
+  if (measured) {
+    if (prevPct !== null && kind === 'session' && prevPct >= 95 && percent <= 5) {
+      triggerResetFlash(value);
+    } else if (prevPct !== null && prevPct !== percent) {
+      flashUpdate(value);
+    }
+    value.dataset.prevPercent = String(percent);
+  } else {
+    delete value.dataset.prevPercent;
+  }
   setQuotaColorDrift(value, percent);
   row.querySelector('[data-suffix]').textContent = measured ? t(`quota.suffix.${ctx.mode}`, ctx.lang) : '';
+  const paceEl = row.querySelector('[data-pace]');
+  if (paceEl) {
+    const pace = buildUsagePace({
+      slot: measured ? { percent, resetsAt: window.resetsAt ? new Date(window.resetsAt) : null } : null,
+      now: ctx.now,
+      windowMs: SESSION_WINDOW_MS
+    });
+    renderPace(paceEl, pace, ctx.lang);
+  }
   renderMeter(row.querySelector('[data-meter]'), percent);
   row.querySelector('[data-reset]').textContent = buildProviderResetLine(window, kind, ctx);
 }
@@ -1309,12 +1399,14 @@ function renderProviderView(state, lang) {
   const provider = activeProvider();
   const quota = state[provider];
   if (provider === 'claude' || !quota) return;
-  elements.providerView.setAttribute('aria-label', PROVIDER_NAMES[provider]);
+  if (elements.providerHeading) elements.providerHeading.textContent = PROVIDER_NAMES[provider];
   const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
   const cards = quota.sections.map(section => {
     let card = groupCards.get(section.id);
     if (!card) {
       card = elements.quotaGroupTemplate.content.firstElementChild.cloneNode(true);
+      const paceEl = card.querySelector('[data-pace]');
+      if (paceEl) wireTooltip(paceEl);
       groupCards.set(section.id, card);
     }
     card.querySelector('[data-group-title]').textContent = groupTitle(section.id, lang);
@@ -1397,10 +1489,15 @@ function renderPace(element, pace, lang = currentLanguage()) {
   if (!element) return;
   const status = pace?.status ?? 'no_data';
   element.dataset.status = status;
-  element.textContent = t(`pace.${status}`, lang);
+  const label = t(`pace.${status}`, lang);
+  element.textContent = label;
   const hint = tFormat(`pace.${status}Tooltip`, lang, { time: formatClockTime(pace?.projectedDepletionAt) });
   element.dataset.tooltip = hint;
-  elements.sessionPaceHint.textContent = hint;
+  if (element === elements.sessionPace) {
+    elements.sessionPaceHint.textContent = hint;
+  } else {
+    element.setAttribute('aria-label', `${label} — ${hint}`);
+  }
   // Runs every refresh tick: keep an open bubble in sync with the new copy.
   if (tooltipTrigger === element) elements.tooltip.textContent = hint;
 }

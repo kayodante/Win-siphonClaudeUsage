@@ -369,8 +369,9 @@
       </section>
 
       <!-- Codex / Antigravity: one card per quota group, built from
-           #quotaGroupTemplate. The label names the provider shown. -->
-      <section id="providerView" class="view" aria-label="Codex" hidden>
+           #quotaGroupTemplate. The heading names the provider shown. -->
+      <section id="providerView" class="view" aria-labelledby="providerHeading" hidden>
+        <span id="providerHeading" class="notif-label" role="heading" aria-level="1">Codex</span>
         <div id="providerGroups" class="provider-groups"></div>
         <section id="providerCostGrid" class="grid" hidden>
           <article class="card cost-card" aria-labelledby="providerTodayHeading">
@@ -405,12 +406,13 @@
         <section class="card quota-panel quota-group">
           <span class="card-eyebrow" role="heading" aria-level="2" data-group-title></span>
           <div class="quota-row" data-window="session">
+            <span class="quota-row-label" data-label></span>
             <div class="quota-row-head">
-              <span class="quota-row-label" data-label></span>
               <span class="quota-value-group">
                 <span class="quota-percent" data-percent>--</span>
                 <span class="quota-suffix" data-suffix></span>
               </span>
+              <div class="quota-pace" data-pace data-status="no_data" tabindex="0">--</div>
             </div>
             <div class="meter" data-meter aria-hidden="true"></div>
             <span class="reset-line" data-reset>--</span>
