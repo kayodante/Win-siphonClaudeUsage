@@ -17,8 +17,7 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use crate::format::parse_iso;
-use crate::providers::{iso, QuotaSection};
-use crate::quota::Slot;
+use crate::providers::{iso, ProviderWindow, QuotaSection};
 
 /// Connect path of the quota call, POSTed with a `{}` body.
 pub const QUOTA_RPC_PATH: &str =
@@ -65,10 +64,34 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
     plausible.then_some(token)
 }
 
+/// The token to send, out of every `language_server` command line. Two
+/// Antigravity servers can run at once (an update restarting one, a second
+/// install); the port comes from the log and nothing ties it to either
+/// process, so with two different tokens Siphon does not guess.
+#[derive(Debug, PartialEq, Eq)]
+pub enum TokenPick {
+    /// No Antigravity server is running: the app is closed.
+    None,
+    One(String),
+    Ambiguous,
+}
+
+pub fn pick_token<S: AsRef<str>>(command_lines: &[S]) -> TokenPick {
+    let mut found: Option<String> = None;
+    for token in command_lines.iter().filter_map(|l| csrf_token(l.as_ref())) {
+        match &found {
+            Some(seen) if *seen != token => return TokenPick::Ambiguous,
+            _ => found = Some(token),
+        }
+    }
+    found.map_or(TokenPick::None, TokenPick::One)
+}
+
 /// `RetrieveUserQuotaSummary` → the two sections the UI shows: `gemini`
 /// (Gemini Flash / Pro) and `thirdParty` (Claude and GPT models). Other groups
 /// (model-specific allowances such as Argon) are left out. `None` when the
-/// payload has neither, which the caller reports as an unreadable response.
+/// payload has neither, or when not one of their windows carries a usable
+/// value, which the caller reports as an unreadable response.
 pub fn parse_quota_summary(raw: &Value) -> Option<Vec<QuotaSection>> {
     let groups = raw
         .pointer("/response/groups")
@@ -94,30 +117,48 @@ pub fn parse_quota_summary(raw: &Value) -> Option<Vec<QuotaSection>> {
             if session.is_none() && weekly.is_none() {
                 return None;
             }
+            // `disabled` sits on the window that cannot be used even though
+            // its own fraction may read full (the 5-hour one while the
+            // weekly one is spent); it holds back the whole group.
+            let blocked = [session, weekly]
+                .into_iter()
+                .flatten()
+                .any(|b| b.get("disabled").and_then(Value::as_bool) == Some(true));
             Some(QuotaSection {
                 id: id.to_string(),
-                session: session.and_then(parse_bucket),
-                weekly: weekly.and_then(parse_bucket),
+                session: session.map(parse_bucket),
+                weekly: weekly.map(parse_bucket),
+                blocked,
             })
         })
         .collect();
-    (!sections.is_empty()).then_some(sections)
+    let measured = sections
+        .iter()
+        .flat_map(|s| [&s.session, &s.weekly])
+        .flatten()
+        .any(|w| w.percent.is_some());
+    measured.then_some(sections)
 }
 
 /// A bucket without `remainingFraction` is unmeasured, not exhausted (sources
 /// disagree on what proto3's omitted zero means here, and showing 100% used
-/// for a quota nobody measured is the worse mistake), so it reads as `--`.
-fn parse_bucket(bucket: &Value) -> Option<Slot> {
-    let remaining = bucket.get("remainingFraction")?.as_f64()?.clamp(0.0, 1.0);
+/// for a quota nobody measured is the worse mistake), so it keeps its row
+/// with no percent.
+fn parse_bucket(bucket: &Value) -> ProviderWindow {
+    let percent = bucket
+        .get("remainingFraction")
+        .and_then(Value::as_f64)
+        .map(|remaining| (1.0 - remaining.clamp(0.0, 1.0)) * 100.0);
     let resets_at = bucket
         .get("resetTime")
         .and_then(Value::as_str)
         .and_then(parse_iso)
         .map(iso);
-    Some(Slot {
-        percent: (1.0 - remaining) * 100.0,
+    ProviderWindow {
+        percent,
         resets_at,
-    })
+        rolled_over: false,
+    }
 }
 
 #[cfg(test)]
@@ -144,16 +185,20 @@ mod tests {
         assert_eq!(sections.len(), 2, "Argon is left out");
         let gemini = &sections[0];
         assert_eq!(gemini.id, "gemini");
-        assert_eq!(gemini.session.as_ref().unwrap().percent, 0.0);
+        assert_eq!(gemini.session.as_ref().unwrap().percent, Some(0.0));
+        assert!(!gemini.blocked);
         let weekly = gemini.weekly.as_ref().unwrap();
-        assert!((weekly.percent - 2.38377).abs() < 1e-3);
+        assert!((weekly.percent.unwrap() - 2.38377).abs() < 1e-3);
         assert_eq!(
             weekly.resets_at.as_deref(),
             Some("2026-10-27T21:11:10.000Z")
         );
         let third = &sections[1];
         assert_eq!(third.id, "thirdParty");
-        assert_eq!(third.weekly.as_ref().unwrap().percent, 100.0);
+        assert_eq!(third.weekly.as_ref().unwrap().percent, Some(100.0));
+        // A full 5-hour window behind a spent weekly one cannot be used.
+        assert_eq!(third.session.as_ref().unwrap().percent, Some(0.0));
+        assert!(third.blocked, "`disabled: true` blocks the group");
     }
 
     #[test]
@@ -163,15 +208,53 @@ mod tests {
             { "bucketId": "gemini-weekly", "remainingFraction": -3, "resetTime": "not a date" },
         ]}]});
         let sections = parse_quota_summary(&raw).unwrap();
-        assert!(
-            sections[0].session.is_none(),
-            "no fraction reads as unknown"
-        );
+        let session = sections[0].session.as_ref().unwrap();
+        assert_eq!(session.percent, None, "no fraction reads as unknown");
+        assert!(session.resets_at.is_some());
         let weekly = sections[0].weekly.as_ref().unwrap();
-        assert_eq!(weekly.percent, 100.0);
+        assert_eq!(weekly.percent, Some(100.0));
         assert_eq!(weekly.resets_at, None);
+        // Absent from the payload: no row at all.
+        assert!(sections.iter().all(|s| s.id != "thirdParty"));
         assert!(parse_quota_summary(&serde_json::json!({ "response": {} })).is_none());
         assert!(parse_quota_summary(&serde_json::json!({ "groups": [] })).is_none());
+    }
+
+    #[test]
+    fn a_response_with_no_usable_value_is_not_a_reading() {
+        let raw = serde_json::json!({ "groups": [{ "buckets": [
+            { "bucketId": "gemini-5h" },
+            { "bucketId": "3p-weekly", "remainingFraction": "half" },
+        ]}]});
+        assert!(parse_quota_summary(&raw).is_none());
+    }
+
+    #[test]
+    fn zero_and_full_fractions_are_measurements() {
+        let raw = serde_json::json!({ "groups": [{ "buckets": [
+            { "bucketId": "gemini-5h", "remainingFraction": 0 },
+            { "bucketId": "gemini-weekly", "remainingFraction": 1 },
+        ]}]});
+        let gemini = &parse_quota_summary(&raw).unwrap()[0];
+        assert_eq!(gemini.session.as_ref().unwrap().percent, Some(100.0));
+        assert_eq!(gemini.weekly.as_ref().unwrap().percent, Some(0.0));
+    }
+
+    #[test]
+    fn two_servers_with_different_tokens_are_not_guessed_between() {
+        let server = |token: &str| {
+            format!("language_server.exe --override_ide_name antigravity --csrf_token {token}")
+        };
+        let a = server("aaaaaaaa-1111-4222-8333-944455556666");
+        let b = server("bbbbbbbb-1111-4222-8333-944455556666");
+        let windsurf = "language_server.exe --ide_name windsurf --csrf_token cccccccc-1111";
+        assert_eq!(pick_token::<&str>(&[]), TokenPick::None);
+        assert_eq!(pick_token(&[windsurf]), TokenPick::None);
+        assert_eq!(
+            pick_token(&[a.as_str(), windsurf, a.as_str()]),
+            TokenPick::One("aaaaaaaa-1111-4222-8333-944455556666".to_string())
+        );
+        assert_eq!(pick_token(&[a, b]), TokenPick::Ambiguous);
     }
 
     #[test]

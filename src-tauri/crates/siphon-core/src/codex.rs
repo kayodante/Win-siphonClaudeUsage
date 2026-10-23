@@ -9,8 +9,8 @@
 //! ```
 //!
 //! No credentials and no network: the numbers are as fresh as the last Codex
-//! turn on this machine, and `providers::normalize_slot` rolls a window over
-//! once its reset passes.
+//! turn on this machine. `providers::apply` keeps the newest reading across
+//! attempts and marks a window rolled over once its reset passes.
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -20,13 +20,19 @@ use serde_json::Value;
 
 use crate::format::parse_iso;
 use crate::json_store::home_dir;
-use crate::providers::{iso, normalize_sections, ProviderQuota, ProviderStatus, QuotaSection};
-use crate::quota::Slot;
+use crate::providers::{iso, Observation, ProviderStatus, ProviderWindow, QuotaSection};
 
 /// A `token_count` line is ~1 KB, so the tail of a file holds dozens of them.
 const TAIL_BYTES: u64 = 512 * 1024;
-/// A brand-new session has no `token_count` yet; fall back to older files.
-const MAX_FILES: usize = 5;
+/// A long tool output can bury the last `token_count` under megabytes; a tail
+/// with no reading is retried this deep before the file counts as empty.
+const DEEP_TAIL_BYTES: u64 = 4 * 1024 * 1024;
+/// Files examined per attempt. Only files modified after the last known
+/// reading are candidates, so a normal refresh reads one; the cap bounds the
+/// first search on a history full of sessions that never reached Codex.
+/// ponytail: fixed cap, page further back across attempts if 40 empty
+/// sessions in a row turns out to be common.
+const MAX_FILES: usize = 40;
 
 /// `$CODEX_HOME` when set, else `~/.codex` — the same lookup Codex does.
 pub fn default_codex_home() -> PathBuf {
@@ -36,41 +42,65 @@ pub fn default_codex_home() -> PathBuf {
         .unwrap_or_else(|| home_dir().join(".codex"))
 }
 
-/// `None` when Codex is not installed (no `sessions` directory). An installed
-/// Codex with no reading yet comes back with no sections.
-pub fn read_quota(codex_home: &Path, now: DateTime<Utc>) -> Option<ProviderQuota> {
+/// What the rollouts say now. `known_at` is when the reading Siphon already
+/// holds was taken: a file last modified before it cannot hold anything newer,
+/// so it is not opened. The newest reading is chosen by the event's own
+/// timestamp, never by which file changed last — any event (a tool output)
+/// touches a file without carrying a new quota.
+pub fn read_quota(codex_home: &Path, known_at: Option<DateTime<Utc>>) -> Observation {
     let sessions = codex_home.join("sessions");
     if !sessions.is_dir() {
-        return None;
+        return Observation::NotInstalled;
     }
     // ponytail: stats every rollout on each refresh, O(files); cache by mtime
     // like local_data if the history ever makes this slow.
     let mut files = Vec::new();
-    collect_rollouts(&sessions, &mut files);
+    let mut failed = !collect_rollouts(&sessions, &mut files);
     files.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));
 
-    let reading = files
-        .into_iter()
-        .take(MAX_FILES)
-        .find_map(|(_, path)| latest_reading(&read_tail(&path, TAIL_BYTES).ok()?));
-    let (updated_at, sections) = match reading {
-        Some((updated_at, mut section)) => {
-            normalize_sections(std::slice::from_mut(&mut section), now);
-            (updated_at, vec![section])
+    let mut best: Option<Reading> = None;
+    for (modified, path) in files.into_iter().take(MAX_FILES) {
+        let modified = DateTime::<Utc>::from(modified);
+        let floor = best.as_ref().and_then(|(at, _)| *at).or(known_at);
+        if floor.is_some_and(|floor| modified < floor) {
+            break; // sorted newest first: every file left is older still
         }
-        None => (None, Vec::new()),
-    };
-    Some(ProviderQuota {
-        status: ProviderStatus::Live,
-        updated_at,
-        sections,
-    })
+        match file_reading(&path) {
+            Ok(Some(found)) if best.as_ref().map_or(true, |b| is_later(&found, b)) => {
+                best = Some(found)
+            }
+            Ok(_) => {}
+            Err(_) => failed = true,
+        }
+    }
+
+    match best {
+        Some((taken_at, section)) => Observation::Reading {
+            taken_at: taken_at.map(iso),
+            sections: vec![section],
+        },
+        None if failed => Observation::NoReading(ProviderStatus::Error),
+        None => Observation::NoReading(ProviderStatus::Live),
+    }
 }
 
-fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) {
+type Reading = (Option<DateTime<Utc>>, QuotaSection);
+
+/// A dated reading beats an undated one; between dated ones, the later wins.
+fn is_later(found: &Reading, best: &Reading) -> bool {
+    match (found.0, best.0) {
+        (Some(found), Some(best)) => found > best,
+        (found, best) => found.is_some() && best.is_none(),
+    }
+}
+
+/// `false` when a directory could not be listed, so the caller can tell a
+/// failed read from a history with nothing in it.
+fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
     let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
+        return false;
     };
+    let mut complete = true;
     for entry in entries.flatten() {
         // `DirEntry::file_type` does not follow symlinks, so a linked
         // directory cannot send the walk in a loop.
@@ -79,17 +109,34 @@ fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) {
         };
         let path = entry.path();
         if kind.is_dir() {
-            collect_rollouts(&path, out);
+            complete &= collect_rollouts(&path, out);
             continue;
         }
         let name = entry.file_name();
         let name = name.to_string_lossy();
         if kind.is_file() && name.starts_with("rollout-") && name.ends_with(".jsonl") {
-            if let Ok(modified) = entry.metadata().and_then(|m| m.modified()) {
-                out.push((modified, path));
+            match entry.metadata().and_then(|m| m.modified()) {
+                Ok(modified) => out.push((modified, path)),
+                Err(_) => complete = false,
             }
         }
     }
+    complete
+}
+
+/// The file's newest reading, from its tail and then, when the tail holds
+/// none and the file is longer, from a deeper tail.
+fn file_reading(path: &Path) -> std::io::Result<Option<Reading>> {
+    let len = std::fs::metadata(path)?.len();
+    for max in [TAIL_BYTES, DEEP_TAIL_BYTES] {
+        if let Some(found) = latest_reading(&read_tail(path, max)?) {
+            return Ok(Some(found));
+        }
+        if len <= max {
+            break;
+        }
+    }
+    Ok(None)
 }
 
 /// The last `max` bytes of `path`. When that cuts into the file, the first
@@ -114,7 +161,7 @@ fn read_tail(path: &Path, max: u64) -> std::io::Result<String> {
 /// The newest account-wide rate-limit reading in `text`, with its timestamp.
 /// Lines that are cut off (Codex still writing), unparseable, or about a
 /// model-specific limit (`limit_id` other than `codex`) are skipped.
-pub fn latest_reading(text: &str) -> Option<(Option<String>, QuotaSection)> {
+pub fn latest_reading(text: &str) -> Option<Reading> {
     text.lines().rev().find_map(|line| {
         if !line.contains("\"rate_limits\"") {
             return None;
@@ -130,67 +177,151 @@ pub fn latest_reading(text: &str) -> Option<(Option<String>, QuotaSection)> {
                 return None;
             }
         }
-        let session = parse_window(limits.get("primary"));
-        let weekly = parse_window(limits.get("secondary"));
-        if session.is_none() && weekly.is_none() {
+        let mut section = QuotaSection {
+            id: "codex".to_string(),
+            session: None,
+            weekly: None,
+            blocked: false,
+        };
+        for (key, by_position) in [("primary", Kind::Session), ("secondary", Kind::Weekly)] {
+            let Some(raw) = limits.get(key) else {
+                continue;
+            };
+            let (Some(kind), Some(window)) = (window_kind(raw, by_position), parse_window(raw))
+            else {
+                continue;
+            };
+            let target = match kind {
+                Kind::Session => &mut section.session,
+                Kind::Weekly => &mut section.weekly,
+            };
+            target.get_or_insert(window);
+        }
+        if section.session.is_none() && section.weekly.is_none() {
             return None;
         }
-        let updated_at = event
+        let taken_at = event
             .get("timestamp")
             .and_then(Value::as_str)
-            .and_then(parse_iso)
-            .map(iso);
-        Some((
-            updated_at,
-            QuotaSection {
-                id: "codex".to_string(),
-                session,
-                weekly,
-            },
-        ))
+            .and_then(parse_iso);
+        Some((taken_at, section))
     })
 }
 
-fn parse_window(window: Option<&Value>) -> Option<Slot> {
-    let window = window?;
+#[derive(Clone, Copy)]
+enum Kind {
+    Session,
+    Weekly,
+}
+
+/// Which of Siphon's windows a Codex window is. Its length is what it means;
+/// `primary` / `secondary` only decide when the length is missing, the way
+/// Codex has always used them. A length Siphon has no window for (not 5 hours,
+/// not 7 days) is left out rather than shown under the wrong name.
+fn window_kind(raw: &Value, by_position: Kind) -> Option<Kind> {
+    match raw.get("window_minutes") {
+        None | Some(Value::Null) => Some(by_position),
+        Some(minutes) => match minutes.as_i64()? {
+            300 => Some(Kind::Session),
+            10080 => Some(Kind::Weekly),
+            _ => None,
+        },
+    }
+}
+
+fn parse_window(window: &Value) -> Option<ProviderWindow> {
     let used = window.get("used_percent")?.as_f64()?;
     let resets_at = window
         .get("resets_at")
         .and_then(Value::as_i64)
         .and_then(|secs| DateTime::from_timestamp(secs, 0))
         .map(iso);
-    Some(Slot {
-        percent: used.clamp(0.0, 100.0),
-        resets_at,
-    })
+    Some(ProviderWindow::measured(used.clamp(0.0, 100.0), resets_at))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeZone;
+    use std::time::Duration;
 
     /// A real `token_count` line from a Codex 0.160 rollout (token counts only,
     /// no prompt text).
     const REAL_LINE: &str = r#"{"timestamp":"2026-10-22T12:13:23.892Z","ordinal":87,"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":602759,"cached_input_tokens":501632,"cache_write_input_tokens":0,"output_tokens":4997,"reasoning_output_tokens":2082,"total_tokens":607756},"last_token_usage":{"input_tokens":103081,"cached_input_tokens":100480,"cache_write_input_tokens":0,"output_tokens":1849,"reasoning_output_tokens":1034,"total_tokens":104930},"model_context_window":475000},"rate_limits":{"limit_id":"codex","limit_name":null,"primary":{"used_percent":67.0,"window_minutes":300,"resets_at":1792688645},"secondary":{"used_percent":54.0,"window_minutes":10080,"resets_at":1793096377},"credits":{"has_credits":false,"unlimited":false,"balance":"0"},"individual_limit":null,"spend_control_reached":null,"plan_type":null,"rate_limit_reached_type":null}}}"#;
 
-    fn line(limit_id: &str, primary: &str, secondary: &str) -> String {
+    fn line_at(timestamp: &str, primary: &str, secondary: &str) -> String {
         format!(
-            r#"{{"timestamp":"2026-10-22T13:00:00.000Z","type":"event_msg","payload":{{"type":"token_count","rate_limits":{{"limit_id":"{limit_id}","primary":{primary},"secondary":{secondary}}}}}}}"#
+            r#"{{"timestamp":"{timestamp}","type":"event_msg","payload":{{"type":"token_count","rate_limits":{{"limit_id":"codex","primary":{primary},"secondary":{secondary}}}}}}}"#
         )
+    }
+
+    fn line(limit_id: &str, primary: &str, secondary: &str) -> String {
+        line_at("2026-10-22T13:00:00.000Z", primary, secondary).replace(
+            r#""limit_id":"codex""#,
+            &format!(r#""limit_id":"{limit_id}""#),
+        )
+    }
+
+    fn session_of(reading: &Observation) -> Option<f64> {
+        match reading {
+            Observation::Reading { sections, .. } => sections[0].session.as_ref()?.percent,
+            _ => None,
+        }
+    }
+
+    /// A scratch `CODEX_HOME` with one day directory, removed on drop.
+    struct Home(PathBuf);
+
+    impl Home {
+        fn new(name: &str) -> Self {
+            let home =
+                std::env::temp_dir().join(format!("siphon-codex-{name}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&home);
+            std::fs::create_dir_all(home.join("sessions/2026/10/22")).unwrap();
+            Home(home)
+        }
+
+        /// Write a rollout and pin its mtime to `minutes` past 12:00 UTC.
+        fn rollout(&self, name: &str, text: &str, minutes: u64) {
+            let path = self
+                .0
+                .join("sessions/2026/10/22")
+                .join(format!("rollout-{name}.jsonl"));
+            std::fs::write(&path, text).unwrap();
+            let noon = SystemTime::from(Utc.with_ymd_and_hms(2026, 10, 22, 12, 0, 0).unwrap());
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_modified(noon + Duration::from_secs(minutes * 60))
+                .unwrap();
+        }
+    }
+
+    impl Drop for Home {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn pct(percent: f64) -> String {
+        format!(r#"{{"used_percent":{percent},"window_minutes":300}}"#)
     }
 
     #[test]
     fn parses_a_real_rollout_line() {
-        let (updated_at, section) = latest_reading(REAL_LINE).unwrap();
-        assert_eq!(updated_at.as_deref(), Some("2026-10-22T12:13:23.892Z"));
+        let (taken_at, section) = latest_reading(REAL_LINE).unwrap();
+        assert_eq!(
+            taken_at.map(iso).as_deref(),
+            Some("2026-10-22T12:13:23.892Z")
+        );
         let session = section.session.unwrap();
-        assert_eq!(session.percent, 67.0);
+        assert_eq!(session.percent, Some(67.0));
         assert_eq!(
             session.resets_at.as_deref(),
             Some("2026-10-22T17:04:05.000Z")
         );
-        assert_eq!(section.weekly.unwrap().percent, 54.0);
+        assert_eq!(section.weekly.unwrap().percent, Some(54.0));
     }
 
     #[test]
@@ -201,7 +332,7 @@ mod tests {
         let cut = &newer[..newer.len() / 2];
         let text = [older, newer.clone(), spark, cut.to_string()].join("\n");
         let (_, section) = latest_reading(&text).unwrap();
-        assert_eq!(section.session.unwrap().percent, 20.0);
+        assert_eq!(section.session.unwrap().percent, Some(20.0));
         // `secondary: null` is a plan without that window, not a parse failure.
         assert!(section.weekly.is_none());
     }
@@ -215,38 +346,146 @@ mod tests {
         );
         let (_, section) = latest_reading(&text).unwrap();
         let session = section.session.unwrap();
-        assert_eq!(session.percent, 100.0);
+        assert_eq!(session.percent, Some(100.0));
         assert_eq!(session.resets_at, None);
         assert!(section.weekly.is_none());
         assert!(latest_reading(r#"{"rate_limits":null}"#).is_none());
     }
 
     #[test]
-    fn reads_the_newest_rollout_and_rolls_over_passed_windows() {
-        let home = std::env::temp_dir().join(format!("siphon-codex-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&home);
-        let now = Utc.with_ymd_and_hms(2026, 10, 22, 18, 0, 0).unwrap();
+    fn windows_are_named_by_their_length() {
+        let weekly_only = line(
+            "codex",
+            r#"{"used_percent":30.0,"window_minutes":10080}"#,
+            "null",
+        );
+        let (_, section) = latest_reading(&weekly_only).unwrap();
         assert!(
-            read_quota(&home, now).is_none(),
-            "no sessions dir: not installed"
+            section.session.is_none(),
+            "a 7-day primary is not a session"
         );
+        assert_eq!(section.weekly.unwrap().percent, Some(30.0));
 
-        let day = home.join("sessions").join("2026").join("10").join("22");
-        std::fs::create_dir_all(&day).unwrap();
-        let empty = read_quota(&home, now).unwrap();
-        assert!(empty.sections.is_empty(), "installed, no reading yet");
+        let swapped = line(
+            "codex",
+            r#"{"used_percent":40.0,"window_minutes":10080}"#,
+            r#"{"used_percent":50.0,"window_minutes":300}"#,
+        );
+        let (_, section) = latest_reading(&swapped).unwrap();
+        assert_eq!(section.session.unwrap().percent, Some(50.0));
+        assert_eq!(section.weekly.unwrap().percent, Some(40.0));
 
-        // REAL_LINE's session reset (17:04:05) is before `now`, its weekly is not.
-        std::fs::write(day.join("rollout-a.jsonl"), format!("{REAL_LINE}\n")).unwrap();
-        let quota = read_quota(&home, now).unwrap();
-        let section = &quota.sections[0];
-        assert_eq!(section.session.as_ref().unwrap().percent, 0.0);
-        assert_eq!(section.weekly.as_ref().unwrap().percent, 54.0);
+        let unknown = line(
+            "codex",
+            r#"{"used_percent":40.0,"window_minutes":60}"#,
+            r#"{"used_percent":50.0,"window_minutes":10080}"#,
+        );
+        let (_, section) = latest_reading(&unknown).unwrap();
+        assert!(
+            section.session.is_none(),
+            "an hour is no window Siphon shows"
+        );
+        assert_eq!(section.weekly.unwrap().percent, Some(50.0));
+        let only_unknown = line(
+            "codex",
+            r#"{"used_percent":40.0,"window_minutes":60}"#,
+            "null",
+        );
+        assert!(latest_reading(&only_unknown).is_none());
+
+        // No length: the position decides, as before.
+        let unlabeled = line(
+            "codex",
+            r#"{"used_percent":1.0}"#,
+            r#"{"used_percent":2.0}"#,
+        );
+        let (_, section) = latest_reading(&unlabeled).unwrap();
+        assert_eq!(section.session.unwrap().percent, Some(1.0));
+        assert_eq!(section.weekly.unwrap().percent, Some(2.0));
+    }
+
+    #[test]
+    fn not_installed_empty_and_a_real_reading() {
+        let missing =
+            std::env::temp_dir().join(format!("siphon-codex-none-{}", std::process::id()));
+        assert_eq!(read_quota(&missing, None), Observation::NotInstalled);
+
+        let home = Home::new("basic");
         assert_eq!(
-            quota.updated_at.as_deref(),
-            Some("2026-10-22T12:13:23.892Z")
+            read_quota(&home.0, None),
+            Observation::NoReading(ProviderStatus::Live),
+            "installed, no reading yet"
         );
-        std::fs::remove_dir_all(&home).unwrap();
+        home.rollout("a", &format!("{REAL_LINE}\n"), 30);
+        let Observation::Reading { taken_at, sections } = read_quota(&home.0, None) else {
+            panic!("expected a reading");
+        };
+        assert_eq!(taken_at.as_deref(), Some("2026-10-22T12:13:23.892Z"));
+        assert_eq!(sections[0].session.as_ref().unwrap().percent, Some(67.0));
+    }
+
+    #[test]
+    fn the_event_time_picks_the_reading_not_the_file_time() {
+        let home = Home::new("order");
+        // A holds the 12:00 reading but was touched last (a tool output at
+        // 12:06 with no quota); B holds the 12:05 reading.
+        let a = [
+            line_at("2026-10-22T12:00:00.000Z", &pct(40.0), "null"),
+            r#"{"timestamp":"2026-10-22T12:06:00.000Z","type":"response_item"}"#.to_string(),
+        ]
+        .join("\n");
+        home.rollout("a", &a, 6);
+        home.rollout(
+            "b",
+            &line_at("2026-10-22T12:05:00.000Z", &pct(60.0), "null"),
+            5,
+        );
+        assert_eq!(session_of(&read_quota(&home.0, None)), Some(60.0));
+    }
+
+    #[test]
+    fn files_older_than_the_known_reading_are_not_opened() {
+        let home = Home::new("known");
+        home.rollout(
+            "old",
+            &line_at("2026-10-22T12:01:00.000Z", &pct(90.0), "null"),
+            1,
+        );
+        let known = Utc.with_ymd_and_hms(2026, 10, 22, 12, 5, 0).unwrap();
+        assert_eq!(
+            read_quota(&home.0, Some(known)),
+            Observation::NoReading(ProviderStatus::Live)
+        );
+    }
+
+    #[test]
+    fn a_reading_behind_many_empty_sessions_is_still_found() {
+        let home = Home::new("deep");
+        home.rollout(
+            "first",
+            &line_at("2026-10-22T12:00:00.000Z", &pct(25.0), "null"),
+            0,
+        );
+        for i in 1..=8 {
+            home.rollout(&format!("empty-{i}"), r#"{"type":"session_meta"}"#, i);
+        }
+        assert_eq!(session_of(&read_quota(&home.0, None)), Some(25.0));
+    }
+
+    #[test]
+    fn a_long_output_after_the_last_reading_does_not_hide_it() {
+        let home = Home::new("long");
+        let filler = format!(
+            r#"{{"type":"response_item","output":"{}"}}"#,
+            "x".repeat(700 * 1024)
+        );
+        let text = [
+            line_at("2026-10-22T12:00:00.000Z", &pct(33.0), "null"),
+            filler,
+        ]
+        .join("\n");
+        home.rollout("a", &text, 1);
+        assert_eq!(session_of(&read_quota(&home.0, None)), Some(33.0));
     }
 
     #[test]

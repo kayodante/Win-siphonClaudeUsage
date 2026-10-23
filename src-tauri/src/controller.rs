@@ -18,9 +18,7 @@ use siphon_core::json_store::JsonStore;
 use siphon_core::local_data::LocalDataService;
 use siphon_core::oauth::{self, AuthFlow};
 use siphon_core::oauth_callback::CallbackOutcome;
-use siphon_core::providers::{
-    normalize_sections, Channel, ProviderQuota, ProviderStatus, QuotaSection,
-};
+use siphon_core::providers::{Channel, Observation, ProviderStatus};
 use siphon_core::quota::{QuotaError, QuotaErrorCode, Slot};
 use siphon_core::reset_scheduler::{decide_update, ResetDecision};
 use siphon_core::state::AppState;
@@ -221,72 +219,90 @@ impl Controller {
     /// `refresh_local` already runs off the async runtime.
     fn refresh_codex(&self) {
         let home = siphon_core::codex::default_codex_home();
-        let codex = siphon_core::codex::read_quota(&home, Utc::now());
-        self.state.lock().unwrap().codex = codex;
+        let known_at = self.state.lock().unwrap().codex.as_ref().and_then(|c| {
+            c.updated_at
+                .as_deref()
+                .and_then(siphon_core::format::parse_iso)
+        });
+        let observation = siphon_core::codex::read_quota(&home, known_at);
+        // `apply` only ever moves forward, so two refreshes racing here (the
+        // loop, the button, a reset firing) land in either order safely.
+        {
+            let mut state = self.state.lock().unwrap();
+            let previous = state.codex.take();
+            state.codex = siphon_core::providers::apply(previous, observation, Utc::now());
+        }
         self.sync_reset(Channel::Codex);
     }
 
     /// Ask the running Antigravity app for its quota. Independent of the
-    /// Claude sign-in. A closed app keeps the last reading (normalized, so a
-    /// window that reset meanwhile reads 0%) under `status: closed`.
+    /// Claude sign-in. A closed app or a failed read keeps the last reading
+    /// under `status: closed` / `error` (`providers::apply`).
     pub async fn refresh_antigravity(&self) {
         if self.antigravity_busy.swap(true, Ordering::AcqRel) {
             return;
         }
-        let read = self.read_antigravity().await;
+        let observation = self.read_antigravity().await;
         self.antigravity_busy.store(false, Ordering::Release);
 
-        let now = Utc::now();
         {
             let mut state = self.state.lock().unwrap();
-            state.antigravity = read.map(|(status, fresh)| {
-                let previous = state.antigravity.take();
-                let mut next = match fresh {
-                    Some(sections) => ProviderQuota {
-                        status,
-                        updated_at: Some(siphon_core::providers::iso(now)),
-                        sections,
-                    },
-                    None => ProviderQuota {
-                        status,
-                        updated_at: previous.as_ref().and_then(|p| p.updated_at.clone()),
-                        sections: previous.map(|p| p.sections).unwrap_or_default(),
-                    },
-                };
-                normalize_sections(&mut next.sections, now);
-                next
-            });
+            let previous = state.antigravity.take();
+            state.antigravity = siphon_core::providers::apply(previous, observation, Utc::now());
         }
         self.sync_reset(Channel::AntigravityGemini);
         self.sync_reset(Channel::AntigravityThirdParty);
         self.emit();
     }
 
-    /// `None`: not installed. Otherwise the status, plus fresh sections when
-    /// the read succeeded. The CSRF token lives only in this function.
-    async fn read_antigravity(&self) -> Option<(ProviderStatus, Option<Vec<QuotaSection>>)> {
-        use siphon_core::antigravity::{csrf_token, find_port, main_log_path, parse_quota_summary};
-        let log = tokio::fs::read(main_log_path()?).await.ok()?;
+    /// Only a missing log means "not installed": any other failure to read it
+    /// keeps the tab and its numbers. "Closed" means no Antigravity server is
+    /// running; one that runs but cannot be reached with certainty (no port
+    /// logged, two servers with different tokens, a bad answer) is an error.
+    /// The CSRF token lives only in this function.
+    async fn read_antigravity(&self) -> Observation {
+        use siphon_core::antigravity::{
+            find_port, main_log_path, parse_quota_summary, pick_token, TokenPick,
+        };
+        let Some(path) = main_log_path() else {
+            return Observation::NotInstalled;
+        };
+        let log = match tokio::fs::read(&path).await {
+            Ok(log) => log,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Observation::NotInstalled
+            }
+            Err(e) => {
+                log::warn!("Antigravity log unreadable: {}", e.kind());
+                return Observation::NoReading(ProviderStatus::Error);
+            }
+        };
         let port = find_port(&String::from_utf8_lossy(&log));
         let token = tauri::async_runtime::spawn_blocking(|| {
-            crate::process::command_lines("language_server")
-                .iter()
-                .find_map(|line| csrf_token(line))
+            pick_token(&crate::process::command_lines("language_server"))
         })
         .await
-        .ok()
-        .flatten();
-        let (Some(port), Some(token)) = (port, token) else {
-            return Some((ProviderStatus::Closed, None));
+        .unwrap_or(TokenPick::None);
+        let token = match token {
+            TokenPick::None => return Observation::NoReading(ProviderStatus::Closed),
+            TokenPick::Ambiguous => return Observation::NoReading(ProviderStatus::Error),
+            TokenPick::One(token) => token,
         };
-        Some(match self.http.antigravity_quota(port, &token).await {
+        let Some(port) = port else {
+            return Observation::NoReading(ProviderStatus::Error);
+        };
+        match self.http.antigravity_quota(port, &token).await {
             Ok(raw) => match parse_quota_summary(&raw) {
-                Some(sections) => (ProviderStatus::Live, Some(sections)),
-                None => (ProviderStatus::Error, None),
+                Some(sections) => Observation::Reading {
+                    taken_at: Some(siphon_core::providers::iso(Utc::now())),
+                    sections,
+                },
+                None => Observation::NoReading(ProviderStatus::Error),
             },
-            Err(LoopbackError::Unreachable) => (ProviderStatus::Closed, None),
-            Err(LoopbackError::Unreadable) => (ProviderStatus::Error, None),
-        })
+            // The server is starting, or exited since the process list.
+            Err(LoopbackError::Unreachable) => Observation::NoReading(ProviderStatus::Closed),
+            Err(LoopbackError::Unreadable) => Observation::NoReading(ProviderStatus::Error),
+        }
     }
 
     pub async fn refresh_quota(&self) {
@@ -790,7 +806,7 @@ impl Controller {
     /// window, or clear it when reset toasts are off.
     fn sync_reset(&self, channel: Channel) {
         if self.prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
-            let session = channel.session(&self.state.lock().unwrap()).cloned();
+            let session = channel.session(&self.state.lock().unwrap());
             self.update_reset(channel, session.as_ref());
         } else {
             self.clear_reset(channel);
@@ -890,10 +906,13 @@ impl Controller {
             }
             // Read prefs at fire time so a toggle flipped during the wait is honored.
             let prefs = &controller.prefs;
-            if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
+            let blocked = channel.blocks_reset_toast(&controller.state.lock().unwrap());
+            if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) && !blocked {
                 let toast = channel.reset_toast(&prefs.load().language);
                 crate::notify::show(&app, &toast.title, &toast.body);
-                if prefs.get("notifications.sound") == Some(Value::Bool(true)) {
+                if channel.plays_reset_sound()
+                    && prefs.get("notifications.sound") == Some(Value::Bool(true))
+                {
                     let _ = app.emit("play-reset-sound", ());
                 }
             }
