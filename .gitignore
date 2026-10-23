@@ -20,14 +20,6 @@ npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Docs (local only)
-AGENTS.md
-ARCHITECTURE.md
-CLAUDE.md
-DESIGN.md
-PRODUCT.md
-ROADMAP.md
-
 # Local config
 *.local
 
