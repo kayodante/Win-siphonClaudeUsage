@@ -105,6 +105,9 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const peakHoursLocalRange = () => '';
     const buildSessionResetLine = () => '';
     const buildWeeklyResetLine = () => '';
+    const buildProviderResetLine = () => '';
+    const formatWeekdayClock = () => '';
+    const createViewSwitcher = () => () => {};
     const resolveView = () => 'main';
     const resolveProvider = () => 'claude';
   `;

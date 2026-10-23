@@ -193,3 +193,9 @@ test('the main window min width matches the Rust restore floor', () => {
   assert.equal(Number(rust.match(/pub const MIN_W: f64 = ([\d.]+);/)[1]), main.minWidth);
   assert.equal(Number(rust.match(/pub const MIN_H: f64 = ([\d.]+);/)[1]), main.minHeight);
 });
+
+test('quota suffixes are read, so "used" and "left" do not sound the same', () => {
+  const suffixes = html.match(/<span class="quota-suffix"[^>]*>/g);
+  assert.equal(suffixes.length, 4, 'Claude session + weekly, provider session + weekly');
+  for (const suffix of suffixes) assert.doesNotMatch(suffix, /aria-hidden/);
+});

@@ -56,6 +56,29 @@ export function buildWeeklyResetLine(slot, now = new Date(), lang = 'en') {
   return `${remaining}${SEPARATOR}${weekday}`;
 }
 
+// A Codex / Antigravity window (`providers::ProviderWindow`). Unlike Claude's
+// slots it can be unmeasured, past its reset with no new reading yet, or held
+// back by the source; only a measured 0% earns the "send a message" prompt.
+export function buildProviderResetLine(window, kind, {
+  now = new Date(),
+  lang = 'en',
+  blocked = false,
+  weeklySpent = false
+} = {}) {
+  if (window.rolledOver) return t('provider.window.rolledOver', lang);
+  if (window.percent == null) return t('provider.window.unknown', lang);
+  if (kind === 'session' && blocked) {
+    return t(weeklySpent ? 'provider.blocked.weekly' : 'provider.blocked', lang);
+  }
+  const slot = {
+    percent: window.percent,
+    resetsAt: window.resetsAt ? new Date(window.resetsAt) : null
+  };
+  return kind === 'session'
+    ? buildSessionResetLine(slot, now, lang)
+    : buildWeeklyResetLine(slot, now, lang);
+}
+
 function clamp(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return 0;
   return Math.max(0, Math.min(100, value));

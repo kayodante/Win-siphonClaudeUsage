@@ -186,7 +186,13 @@ test('the provider tab copy exists in every supported language', () => {
     'provider.antigravity.thirdParty',
     'provider.codex.empty',
     'provider.antigravity.closed',
-    'provider.antigravity.error'
+    'provider.antigravity.error',
+    'provider.codex.error',
+    'provider.lastReading',
+    'provider.window.unknown',
+    'provider.window.rolledOver',
+    'provider.blocked.weekly',
+    'provider.blocked'
   ];
   for (const lang of SUPPORTED_LANGUAGES) {
     for (const key of keys) {

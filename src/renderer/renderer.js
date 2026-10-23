@@ -6,6 +6,7 @@ import {
   formatCurrency,
   formatPercent,
   formatTokens,
+  formatWeekdayClock,
   hydrateSlot,
   levelForPercent,
   maskEmail,
@@ -15,7 +16,8 @@ import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
-import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
+import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
+import { createViewSwitcher } from './viewTransition.js';
 import { resolveProvider, resolveView } from './viewState.js';
 
 let i18nCache = null;
@@ -146,6 +148,15 @@ let currentState = null;
 let requestedView = 'main';
 // Not persisted: the app always opens on Claude.
 let requestedProvider = 'claude';
+// View state lives up here, not beside renderActiveView: the bootstrap's
+// first render() runs before module evaluation reaches the bottom half of
+// this file, and a `let` read before its line throws.
+const crossfadeTo = createViewSwitcher(
+  [elements.onboardView, elements.mainView, elements.providerView, elements.settingsView],
+  { fadeMs: () => cssMs('--duration-view-fade', 150) }
+);
+let renderedView = null;
+let settingsReturnFocus = null;
 let offlineDismissed = false;
 let updateDismissed = false;
 let highUsageDismissed = false;
@@ -1205,10 +1216,26 @@ function updateLastUpdatedLine() {
   if (!currentState) return;
   const lang = currentLanguage();
   const provider = activeProvider();
-  const stamp = provider === 'claude' ? currentState.lastUpdated : currentState[provider]?.updatedAt;
-  elements.lastUpdated.textContent = stamp
-    ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(stamp)) })
-    : '--';
+  if (provider === 'claude') {
+    const stamp = currentState.lastUpdated;
+    elements.lastUpdated.textContent = stamp
+      ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(stamp)) })
+      : '--';
+    return;
+  }
+  // A provider's stamp is when its source last reported, which can be days
+  // ago (Codex unused, Antigravity closed): name the day when it is not today.
+  const stamp = currentState[provider]?.updatedAt;
+  if (!stamp) {
+    elements.lastUpdated.textContent = '--';
+    return;
+  }
+  const at = new Date(stamp);
+  const time = at.toDateString() === new Date().toDateString()
+    ? formatClockTime(at)
+    : formatWeekdayClock(at, lang);
+  const key = provider === 'codex' ? 'provider.lastReading' : 'time.updated.at';
+  elements.lastUpdated.textContent = tFormat(key, lang, { time });
 }
 
 function activeProvider() {
@@ -1240,21 +1267,29 @@ function groupTitle(id, lang) {
 }
 
 function providerStatusText(provider, quota, lang) {
-  if (provider === 'codex') return quota.sections.length ? '' : t('provider.codex.empty', lang);
+  if (provider === 'codex') {
+    if (quota.status === 'error') return t('provider.codex.error', lang);
+    return quota.sections.length ? '' : t('provider.codex.empty', lang);
+  }
   if (quota.status === 'error') return t('provider.antigravity.error', lang);
   if (quota.status === 'closed') return t('provider.antigravity.closed', lang);
   return '';
 }
 
-function renderQuotaRow(row, label, slot, buildResetLine, { now, lang, mode }) {
-  const percent = clampPercent(slot?.percent ?? 0);
+// `window` is a `providers::ProviderWindow`, or null when the source does not
+// offer that window at all — then the row is not shown.
+function renderQuotaRow(row, label, window, kind, ctx) {
+  row.hidden = !window;
+  if (!window) return;
+  const measured = window.percent != null && !window.rolledOver;
+  const percent = clampPercent(measured ? window.percent : 0);
   row.querySelector('[data-label]').textContent = label;
   const value = row.querySelector('[data-percent]');
-  value.textContent = slot ? formatPercent(quotaDisplayValue(percent, mode)) : '--';
+  value.textContent = measured ? formatPercent(quotaDisplayValue(percent, ctx.mode)) : '--';
   setQuotaColorDrift(value, percent);
-  row.querySelector('[data-suffix]').textContent = slot ? t(`quota.suffix.${mode}`, lang) : '';
+  row.querySelector('[data-suffix]').textContent = measured ? t(`quota.suffix.${ctx.mode}`, ctx.lang) : '';
   renderMeter(row.querySelector('[data-meter]'), percent);
-  row.querySelector('[data-reset]').textContent = buildResetLine(slot, now, lang);
+  row.querySelector('[data-reset]').textContent = buildProviderResetLine(window, kind, ctx);
 }
 
 function renderProviderView(state, lang) {
@@ -1271,8 +1306,13 @@ function renderProviderView(state, lang) {
     }
     card.querySelector('[data-group-title]').textContent = groupTitle(section.id, lang);
     const [session, weekly] = card.querySelectorAll('.quota-row');
-    renderQuotaRow(session, t('home.session', lang), hydrateSlot(section.session), buildSessionResetLine, ctx);
-    renderQuotaRow(weekly, t('home.weekly', lang), hydrateSlot(section.weekly), buildWeeklyResetLine, ctx);
+    const rowCtx = {
+      ...ctx,
+      blocked: Boolean(section.blocked),
+      weeklySpent: (section.weekly?.percent ?? 0) >= 100
+    };
+    renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
+    renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
     return card;
   });
   const shown = [...elements.providerGroups.children];
@@ -1525,9 +1565,6 @@ function showView(view) {
   renderActiveView();
 }
 
-let _transitioning = false;
-let renderedView = null;
-let settingsReturnFocus = null;
 
 function focusAfterViewChange(activeView, previousView) {
   let target = null;
@@ -1557,56 +1594,14 @@ function renderActiveView() {
   // 'main' is Claude's dashboard or the provider view, by the selected tab.
   const mainPanel = activeProvider() === 'claude' ? elements.mainView : elements.providerView;
   const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
-  const allViews = [elements.onboardView, elements.mainView, elements.providerView, elements.settingsView];
-  const incoming = viewMap[activeView];
-  const outgoing = allViews.find(v => !v.hidden && v !== incoming);
-
-  if (!outgoing || _transitioning) {
-    for (const view of allViews) view.hidden = view !== incoming;
-    if (activeView === 'settings' && currentState) renderSettings(currentState);
-    if (viewChanged) focusAfterViewChange(activeView, previousView);
-    return;
-  }
-
-  _transitioning = true;
-
-  // Overlap the crossfade instead of running it twice. Parking the outgoing
-  // view out of flow (.shell-scroll is position:relative) lets the incoming one
-  // take its place at once, so opening a view costs one fade, not two — the
-  // same trick switchSettingsTab uses for the settings panels.
-  const width = outgoing.getBoundingClientRect().width;
-  outgoing.style.position = 'absolute';
-  outgoing.style.top = '0';
-  outgoing.style.left = '0';
-  outgoing.style.width = `${width}px`;
-  outgoing.style.pointerEvents = 'none';
-  outgoing.style.opacity = '0';
-  outgoing.style.transform = 'translateY(-6px)';
-
-  incoming.hidden = false;
-  incoming.style.opacity = '0';
-  incoming.style.transform = 'translateY(6px)';
-  if (activeView === 'settings' && currentState) renderSettings(currentState);
-
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    incoming.style.opacity = '';
-    incoming.style.transform = '';
-  }));
-
-  setTimeout(() => {
-    outgoing.hidden = true;
-    outgoing.style.position = '';
-    outgoing.style.top = '';
-    outgoing.style.left = '';
-    outgoing.style.width = '';
-    outgoing.style.pointerEvents = '';
-    outgoing.style.opacity = '';
-    outgoing.style.transform = '';
-    incoming.style.opacity = '';
-    incoming.style.transform = '';
-    _transitioning = false;
-    if (viewChanged) focusAfterViewChange(activeView, previousView);
-  }, cssMs('--duration-view-fade', 150));
+  crossfadeTo(viewMap[activeView], {
+    onVisible: () => {
+      if (activeView === 'settings' && currentState) renderSettings(currentState);
+    },
+    onSettled: () => {
+      if (viewChanged) focusAfterViewChange(activeView, previousView);
+    }
+  });
 }
 
 function currentLanguage() {
