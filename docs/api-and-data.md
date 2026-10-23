@@ -445,7 +445,8 @@ with defaults on load so old files remain valid.
     "width": null,
     "height": null
   },
-  "claudePath": null
+  "claudePath": null,
+  "codexPath": null
 }
 ```
 
@@ -610,9 +611,13 @@ the user's Claude Code settings.
 
 Read by `siphon_core::codex`. Codex (CLI and desktop app) appends one JSON
 object per line to `<codex home>/sessions/YYYY/MM/DD/rollout-*.jsonl`, where
-`<codex home>` is `$CODEX_HOME` or `~/.codex`. Every model turn adds a
-`token_count` event carrying the account's current rate limits (observed on
-Codex 0.160):
+`<codex home>` is `preferences.codexPath`, `$CODEX_HOME`, `~/.codex`, or (when
+`~/.codex/sessions` is absent on Windows and `$WSL_DISTRO_NAME` is set) a WSL
+`\\wsl$\<distro>\home\<user>\.codex` directory. Every model turn adds a
+`token_count` event carrying the account's current rate limits and cumulative
+token usage (`info.total_token_usage`, paired with `turn_context.model` for
+Today and This Month token/cost aggregation in `codex::read_usage`), observed on
+Codex 0.160:
 
 ```jsonc
 {
@@ -657,18 +662,22 @@ Read by `siphon_core::antigravity` (parsing) and `controller::read_antigravity`
 supported, and only while it runs: its `resources\bin\language_server.exe`
 serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
 
-- **Port:** the newest `https://127.0.0.1:<port>/` in
-  `%APPDATA%\Antigravity\logs\main.log` (the app logs
-  `Local:       https://127.0.0.1:<port>/` whenever it changes). That file
+- **Port:** the newest `https://127.0.0.1:<port>/` in the tail (last 256 KB,
+  with a full-file fallback) of `%APPDATA%\Antigravity\logs\main.log` (the app
+  logs `Local:       https://127.0.0.1:<port>/` whenever it changes), cross-checked
+  against loopback TCP ports owned by each `language_server` PID via
+  `GetExtendedTcpTable` (`process.rs` + `antigravity::resolve_endpoint`). If
+  `main.log` rotated past the port line and a single `language_server` owns one
+  loopback port, that PID-owned port is used directly. That log file
   existing is what makes the Antigravity tab appear; only its absence removes
   the tab, while any other read error keeps it under `status: error`.
 - **CSRF token:** `--csrf_token <uuid>` on the `language_server` process
   command line (read with `NtQueryInformationProcess`, `process.rs`), taken only
   from a command line that also carries `--override_ide_name antigravity` or
   `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged it; 2.16 stopped.
-  No such process → `status: closed`. Two with different tokens →
-  `status: error`: nothing ties the logged port to either process, so Siphon
-  does not guess.
+  No such process → `status: closed`. Two with different tokens are disambiguated
+  when only one process owns the logged loopback port; otherwise →
+  `status: error`: Siphon does not guess.
 
 ### Request
 

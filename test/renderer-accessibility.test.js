@@ -102,12 +102,14 @@ test('each main-window view and data card has a programmatic heading', () => {
   for (const [view, heading] of [
     ['onboardView', 'onboardingHeading'],
     ['mainView', 'sessionHeading'],
+    ['providerView', 'providerHeading'],
     ['settingsView', 'settingsTitle']
   ]) assert.match(elementWithId(view), new RegExp(`aria-labelledby="${heading}"`));
 
   for (const id of [
     'onboardingHeading', 'sessionHeading', 'weeklyHeading', 'extraUsageHeading',
-    'todayHeading', 'monthHeading', 'settingsTitle', 'settingsResetSectionHeading',
+    'todayHeading', 'monthHeading', 'providerHeading', 'providerTodayHeading',
+    'providerMonthHeading', 'settingsTitle', 'settingsResetSectionHeading',
     'settingsLimitSectionHeading', 'settingsExpireSectionHeading', 'settingsWidgetStyleHeading'
   ]) assert.match(elementWithId(id), /role="heading"[^>]+aria-level="[12]"/);
 });
@@ -184,6 +186,8 @@ test('Codex and Antigravity tabs are named and start hidden until detected', () 
     assert.match(el, /\shidden[\s>]/, `#${id} hidden by default`);
     assert.doesNotMatch(el, /aria-current/, `#${id} is not the current tab at boot`);
   }
+  assert.match(renderer, /elements\.railProviders\?\.addEventListener\('keydown'/);
+  assert.match(html, /class="quota-pace"\s+data-pace\s+data-status="no_data"\s+tabindex="0"/);
 });
 
 test('the main window min width matches the Rust restore floor', () => {
