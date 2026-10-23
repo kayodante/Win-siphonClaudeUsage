@@ -58,3 +58,24 @@ jobs:
       - name: Test
         working-directory: src-tauri/crates/siphon-core
         run: cargo test
+
+  # The Windows app crate (tray, WebView2, DPAPI, process listing, the
+  # loopback client). Compile-only: its logic is tested through siphon-core
+  # above, and it does not pass `cargo fmt --check` (pre-existing drift).
+  tauri-check:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Check
+        working-directory: src-tauri
+        run: cargo check --locked
