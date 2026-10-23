@@ -38,6 +38,10 @@ is added above it.
   Code".
 - Quota percentages drop from 56px to 36px and the Today / This Month costs
   from 20px to 18px, to fit the narrower cards.
+- Card titles and badges no longer wrap at narrow widths. The peak badge
+  reads "PEAK", the Today / This Month info button moves next to the card
+  title, and "Usage estimate" becomes "Estimate". Titles that still don't
+  fit end in an ellipsis.
 
 ### Security
 

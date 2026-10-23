@@ -281,7 +281,7 @@
               <span id="sessionHeading" role="heading" aria-level="1" data-i18n="home.session">Current Session</span>
             </span>
             <span id="peakHoursBadge" class="peak-badge" hidden>
-              <span data-i18n="home.peakHours">Peak hours</span>
+              <span data-i18n="home.peakHours">Peak</span>
               <button type="button" class="cost-info-btn" id="peakHoursInfo" tabindex="0" aria-label="Peak hours info">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
@@ -338,26 +338,26 @@
 
         <section class="grid">
           <article class="card cost-card" aria-labelledby="todayHeading">
-            <span class="card-eyebrow" id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
-            <span class="cost-estimate-row">
-              <span data-i18n="home.costEstimate">Usage estimate</span>
+            <div class="card-eyebrow">
+              <span id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
               <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
-            </span>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
             <span class="stat-value" id="todayCost">--</span>
             <span class="cost-tokens" id="todayTokens"></span>
           </article>
           <article class="card cost-card" aria-labelledby="monthHeading">
-            <span class="card-eyebrow" id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
-            <span class="cost-estimate-row">
-              <span data-i18n="home.costEstimate">Usage estimate</span>
+            <div class="card-eyebrow">
+              <span id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
               <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
-            </span>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
             <span class="stat-value" id="monthCost">--</span>
             <span class="cost-tokens" id="monthTokens"></span>
           </article>

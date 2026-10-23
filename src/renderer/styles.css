@@ -972,6 +972,15 @@ body[data-view="onboard"] .app-footer {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Narrow windows truncate eyebrow titles instead of wrapping them. */
+.card-eyebrow [role="heading"] {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .quota-panel {
@@ -1152,6 +1161,7 @@ body[data-view="onboard"] .app-footer {
   background: var(--card-elevated);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -1195,6 +1205,8 @@ body[data-view="onboard"] .app-footer {
   color: var(--warning);
   background: var(--warning-soft);
   width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .peak-badge .cost-info-btn {
@@ -1230,6 +1242,11 @@ body[data-view="onboard"] .app-footer {
 
 .cost-card > .cost-estimate-row {
   margin-bottom: var(--space-7);
+}
+
+/* The 24px info hit area overhangs the 12px title line instead of growing it. */
+.cost-card > .card-eyebrow .cost-info-btn {
+  margin-block: calc(-1 * var(--space-2));
 }
 
 .stat-value {
@@ -1289,9 +1306,9 @@ body[data-refreshing="true"] .card::after {
 }
 
 .cost-estimate-row {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
   color: var(--subtle-foreground);
