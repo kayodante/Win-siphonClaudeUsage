@@ -15,12 +15,14 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde_json::Value;
 
-use crate::format::parse_iso;
+use crate::format::{parse_iso, to_local_date_key};
 use crate::json_store::home_dir;
+use crate::pricing::{round_cost, token_cost, Price, Tokens};
 use crate::providers::{iso, Observation, ProviderStatus, ProviderWindow, QuotaSection};
+use crate::state::PeriodStats;
 
 /// A `token_count` line is ~1 KB, so the tail of a file holds dozens of them.
 const TAIL_BYTES: u64 = 512 * 1024;
@@ -33,13 +35,34 @@ const DEEP_TAIL_BYTES: u64 = 4 * 1024 * 1024;
 /// ponytail: fixed cap, page further back across attempts if 40 empty
 /// sessions in a row turns out to be common.
 const MAX_FILES: usize = 40;
+const USAGE_LOOKBACK_DAYS: i64 = 35;
+const USAGE_MAX_FILES: usize = 512;
 
-/// `$CODEX_HOME` when set, else `~/.codex` — the same lookup Codex does.
+/// `$CODEX_HOME` when set, else `~/.codex` — falling back to the active WSL
+/// distro's `~/.codex` (`\\wsl.localhost\<distro>\home\<user>\.codex`) when
+/// `WSL_DISTRO_NAME` is present and the Windows home has no `sessions` dir.
 pub fn default_codex_home() -> PathBuf {
-    std::env::var_os("CODEX_HOME")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home_dir().join(".codex"))
+    if let Some(env_home) = std::env::var_os("CODEX_HOME").filter(|v| !v.is_empty()) {
+        return PathBuf::from(env_home);
+    }
+    let win_home = home_dir().join(".codex");
+    if win_home.join("sessions").is_dir() {
+        return win_home;
+    }
+    if let (Some(distro), Some(user)) = (
+        std::env::var_os("WSL_DISTRO_NAME").filter(|v| !v.is_empty()),
+        std::env::var_os("USERNAME").or_else(|| std::env::var_os("USER")),
+    ) {
+        let wsl_home = PathBuf::from(r"\\wsl.localhost")
+            .join(distro)
+            .join("home")
+            .join(user)
+            .join(".codex");
+        if wsl_home.join("sessions").is_dir() {
+            return wsl_home;
+        }
+    }
+    win_home
 }
 
 /// What the rollouts say now. `known_at` is when the reading Siphon already
@@ -53,7 +76,7 @@ pub fn read_quota(codex_home: &Path, known_at: Option<DateTime<Utc>>) -> Observa
         return Observation::NotInstalled;
     }
     let mut files = Vec::new();
-    let mut failed = !collect_rollouts(&sessions, &mut files);
+    let mut failed = !collect_rollouts(&sessions, MAX_FILES * 2, &mut files);
     files.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));
 
     let mut best: Option<Reading> = None;
@@ -94,9 +117,9 @@ fn is_later(found: &Reading, best: &Reading) -> bool {
 
 /// `false` when a directory could not be listed, so the caller can tell a
 /// failed read from a history with nothing in it. Walks `YYYY/MM/DD` entries
-/// newest-first so old months are not opened once enough recent rollouts are
+/// newest-first so old months are not opened once `limit` recent rollouts are
 /// found.
-fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
+fn collect_rollouts(dir: &Path, limit: usize, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
     let Ok(read_dir) = std::fs::read_dir(dir) else {
         return false;
     };
@@ -111,10 +134,10 @@ fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
         };
         let path = entry.path();
         if kind.is_dir() {
-            if out.len() >= MAX_FILES * 2 {
+            if out.len() >= limit {
                 break;
             }
-            complete &= collect_rollouts(&path, out);
+            complete &= collect_rollouts(&path, limit, out);
             continue;
         }
         let name = entry.file_name();
@@ -242,6 +265,185 @@ fn parse_window(window: &Value) -> Option<ProviderWindow> {
         .and_then(|secs| DateTime::from_timestamp(secs, 0))
         .map(iso);
     Some(ProviderWindow::measured(used.clamp(0.0, 100.0), resets_at))
+}
+
+#[derive(Debug, Clone)]
+struct SessionUsage {
+    taken_at: Option<DateTime<Utc>>,
+    input_tokens: u64,
+    cached_input_tokens: u64,
+    cache_write_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+    model: String,
+}
+
+/// Aggregate Today and This Month token usage and estimated USD cost across
+/// Codex rollouts in `<codex_home>/sessions`. Each rollout's last
+/// `token_count` event holds that session's cumulative `total_token_usage`, so
+/// reading the tail of each recent file sums the month without scanning full
+/// transcripts.
+pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, PeriodStats) {
+    let mut today = PeriodStats::default();
+    let mut month = PeriodStats::default();
+    let sessions = codex_home.join("sessions");
+    if !sessions.is_dir() {
+        return (today, month);
+    }
+    let today_key = to_local_date_key(now);
+    let month_prefix = &today_key[..7];
+    let cutoff = now - ChronoDuration::days(USAGE_LOOKBACK_DAYS);
+
+    let mut files = Vec::new();
+    let _ = collect_rollouts(&sessions, USAGE_MAX_FILES, &mut files);
+    files.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));
+
+    for (modified, path) in files {
+        let modified_utc = DateTime::<Utc>::from(modified);
+        if modified_utc < cutoff {
+            break;
+        }
+        let Ok(text) = read_tail(&path, TAIL_BYTES) else {
+            continue;
+        };
+        let Some(usage) = latest_session_usage(&text) else {
+            continue;
+        };
+        let when = usage.taken_at.unwrap_or(modified_utc);
+        let day_key = to_local_date_key(when);
+        if !day_key.starts_with(month_prefix) {
+            continue;
+        }
+        let uncached_input = usage.input_tokens.saturating_sub(usage.cached_input_tokens);
+        let cost = token_cost(
+            Tokens {
+                input: uncached_input as f64,
+                output: usage.output_tokens as f64,
+                cache_read: usage.cached_input_tokens as f64,
+                cache_write: usage.cache_write_tokens as f64,
+            },
+            codex_price(&usage.model),
+        );
+        add_usage(&mut month, &usage, uncached_input, cost);
+        if day_key == today_key {
+            add_usage(&mut today, &usage, uncached_input, cost);
+        }
+    }
+    today.cost = round_cost(today.cost);
+    month.cost = round_cost(month.cost);
+    (today, month)
+}
+
+fn add_usage(target: &mut PeriodStats, u: &SessionUsage, uncached_input: u64, cost: f64) {
+    target.input_tokens += uncached_input;
+    target.output_tokens += u.output_tokens;
+    target.cache_read_tokens += u.cached_input_tokens;
+    target.cache_write_tokens += u.cache_write_tokens;
+    target.total_tokens += u.total_tokens;
+    target.cost += cost;
+    if u.total_tokens > 0 || cost > 0.0 {
+        target.is_empty = false;
+    }
+}
+
+fn latest_session_usage(text: &str) -> Option<SessionUsage> {
+    let model = text
+        .lines()
+        .rev()
+        .find_map(|line| {
+            if !line.contains("\"model\"") {
+                return None;
+            }
+            let event: Value = serde_json::from_str(line).ok()?;
+            event
+                .pointer("/payload/model")
+                .or_else(|| event.get("model"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "gpt-5-codex".to_string());
+
+    text.lines().rev().find_map(|line| {
+        if !line.contains("\"total_token_usage\"") {
+            return None;
+        }
+        let event: Value = serde_json::from_str(line).ok()?;
+        let payload = event.get("payload")?;
+        if payload.get("type").and_then(Value::as_str) != Some("token_count") {
+            return None;
+        }
+        let total = payload.pointer("/info/total_token_usage")?;
+        let num = |k: &str| total.get(k).and_then(Value::as_u64).unwrap_or(0);
+        let input_tokens = num("input_tokens");
+        let cached_input_tokens = num("cached_input_tokens");
+        let cache_write_tokens = num("cache_write_input_tokens");
+        let output_tokens = num("output_tokens");
+        let total_tokens = total
+            .get("total_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(input_tokens + output_tokens);
+        if total_tokens == 0 && input_tokens == 0 && output_tokens == 0 {
+            return None;
+        }
+        let taken_at = event
+            .get("timestamp")
+            .and_then(Value::as_str)
+            .and_then(parse_iso);
+        Some(SessionUsage {
+            taken_at,
+            input_tokens,
+            cached_input_tokens,
+            cache_write_tokens,
+            output_tokens,
+            total_tokens,
+            model: model.clone(),
+        })
+    })
+}
+
+fn codex_price(model: &str) -> Price {
+    let lower = model.to_ascii_lowercase();
+    if lower.contains("-pro") || lower == "o3-pro" {
+        Price {
+            input: 15.0,
+            output: 60.0,
+            cache_read: 1.50,
+            cache_write: 15.0,
+        }
+    } else if lower.contains("o4-mini") || lower.contains("4.1-mini") || lower.contains("4-1-mini")
+    {
+        Price {
+            input: 0.40,
+            output: 1.60,
+            cache_read: 0.10,
+            cache_write: 0.40,
+        }
+    } else if lower.contains("mini") {
+        Price {
+            input: 0.25,
+            output: 2.00,
+            cache_read: 0.025,
+            cache_write: 0.25,
+        }
+    } else if lower == "o3"
+        || lower.starts_with("o3-")
+        || lower.contains("4.1")
+        || lower.contains("4-1")
+    {
+        Price {
+            input: 2.00,
+            output: 8.00,
+            cache_read: 0.50,
+            cache_write: 2.00,
+        }
+    } else {
+        Price {
+            input: 1.25,
+            output: 10.0,
+            cache_read: 0.125,
+            cache_write: 1.25,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -503,5 +705,24 @@ mod tests {
             "first line é\nsecond\nthird\n"
         );
         std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn aggregates_today_and_month_tokens_and_cost() {
+        let home = Home::new("usage");
+        home.rollout("s1", REAL_LINE, 5);
+        let same_day = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (today, month) = read_usage(&home.0, same_day);
+        assert_eq!(today.total_tokens, 607_756);
+        assert_eq!(month.total_tokens, 607_756);
+        assert!(today.cost > 0.20 && today.cost < 0.30);
+        assert!(!today.is_empty);
+
+        let next_day = Utc.with_ymd_and_hms(2026, 10, 23, 15, 0, 0).unwrap();
+        let (today_after, month_after) = read_usage(&home.0, next_day);
+        assert_eq!(today_after.total_tokens, 0);
+        assert!(today_after.is_empty);
+        assert_eq!(month_after.total_tokens, 607_756);
+        assert_eq!(month_after.cost, today.cost);
     }
 }

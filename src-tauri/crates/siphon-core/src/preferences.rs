@@ -95,6 +95,8 @@ pub struct Preferences {
     pub display: Display,
     pub claude_path: Option<String>,
     #[serde(default)]
+    pub codex_path: Option<String>,
+    #[serde(default)]
     pub window: Option<WindowBounds>,
 }
 
@@ -137,6 +139,7 @@ impl Default for Preferences {
                 quota_mode: "used".to_string(),
             },
             claude_path: None,
+            codex_path: None,
             window: None,
         }
     }

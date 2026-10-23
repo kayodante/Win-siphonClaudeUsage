@@ -10,7 +10,7 @@ use crate::alerts::Alert;
 use crate::format::parse_iso;
 use crate::i18n::t;
 use crate::quota::Slot;
-use crate::state::AppState;
+use crate::state::{AppState, PeriodStats};
 
 /// `live`: the last read succeeded. `closed`: the source is not running (the
 /// Antigravity app is closed), so `sections` holds the last known reading.
@@ -84,6 +84,10 @@ pub struct ProviderQuota {
     /// When the reading was taken (ISO-8601), not when Siphon last looked.
     pub updated_at: Option<String>,
     pub sections: Vec<QuotaSection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub today_stats: Option<PeriodStats>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub month_stats: Option<PeriodStats>,
 }
 
 impl ProviderQuota {
@@ -126,6 +130,8 @@ pub fn apply(
                 status,
                 updated_at: None,
                 sections: Vec::new(),
+                today_stats: None,
+                month_stats: None,
             },
         },
         Observation::Reading { taken_at, sections } => match previous {
@@ -135,10 +141,19 @@ pub fn apply(
                     ..previous
                 }
             }
-            _ => ProviderQuota {
+            Some(previous) => ProviderQuota {
                 status: ProviderStatus::Live,
                 updated_at: taken_at,
                 sections,
+                today_stats: previous.today_stats,
+                month_stats: previous.month_stats,
+            },
+            None => ProviderQuota {
+                status: ProviderStatus::Live,
+                updated_at: taken_at,
+                sections,
+                today_stats: None,
+                month_stats: None,
             },
         },
     };
@@ -458,6 +473,8 @@ mod tests {
             status: ProviderStatus::Live,
             updated_at: None,
             sections,
+            today_stats: None,
+            month_stats: None,
         };
         let mut blocked = section("thirdParty", Some(window(0.0, None)));
         blocked.blocked = true;
@@ -498,6 +515,8 @@ mod tests {
             status: ProviderStatus::Live,
             updated_at: None,
             sections,
+            today_stats: None,
+            month_stats: None,
         };
         let state = AppState {
             codex: Some(provider(vec![at("codex", 10.0)])),

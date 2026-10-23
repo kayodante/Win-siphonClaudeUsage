@@ -235,19 +235,30 @@ impl Controller {
     /// Codex rides the local cadence: its quota is a file read too, and
     /// `refresh_local` already runs off the async runtime.
     fn refresh_codex(&self) {
-        let home = siphon_core::codex::default_codex_home();
+        let home = match self.prefs.get("codexPath") {
+            Some(Value::String(s)) if !s.is_empty() => PathBuf::from(s),
+            _ => siphon_core::codex::default_codex_home(),
+        };
         let known_at = self.state.lock().unwrap().codex.as_ref().and_then(|c| {
             c.updated_at
                 .as_deref()
                 .and_then(siphon_core::format::parse_iso)
         });
+        let now = Utc::now();
         let observation = siphon_core::codex::read_quota(&home, known_at);
+        let usage = (!matches!(observation, Observation::NotInstalled))
+            .then(|| siphon_core::codex::read_usage(&home, now));
         // `apply` only ever moves forward, so two refreshes racing here (the
         // loop, the button, a reset firing) land in either order safely.
         {
             let mut state = self.state.lock().unwrap();
             let previous = state.codex.take();
-            state.codex = siphon_core::providers::apply(previous, observation, Utc::now());
+            let mut next = siphon_core::providers::apply(previous, observation, now);
+            if let (Some(codex), Some((today, month))) = (&mut next, usage) {
+                codex.today_stats = Some(today);
+                codex.month_stats = Some(month);
+            }
+            state.codex = next;
         }
         self.sync_reset(Channel::Codex);
     }

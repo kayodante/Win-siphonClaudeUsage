@@ -44,6 +44,11 @@ const elements = {
   mainView: document.querySelector('#mainView'),
   providerView: document.querySelector('#providerView'),
   providerGroups: document.querySelector('#providerGroups'),
+  providerCostGrid: document.querySelector('#providerCostGrid'),
+  providerTodayCost: document.querySelector('#providerTodayCost'),
+  providerTodayTokens: document.querySelector('#providerTodayTokens'),
+  providerMonthCost: document.querySelector('#providerMonthCost'),
+  providerMonthTokens: document.querySelector('#providerMonthTokens'),
   providerStatus: document.querySelector('#providerStatus'),
   quotaGroupTemplate: document.querySelector('#quotaGroupTemplate'),
   providerClaudeButton: document.querySelector('#providerClaudeButton'),
@@ -1318,6 +1323,18 @@ function renderProviderView(state, lang) {
   const shown = [...elements.providerGroups.children];
   if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) {
     elements.providerGroups.replaceChildren(...cards);
+  }
+  const hasStats = Boolean(quota.todayStats || quota.monthStats);
+  if (elements.providerCostGrid) {
+    elements.providerCostGrid.hidden = !hasStats;
+    if (hasStats) {
+      setCostValue(elements.providerTodayCost, quota.todayStats?.cost);
+      elements.providerTodayTokens.textContent =
+        formatTokens(quota.todayStats?.totalTokens, lang) ?? '';
+      setCostValue(elements.providerMonthCost, quota.monthStats?.cost);
+      elements.providerMonthTokens.textContent =
+        formatTokens(quota.monthStats?.totalTokens, lang) ?? '';
+    }
   }
   elements.providerStatus.textContent = providerStatusText(provider, quota, lang);
 }

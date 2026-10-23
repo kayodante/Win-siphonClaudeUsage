@@ -93,6 +93,7 @@ const ALLOWED_PREFS: &[&str] = &[
     "startup.showWindowOnLogin",
     "refresh.intervalSeconds",
     "claudePath",
+    "codexPath",
     "integration.launchWithClaudeCode",
     "privacy.maskEmail",
     "display.quotaMode",

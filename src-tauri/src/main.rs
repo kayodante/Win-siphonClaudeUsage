@@ -332,7 +332,7 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
     ctx.controller.sync_preferences();
 
     match change.path.as_str() {
-        "claudePath" => {
+        "claudePath" | "codexPath" => {
             let c = ctx.controller.clone();
             tauri::async_runtime::spawn(async move {
                 c.refresh_local_blocking().await;
