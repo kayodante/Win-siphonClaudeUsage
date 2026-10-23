@@ -5,6 +5,7 @@
 //! timers and Tauri event plumbing.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -17,12 +18,15 @@ use siphon_core::json_store::JsonStore;
 use siphon_core::local_data::LocalDataService;
 use siphon_core::oauth::{self, AuthFlow};
 use siphon_core::oauth_callback::CallbackOutcome;
-use siphon_core::quota::{QuotaError, QuotaErrorCode};
+use siphon_core::providers::{
+    normalize_sections, Channel, ProviderQuota, ProviderStatus, QuotaSection,
+};
+use siphon_core::quota::{QuotaError, QuotaErrorCode, Slot};
 use siphon_core::reset_scheduler::{decide_update, ResetDecision};
 use siphon_core::state::AppState;
 use siphon_core::token::Credentials;
 
-use crate::http::HttpClient;
+use crate::http::{HttpClient, LoopbackError};
 use crate::prefs::PrefsStore;
 use crate::token_store::{read_claude_credentials, TokenStore};
 
@@ -37,6 +41,15 @@ struct ResetRuntime {
     /// captured generation is still current. This is the Rust equivalent of
     /// the JS `clearTimeout`.
     generation: u64,
+}
+
+/// Threshold alerts and the reset toast for one provider's session window.
+/// Each channel keeps its own generation, so one provider's schedule or clear
+/// never cancels another's timer.
+struct ChannelRuntime {
+    reset: Mutex<ResetRuntime>,
+    alerts: Mutex<UsageAlertService>,
+    reset_store: JsonStore,
 }
 
 /// Result of attempting a refresh-token grant.
@@ -78,10 +91,12 @@ pub struct Controller {
     /// increments it — the browser reached the listener fine in those cases.
     loopback_timeouts: Mutex<u32>,
     rate_limited_until: Mutex<Option<Instant>>,
-    reset: Mutex<ResetRuntime>,
-    alerts: Mutex<UsageAlertService>,
+    /// Indexed by `channel as usize`, built in `Channel::ALL` order.
+    channels: [ChannelRuntime; 4],
+    /// Set while an Antigravity read is in flight. The loop and the refresh
+    /// button can ask at once; the second ask is dropped, not queued.
+    antigravity_busy: AtomicBool,
     cache_path: PathBuf,
-    reset_store: JsonStore,
 }
 
 impl Controller {
@@ -90,7 +105,7 @@ impl Controller {
         prefs: std::sync::Arc<PrefsStore>,
         tokens: std::sync::Arc<TokenStore>,
         cache_path: PathBuf,
-        reset_store_path: PathBuf,
+        config_dir: PathBuf,
     ) -> Self {
         Controller {
             app,
@@ -102,11 +117,18 @@ impl Controller {
             auth_listener: Mutex::new(None),
             loopback_timeouts: Mutex::new(0),
             rate_limited_until: Mutex::new(None),
-            reset: Mutex::new(ResetRuntime::default()),
-            alerts: Mutex::new(UsageAlertService::new()),
+            channels: Channel::ALL.map(|channel| ChannelRuntime {
+                reset: Mutex::new(ResetRuntime::default()),
+                alerts: Mutex::new(UsageAlertService::new()),
+                reset_store: JsonStore::new(config_dir.join(channel.reset_file())),
+            }),
+            antigravity_busy: AtomicBool::new(false),
             cache_path,
-            reset_store: JsonStore::new(reset_store_path),
         }
+    }
+
+    fn channel(&self, channel: Channel) -> &ChannelRuntime {
+        &self.channels[channel as usize]
     }
 
     pub fn get_state(&self) -> AppState {
@@ -122,21 +144,22 @@ impl Controller {
     }
 
     fn check_alerts(&self, state: &AppState) {
-        let percent = state
-            .quota
-            .as_ref()
-            .and_then(|q| q.session.as_ref())
-            .map(|s| s.percent);
         let lang = state.preferences.language.clone();
         let expire = state.preferences.notifications.expire_alert;
         let limit = state.preferences.notifications.limit_alert;
-        let alerts = self
-            .alerts
-            .lock()
-            .unwrap()
-            .check(percent, expire, limit, &lang);
-        for alert in alerts {
-            crate::notify::show(&self.app, &alert.title, &alert.body);
+        for channel in Channel::ALL {
+            let percent = channel.session(state).map(|s| s.percent);
+            let label = channel.label(&lang);
+            let alerts = self.channel(channel).alerts.lock().unwrap().check(
+                percent,
+                expire,
+                limit,
+                &lang,
+                label.as_deref(),
+            );
+            for alert in alerts {
+                crate::notify::show(&self.app, &alert.title, &alert.body);
+            }
         }
     }
 
@@ -151,8 +174,11 @@ impl Controller {
             state.is_signed_in = self.tokens.load().ok().flatten().is_some();
             state.preferences = self.prefs.load();
         }
-        self.restore_reset().await;
+        for channel in Channel::ALL {
+            self.restore_reset(channel);
+        }
         self.clone().refresh_local_blocking().await;
+        self.refresh_antigravity().await;
         if self.get_state().is_signed_in {
             self.refresh_profile().await;
             self.refresh_quota().await;
@@ -187,7 +213,80 @@ impl Controller {
                 }
             }
         }
+        self.refresh_codex();
         self.emit();
+    }
+
+    /// Codex rides the local cadence: its quota is a file read too, and
+    /// `refresh_local` already runs off the async runtime.
+    fn refresh_codex(&self) {
+        let home = siphon_core::codex::default_codex_home();
+        let codex = siphon_core::codex::read_quota(&home, Utc::now());
+        self.state.lock().unwrap().codex = codex;
+        self.sync_reset(Channel::Codex);
+    }
+
+    /// Ask the running Antigravity app for its quota. Independent of the
+    /// Claude sign-in. A closed app keeps the last reading (normalized, so a
+    /// window that reset meanwhile reads 0%) under `status: closed`.
+    pub async fn refresh_antigravity(&self) {
+        if self.antigravity_busy.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let read = self.read_antigravity().await;
+        self.antigravity_busy.store(false, Ordering::Release);
+
+        let now = Utc::now();
+        {
+            let mut state = self.state.lock().unwrap();
+            state.antigravity = read.map(|(status, fresh)| {
+                let previous = state.antigravity.take();
+                let mut next = match fresh {
+                    Some(sections) => ProviderQuota {
+                        status,
+                        updated_at: Some(siphon_core::providers::iso(now)),
+                        sections,
+                    },
+                    None => ProviderQuota {
+                        status,
+                        updated_at: previous.as_ref().and_then(|p| p.updated_at.clone()),
+                        sections: previous.map(|p| p.sections).unwrap_or_default(),
+                    },
+                };
+                normalize_sections(&mut next.sections, now);
+                next
+            });
+        }
+        self.sync_reset(Channel::AntigravityGemini);
+        self.sync_reset(Channel::AntigravityThirdParty);
+        self.emit();
+    }
+
+    /// `None`: not installed. Otherwise the status, plus fresh sections when
+    /// the read succeeded. The CSRF token lives only in this function.
+    async fn read_antigravity(&self) -> Option<(ProviderStatus, Option<Vec<QuotaSection>>)> {
+        use siphon_core::antigravity::{csrf_token, find_port, main_log_path, parse_quota_summary};
+        let log = tokio::fs::read(main_log_path()?).await.ok()?;
+        let port = find_port(&String::from_utf8_lossy(&log));
+        let token = tauri::async_runtime::spawn_blocking(|| {
+            crate::process::command_lines("language_server")
+                .iter()
+                .find_map(|line| csrf_token(line))
+        })
+        .await
+        .ok()
+        .flatten();
+        let (Some(port), Some(token)) = (port, token) else {
+            return Some((ProviderStatus::Closed, None));
+        };
+        Some(match self.http.antigravity_quota(port, &token).await {
+            Ok(raw) => match parse_quota_summary(&raw) {
+                Some(sections) => (ProviderStatus::Live, Some(sections)),
+                None => (ProviderStatus::Error, None),
+            },
+            Err(LoopbackError::Unreachable) => (ProviderStatus::Closed, None),
+            Err(LoopbackError::Unreadable) => (ProviderStatus::Error, None),
+        })
     }
 
     pub async fn refresh_quota(&self) {
@@ -271,11 +370,7 @@ impl Controller {
                 state.is_signed_in = true;
                 state.is_offline = false;
             }
-            if self.prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
-                self.update_reset_from_quota(&quota).await;
-            } else {
-                self.clear_reset().await;
-            }
+            self.sync_reset(Channel::Claude);
         } else {
             self.apply_quota_error(siphon_core::quota::error_for_status(
                 status,
@@ -399,6 +494,7 @@ impl Controller {
 
     pub async fn refresh_all(self: std::sync::Arc<Self>) {
         self.clone().refresh_local_blocking().await;
+        self.refresh_antigravity().await;
         if self.get_state().is_signed_in {
             self.refresh_quota().await;
         }
@@ -655,7 +751,8 @@ impl Controller {
         self.abort_listener();
         *self.loopback_timeouts.lock().unwrap() = 0;
         let _ = self.tokens.clear();
-        self.clear_reset().await;
+        // Only Claude's: signing out of Claude says nothing about Codex.
+        self.clear_reset(Channel::Claude);
         *self.auth_flow.lock().unwrap() = None;
         {
             let mut state = self.state.lock().unwrap();
@@ -689,15 +786,27 @@ impl Controller {
 
     // ----- reset scheduler -------------------------------------------------
 
-    async fn restore_reset(&self) {
-        let Some(state) = self.reset_store.load().ok().flatten() else {
+    /// Re-run the reset decision for `channel` against its current session
+    /// window, or clear it when reset toasts are off.
+    fn sync_reset(&self, channel: Channel) {
+        if self.prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
+            let session = channel.session(&self.state.lock().unwrap()).cloned();
+            self.update_reset(channel, session.as_ref());
+        } else {
+            self.clear_reset(channel);
+        }
+    }
+
+    fn restore_reset(&self, channel: Channel) {
+        let runtime = self.channel(channel);
+        let Some(state) = runtime.reset_store.load().ok().flatten() else {
             return;
         };
         let Some(resets_at) = state.get("resetsAt").and_then(|v| v.as_str()) else {
             return;
         };
         let Ok(when) = chrono::DateTime::parse_from_rfc3339(resets_at) else {
-            let _ = self.reset_store.save(None);
+            let _ = runtime.reset_store.save(None);
             return;
         };
         let key = state
@@ -705,52 +814,52 @@ impl Controller {
             .and_then(|v| v.as_str())
             .unwrap_or(resets_at)
             .to_string();
-        self.reset.lock().unwrap().current_key = Some(key.clone());
-        self.arm_reset(key, when.with_timezone(&Utc));
+        runtime.reset.lock().unwrap().current_key = Some(key.clone());
+        self.arm_reset(channel, key, when.with_timezone(&Utc));
     }
 
-    async fn update_reset_from_quota(&self, quota: &siphon_core::quota::Quota) {
+    fn update_reset(&self, channel: Channel, session: Option<&Slot>) {
+        let runtime = self.channel(channel);
         let (current, last) = {
-            let r = self.reset.lock().unwrap();
+            let r = runtime.reset.lock().unwrap();
             (r.current_key.clone(), r.last_fired_key.clone())
         };
-        match decide_update(quota, current.as_deref(), last.as_deref()) {
-            ResetDecision::Clear => self.clear_reset().await,
+        match decide_update(session, current.as_deref(), last.as_deref()) {
+            ResetDecision::Clear => self.clear_reset(channel),
             ResetDecision::NoChange => {}
             ResetDecision::Schedule {
                 reset_key,
                 resets_at,
             } => {
-                self.reset.lock().unwrap().current_key = Some(reset_key.clone());
-                let _ = self.reset_store.save(Some(&serde_json::json!({
+                runtime.reset.lock().unwrap().current_key = Some(reset_key.clone());
+                let _ = runtime.reset_store.save(Some(&serde_json::json!({
                     "resetKey": reset_key,
-                    "resetsAt": resets_at
-                        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                        .to_string(),
+                    "resetsAt": siphon_core::providers::iso(resets_at),
                 })));
-                self.arm_reset(reset_key, resets_at);
+                self.arm_reset(channel, reset_key, resets_at);
             }
         }
     }
 
-    async fn clear_reset(&self) {
+    fn clear_reset(&self, channel: Channel) {
+        let runtime = self.channel(channel);
         {
-            let mut r = self.reset.lock().unwrap();
+            let mut r = runtime.reset.lock().unwrap();
             r.current_key = None;
             r.generation += 1;
         }
-        let _ = self.reset_store.save(None);
+        let _ = runtime.reset_store.save(None);
     }
 
-    /// Spawn a task that fires the reset toast at `resets_at`. Sleeps in
-    /// chunks (`next_sleep_ms`) so system suspend cannot delay the toast
-    /// indefinitely, and re-checks the generation on every wake so a newer
-    /// schedule / clear / sign-out cancels this task instead of producing a
-    /// stale toast.
-    fn arm_reset(&self, reset_key: String, resets_at: chrono::DateTime<Utc>) {
+    /// Spawn a task that fires `channel`'s reset toast at `resets_at`. Sleeps
+    /// in chunks (`next_sleep_ms`) so system suspend cannot delay the toast
+    /// indefinitely, and re-checks the channel's generation on every wake so a
+    /// newer schedule / clear / sign-out cancels this task instead of producing
+    /// a stale toast.
+    fn arm_reset(&self, channel: Channel, reset_key: String, resets_at: chrono::DateTime<Utc>) {
         let app = self.app.clone();
         let generation = {
-            let mut r = self.reset.lock().unwrap();
+            let mut r = self.channel(channel).reset.lock().unwrap();
             r.generation += 1;
             r.generation
         };
@@ -761,16 +870,16 @@ impl Controller {
                 let Some(state) = app.try_state::<crate::AppContext>() else {
                     return;
                 };
-                if state.controller.reset.lock().unwrap().generation != generation {
+                if state.controller.channel(channel).reset.lock().unwrap().generation != generation {
                     return; // superseded — abandon silently
                 }
             }
             let Some(state) = app.try_state::<crate::AppContext>() else {
                 return;
             };
-            let controller = &state.controller;
+            let controller = state.controller.clone();
             {
-                let mut r = controller.reset.lock().unwrap();
+                let mut r = controller.channel(channel).reset.lock().unwrap();
                 if r.generation != generation
                     || r.current_key.as_deref() != Some(reset_key.as_str())
                 {
@@ -782,18 +891,22 @@ impl Controller {
             // Read prefs at fire time so a toggle flipped during the wait is honored.
             let prefs = &controller.prefs;
             if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
-                let lang = prefs.load().language;
-                let title = siphon_core::i18n::t("notification.resetTitle", &lang);
-                let body = siphon_core::i18n::t("notification.resetBody", &lang);
-                crate::notify::show(&app, &title, &body);
+                let toast = channel.reset_toast(&prefs.load().language);
+                crate::notify::show(&app, &toast.title, &toast.body);
                 if prefs.get("notifications.sound") == Some(Value::Bool(true)) {
                     let _ = app.emit("play-reset-sound", ());
                 }
             }
-            let _ = controller.reset_store.save(None);
-            // Refresh so the session card reflects 0% without a manual click,
+            let _ = controller.channel(channel).reset_store.save(None);
+            // Refresh so the session reads 0% without a manual click,
             // regardless of whether the toast itself was shown.
-            controller.refresh_quota().await;
+            match channel {
+                Channel::Claude => controller.refresh_quota().await,
+                Channel::Codex => controller.refresh_local_blocking().await,
+                Channel::AntigravityGemini | Channel::AntigravityThirdParty => {
+                    controller.refresh_antigravity().await
+                }
+            }
         });
     }
 }

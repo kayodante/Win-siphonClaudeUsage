@@ -106,6 +106,7 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const buildSessionResetLine = () => '';
     const buildWeeklyResetLine = () => '';
     const resolveView = () => 'main';
+    const resolveProvider = () => 'claude';
   `;
 
   const testExecution = `

@@ -54,7 +54,8 @@
               <tbody>
                 <tr><td><code>credentials.json</code></td><td>Anthropic OAuth access and refresh tokens</td><td>Authenticate usage API calls</td></tr>
                 <tr><td><code>preferences.json</code></td><td>Language, notification toggle, widget position, autostart and refresh interval</td><td>User preferences</td></tr>
-                <tr><td><code>reset-notification.json</code></td><td>Pending session-reset timestamp</td><td>Schedule Windows toast</td></tr>
+                <tr><td><code>reset-notification.json</code></td><td>Pending Claude session-reset timestamp</td><td>Schedule Windows toast</td></tr>
+                <tr><td><code>reset-notification-&lt;provider&gt;.json</code></td><td>Pending Codex / Antigravity session-reset timestamp</td><td>Schedule Windows toast</td></tr>
                 <tr><td><code>local-usage-cache.json</code></td><td>Aggregated Claude Code JSONL usage metadata</td><td>Avoid re-reading unchanged session files</td></tr>
               </tbody>
             </table>
@@ -68,6 +69,8 @@
             <li><code>~/.claude/readout-pricing.json</code></li>
             <li><code>~/.claude/projects/**/*.jsonl</code></li>
           </ul>
+          <p>When Codex is installed, Siphon also reads the rate-limit entries Codex writes to its session logs (<code>~/.codex/sessions/**/rollout-*.jsonl</code>) to show your Codex session and weekly limits. It reads only those entries&rsquo; percentages and reset times; it does not read <code>~/.codex/auth.json</code> or any other credential.</p>
+          <p>When the Antigravity app is installed, Siphon reads the port its local server listens on from <code>%APPDATA%\Antigravity\logs\main.log</code>, and the access token for that server from the server process&rsquo;s command line. It uses them only to ask that server, on <code>127.0.0.1</code>, for your quota. The token never leaves your machine and is never stored or logged.</p>
           <p>These files are never uploaded or shared.</p>
 
           <h2>External network requests</h2>
@@ -86,6 +89,7 @@
             </table>
           </div>
           <p>The GitHub requests carry no usage data, no account information, and no identifier — they only ask what the latest release is and fetch a file.</p>
+          <p>The Antigravity quota request goes to <code>127.0.0.1</code> only &mdash; your own machine, not the network.</p>
           <p>No data is sent to any other third party. No analytics, no crash reporting, no telemetry.</p>
 
           <h2>Credentials</h2>

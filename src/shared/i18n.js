@@ -31,6 +31,10 @@ const STRINGS = Object.freeze({
 
     'home.session': 'Current Session',
     'home.weekly': 'Weekly Limit',
+    'provider.antigravity.thirdParty': 'Claude and GPT',
+    'provider.codex.empty': 'Use Codex once on this PC to see its limits.',
+    'provider.antigravity.closed': 'Open Antigravity to update.',
+    'provider.antigravity.error': 'Could not read the Antigravity quota.',
     'home.extraUsage': 'Extra usage',
     'home.today': 'Today',
     'home.month': 'This Month',
@@ -209,6 +213,10 @@ const STRINGS = Object.freeze({
 
     'home.session': 'Sessão Atual',
     'home.weekly': 'Limite Semanal',
+    'provider.antigravity.thirdParty': 'Claude e GPT',
+    'provider.codex.empty': 'Use o Codex uma vez neste PC para ver os limites.',
+    'provider.antigravity.closed': 'Abra o Antigravity para atualizar.',
+    'provider.antigravity.error': 'Não foi possível ler a cota do Antigravity.',
     'home.extraUsage': 'Uso extra',
     'home.today': 'Hoje',
     'home.month': 'Este mês',
@@ -387,6 +395,10 @@ const STRINGS = Object.freeze({
 
     'home.session': '現在のセッション',
     'home.weekly': '週間制限',
+    'provider.antigravity.thirdParty': 'ClaudeとGPT',
+    'provider.codex.empty': 'このPCでCodexを一度使うと制限が表示されます。',
+    'provider.antigravity.closed': '更新するにはAntigravityを開いてください。',
+    'provider.antigravity.error': 'Antigravityのクォータを読み取れませんでした。',
     'home.extraUsage': '追加使用量',
     'home.today': '今日',
     'home.month': '今月',
@@ -565,6 +577,10 @@ const STRINGS = Object.freeze({
 
     'home.session': '현재 세션',
     'home.weekly': '주간 한도',
+    'provider.antigravity.thirdParty': 'Claude 및 GPT',
+    'provider.codex.empty': '이 PC에서 Codex를 한 번 사용하면 한도가 표시됩니다.',
+    'provider.antigravity.closed': '업데이트하려면 Antigravity를 여세요.',
+    'provider.antigravity.error': 'Antigravity 할당량을 읽을 수 없습니다.',
     'home.extraUsage': '추가 사용량',
     'home.today': '오늘',
     'home.month': '이번 달',

@@ -11,6 +11,19 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- Codex and Antigravity tabs on the side rail, each with its own 5-hour
+  session and weekly limits, shown once the app is installed. Codex is read
+  from the session logs Codex writes on this PC (no sign-in, no network), so
+  it reflects your last Codex turn here. Antigravity is read from the running
+  app and shows the Gemini and Claude-and-GPT limits separately; while it is
+  closed, the last reading stays with an "Open Antigravity to update" note.
+  A window whose reset time has passed reads 0%.
+- Codex and Antigravity get the same 70/90/100% and session-reset toasts as
+  Claude, named after the provider ("Codex · Critical usage"). The tray icon,
+  floating widget, in-app banners and sounds stay on Claude.
+
 ### Changed
 
 - The main window gains a side rail: the Claude provider tab on top, and

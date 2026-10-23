@@ -552,6 +552,12 @@ is written when `session.percent` first crosses 100 with a future reset,
 and cleared when the timer fires, when a new session starts
 (`percent < 15`), or when the user signs out.
 
+This file is Claude's. Codex and the two Antigravity groups each get their
+own, same shape, from `providers::Channel::reset_file`:
+`reset-notification-codex.json`, `reset-notification-antigravityGemini.json`,
+`reset-notification-antigravityThirdParty.json`. Signing out of Claude clears
+only Claude's.
+
 ### `~/.claude/settings.json` (the one exception outside `%APPDATA%`)
 
 Written by `ClaudeSettings` (not `JsonStore`) when the
@@ -599,6 +605,97 @@ and start a second Siphon. Enabled hooks are migrated on app startup or when
 the integration is enabled in Settings.
 Writes go through a `.tmp` file + `rename` so a partial write can't corrupt
 the user's Claude Code settings.
+
+## 5. Codex session logs (read-only)
+
+Read by `siphon_core::codex`. Codex (CLI and desktop app) appends one JSON
+object per line to `<codex home>/sessions/YYYY/MM/DD/rollout-*.jsonl`, where
+`<codex home>` is `$CODEX_HOME` or `~/.codex`. Every model turn adds a
+`token_count` event carrying the account's current rate limits (observed on
+Codex 0.160):
+
+```jsonc
+{
+  "timestamp": "2026-10-22T12:13:23.892Z",      // → state.codex.updatedAt
+  "type": "event_msg",
+  "payload": {
+    "type": "token_count",
+    "info": { /* token totals — not read */ },
+    "rate_limits": {
+      "limit_id": "codex",                       // other ids (e.g. "codex-spark") are model-specific: skipped
+      "primary":   { "used_percent": 67.0, "window_minutes": 300,   "resets_at": 1792688645 },  // → session
+      "secondary": { "used_percent": 54.0, "window_minutes": 10080, "resets_at": 1793096377 },  // → weekly
+      "credits": { /* not read */ }
+    }
+  }
+}
+```
+
+- `resets_at` is Unix seconds; either window may be `null`.
+- Siphon stats every `rollout-*.jsonl`, reads the last 512 KB of the most
+  recently modified one (up to five files back while none has a reading),
+  and takes the **last** qualifying line.
+- A window whose `resets_at` has passed reads 0% (`providers::normalize_slot`):
+  the log only moves when Codex is used on this machine.
+- `~/.codex/auth.json` is never read.
+
+## 6. Antigravity local quota server (read-only, loopback)
+
+Read by `siphon_core::antigravity` (parsing) and `controller::read_antigravity`
+(I/O). Only the Antigravity 2.x app (`%LOCALAPPDATA%\Programs\Antigravity`) is
+supported, and only while it runs: its `resources\bin\language_server.exe`
+serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
+
+- **Port:** the newest `https://127.0.0.1:<port>/` in
+  `%APPDATA%\Antigravity\logs\main.log` (the app logs
+  `Local:       https://127.0.0.1:<port>/` whenever it changes). That file
+  existing is what makes the Antigravity tab appear.
+- **CSRF token:** `--csrf_token <uuid>` on the `language_server` process
+  command line (read with `NtQueryInformationProcess`, `process.rs`), taken only
+  from a command line that also carries `--override_ide_name antigravity` or
+  `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged it; 2.16 stopped.
+
+### Request
+
+```
+POST https://127.0.0.1:<port>/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary
+X-Codeium-Csrf-Token: <token>
+Connect-Protocol-Version: 1
+Content-Type: application/json
+
+{}
+```
+
+Sent by a dedicated client: invalid certificates accepted, no proxy, no
+redirects, 5-second timeout. Connection refused or timeout → `status: closed`;
+any non-2xx (a stale token gives 401) or unparseable body → `status: error`.
+
+### Response (200, observed on 2.16)
+
+```jsonc
+{
+  "response": {
+    "groups": [
+      { "displayName": "Gemini Models", "buckets": [
+          { "bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.976, "resetTime": "2026-10-27T21:11:10Z" },
+          { "bucketId": "gemini-5h",     "window": "5h",     "remainingFraction": 1,     "resetTime": "2026-10-23T07:40:54Z" } ] },
+      { "displayName": "Claude and GPT models", "buckets": [
+          { "bucketId": "3p-weekly", "window": "weekly", "remainingFraction": 0, "resetTime": "2026-10-27T00:54:20Z" },
+          { "bucketId": "3p-5h",     "window": "5h",     "remainingFraction": 1, "disabled": true, "resetTime": "2026-10-23T07:40:54Z" } ] },
+      { "displayName": "Gemini 4 Argon", "buckets": [ /* model-specific — not shown */ ] }
+    ]
+  }
+}
+```
+
+| Bucket | `state.antigravity.sections[]` |
+|---|---|
+| `gemini-5h` / `gemini-weekly` | `gemini` → `session` / `weekly` |
+| `3p-5h` / `3p-weekly` | `thirdParty` → `session` / `weekly` |
+
+`percent = (1 − remainingFraction) × 100`, clamped. A bucket without
+`remainingFraction` reads as unknown (`--`), not as exhausted. `disabled: true`
+(the 5-hour window while the weekly one is spent) is not read.
 
 ## Field cheat sheet
 

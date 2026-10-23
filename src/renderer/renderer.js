@@ -16,7 +16,7 @@ import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../shared/i
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
-import { resolveView } from './viewState.js';
+import { resolveProvider, resolveView } from './viewState.js';
 
 let i18nCache = null;
 
@@ -40,6 +40,13 @@ const elements = {
   onboardCountdown: document.querySelector('#onboardCountdown'),
   onboardHatchNotice: document.querySelector('#onboardHatchNotice'),
   mainView: document.querySelector('#mainView'),
+  providerView: document.querySelector('#providerView'),
+  providerGroups: document.querySelector('#providerGroups'),
+  providerStatus: document.querySelector('#providerStatus'),
+  quotaGroupTemplate: document.querySelector('#quotaGroupTemplate'),
+  providerClaudeButton: document.querySelector('#providerClaudeButton'),
+  providerCodexButton: document.querySelector('#providerCodexButton'),
+  providerAntigravityButton: document.querySelector('#providerAntigravityButton'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
   sessionQuotaSuffix: document.querySelector('#sessionQuotaSuffix'),
@@ -136,6 +143,8 @@ let appInfo = {
 };
 let currentState = null;
 let requestedView = 'main';
+// Not persisted: the app always opens on Claude.
+let requestedProvider = 'claude';
 let offlineDismissed = false;
 let updateDismissed = false;
 let highUsageDismissed = false;
@@ -456,8 +465,18 @@ elements.settingsTabs.addEventListener('keydown', event => {
   switchSettingsTab(tabs[nextIndex][0], { focus: true });
 });
 elements.backButton.addEventListener('click', () => window.siphon.showMainView());
-// The only provider tab so far, so selecting it just means "go home".
-document.querySelector('#providerClaudeButton').addEventListener('click', () => window.siphon.showMainView());
+// Picking a provider always lands on its dashboard, Settings included.
+for (const [provider, button] of [
+  ['claude', elements.providerClaudeButton],
+  ['codex', elements.providerCodexButton],
+  ['antigravity', elements.providerAntigravityButton]
+]) {
+  button.addEventListener('click', () => {
+    requestedProvider = provider;
+    if (currentState) render(currentState);
+    window.siphon.showMainView();
+  });
+}
 async function beginSignIn() {
   try {
     const result = await window.siphon.startSignIn();
@@ -946,6 +965,8 @@ function render(state) {
 
   handleThresholdSounds(state, sessionPercent);
 
+  renderProviderTabs(state);
+  renderProviderView(state, lang);
   renderActiveView();
   renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
 
@@ -1152,9 +1173,12 @@ function renderSettingsControls(state, lang) {
 }
 
 function renderBannersAndErrors(state, sessionPercent, lang) {
-  if (sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
+  // Claude's banners say "Session has reached 70%" with no name on it, which
+  // would read as the other provider's on its tab. Those get native toasts.
+  const onClaude = activeProvider() === 'claude';
+  if (onClaude && sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
   else hideBanner(elements.criticalBanner);
-  if (sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
+  if (onClaude && sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
   else hideBanner(elements.highUsageBanner);
 
   if (!state.isOffline) offlineDismissed = false;
@@ -1172,9 +1196,82 @@ function renderBannersAndErrors(state, sessionPercent, lang) {
 function updateLastUpdatedLine() {
   if (!currentState) return;
   const lang = currentLanguage();
-  elements.lastUpdated.textContent = currentState.lastUpdated
-    ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(currentState.lastUpdated)) })
+  const provider = activeProvider();
+  const stamp = provider === 'claude' ? currentState.lastUpdated : currentState[provider]?.updatedAt;
+  elements.lastUpdated.textContent = stamp
+    ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(stamp)) })
     : '--';
+}
+
+function activeProvider() {
+  return resolveProvider(currentState, requestedProvider);
+}
+
+function renderProviderTabs(state) {
+  const active = activeProvider();
+  for (const [provider, button] of [
+    ['claude', elements.providerClaudeButton],
+    ['codex', elements.providerCodexButton],
+    ['antigravity', elements.providerAntigravityButton]
+  ]) {
+    if (provider !== 'claude') button.hidden = !state[provider];
+    if (provider === active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  }
+}
+
+const PROVIDER_NAMES = { codex: 'Codex', antigravity: 'Antigravity' };
+// One card per quota group, reused across renders so meters transition in
+// place instead of being rebuilt every tick.
+const groupCards = new Map();
+
+function groupTitle(id, lang) {
+  if (id === 'gemini') return 'Gemini';
+  if (id === 'thirdParty') return t('provider.antigravity.thirdParty', lang);
+  return PROVIDER_NAMES[id] ?? id;
+}
+
+function providerStatusText(provider, quota, lang) {
+  if (provider === 'codex') return quota.sections.length ? '' : t('provider.codex.empty', lang);
+  if (quota.status === 'error') return t('provider.antigravity.error', lang);
+  if (quota.status === 'closed') return t('provider.antigravity.closed', lang);
+  return '';
+}
+
+function renderQuotaRow(row, label, slot, buildResetLine, { now, lang, mode }) {
+  const percent = clampPercent(slot?.percent ?? 0);
+  row.querySelector('[data-label]').textContent = label;
+  const value = row.querySelector('[data-percent]');
+  value.textContent = slot ? formatPercent(quotaDisplayValue(percent, mode)) : '--';
+  setQuotaColorDrift(value, percent);
+  row.querySelector('[data-suffix]').textContent = slot ? t(`quota.suffix.${mode}`, lang) : '';
+  renderMeter(row.querySelector('[data-meter]'), percent);
+  row.querySelector('[data-reset]').textContent = buildResetLine(slot, now, lang);
+}
+
+function renderProviderView(state, lang) {
+  const provider = activeProvider();
+  const quota = state[provider];
+  if (provider === 'claude' || !quota) return;
+  elements.providerView.setAttribute('aria-label', PROVIDER_NAMES[provider]);
+  const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
+  const cards = quota.sections.map(section => {
+    let card = groupCards.get(section.id);
+    if (!card) {
+      card = elements.quotaGroupTemplate.content.firstElementChild.cloneNode(true);
+      groupCards.set(section.id, card);
+    }
+    card.querySelector('[data-group-title]').textContent = groupTitle(section.id, lang);
+    const [session, weekly] = card.querySelectorAll('.quota-row');
+    renderQuotaRow(session, t('home.session', lang), hydrateSlot(section.session), buildSessionResetLine, ctx);
+    renderQuotaRow(weekly, t('home.weekly', lang), hydrateSlot(section.weekly), buildWeeklyResetLine, ctx);
+    return card;
+  });
+  const shown = [...elements.providerGroups.children];
+  if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) {
+    elements.providerGroups.replaceChildren(...cards);
+  }
+  elements.providerStatus.textContent = providerStatusText(provider, quota, lang);
 }
 
 function renderNotificationPill(enabled, lang = currentLanguage()) {
@@ -1443,14 +1540,15 @@ function renderActiveView() {
   renderedView = activeView;
   document.body.dataset.view = activeView;
 
-  const viewMap = { onboard: elements.onboardView, main: elements.mainView, settings: elements.settingsView };
+  // 'main' is Claude's dashboard or the provider view, by the selected tab.
+  const mainPanel = activeProvider() === 'claude' ? elements.mainView : elements.providerView;
+  const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
+  const allViews = [elements.onboardView, elements.mainView, elements.providerView, elements.settingsView];
   const incoming = viewMap[activeView];
-  const outgoing = Object.values(viewMap).find(v => !v.hidden && v !== incoming);
+  const outgoing = allViews.find(v => !v.hidden && v !== incoming);
 
   if (!outgoing || _transitioning) {
-    elements.onboardView.hidden = activeView !== 'onboard';
-    elements.mainView.hidden = activeView !== 'main';
-    elements.settingsView.hidden = activeView !== 'settings';
+    for (const view of allViews) view.hidden = view !== incoming;
     if (activeView === 'settings' && currentState) renderSettings(currentState);
     if (viewChanged) focusAfterViewChange(activeView, previousView);
     return;

@@ -10,7 +10,8 @@ All data written by Siphon stays on your machine under `%APPDATA%\Siphon\`:
 |------|----------|---------|
 | `credentials.json` | Anthropic OAuth access and refresh tokens | Authenticate usage API calls |
 | `preferences.json` | Language, notification toggle, widget position, autostart and refresh interval | User preferences |
-| `reset-notification.json` | Pending session-reset timestamp | Schedule Windows toast |
+| `reset-notification.json` | Pending Claude session-reset timestamp | Schedule Windows toast |
+| `reset-notification-<provider>.json` | Pending Codex / Antigravity session-reset timestamp | Schedule Windows toast |
 | `local-usage-cache.json` | Aggregated Claude Code JSONL usage metadata | Avoid re-reading unchanged session files |
 
 Files are written with mode `0600` (owner read/write only) where supported.
@@ -22,6 +23,17 @@ Siphon reads Claude Code's local usage files:
 - `~/.claude/readout-cost-cache.json`
 - `~/.claude/readout-pricing.json`
 - `~/.claude/projects/**/*.jsonl`
+
+When Codex is installed, Siphon also reads the rate-limit entries Codex writes
+to its session logs (`~/.codex/sessions/**/rollout-*.jsonl`) to show your Codex
+session and weekly limits. It reads only those entries' percentages and reset
+times; it does not read `~/.codex/auth.json` or any other credential.
+
+When the Antigravity app is installed, Siphon reads the port its local server
+listens on from `%APPDATA%\Antigravity\logs\main.log`, and the access token
+for that server from the server process's command line. It uses them only to
+ask that server, on `127.0.0.1`, for your quota. The token never leaves your
+machine and is never stored or logged.
 
 These files are never uploaded or shared.
 
@@ -39,6 +51,9 @@ data, and GitHub, for updates:
 
 The GitHub requests carry no usage data, no account information, and no
 identifier — they only ask what the latest release is and fetch a file.
+
+The Antigravity quota request goes to `127.0.0.1` only — your own machine,
+not the network.
 
 No data is sent to any other third party. No analytics, no crash reporting, no telemetry.
 

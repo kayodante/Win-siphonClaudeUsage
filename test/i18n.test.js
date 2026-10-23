@@ -169,6 +169,23 @@ test('the loopback sign-in copy exists in every supported language', () => {
   }
 });
 
+test('the provider tab copy exists in every supported language', () => {
+  const keys = [
+    'provider.antigravity.thirdParty',
+    'provider.codex.empty',
+    'provider.antigravity.closed',
+    'provider.antigravity.error'
+  ];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const key of keys) {
+      const value = t(key, lang);
+      assert.notEqual(value, key, `${key} is missing from ${lang}`);
+      // `t` falls back to English; a translation must not be that fallback.
+      if (lang !== 'en') assert.notEqual(value, t(key, 'en'), `${key} is untranslated in ${lang}`);
+    }
+  }
+});
+
 test('the deadline label carries the countdown placeholder in every language', () => {
   for (const lang of SUPPORTED_LANGUAGES) {
     assert.match(

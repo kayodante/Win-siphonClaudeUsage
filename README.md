@@ -35,6 +35,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 * **Session quota** | Progress bar for your current 5-hour session with a reset countdown
 * **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint
+* **Codex and Antigravity** | Tabs on the side rail with their own session and weekly limits, shown once either app is installed. Codex is read from the session logs Codex writes locally (no sign-in, no network), so it reflects your last Codex turn on this PC. Antigravity is read from the running app and shows Gemini and Claude-and-GPT limits separately; while the app is closed, the last reading stays up with a note. Both get the same 70/90/100% and reset toasts as Claude; the tray icon and widget stay on Claude
 * **Usage tracking** | Today's and this month's usage in USD, calculated locally from Claude Code's usage and pricing files
 * **Quota alerts** | Warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100%, each configurable on its own
 * **Reset notification** | Windows toast when your session resets. If the app was closed during the reset window, it fires on next launch
@@ -103,7 +104,8 @@ for known Claude models. No data leaves your machine for usage calculations.
 | File | Purpose |
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
-| `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
+| `%APPDATA%\Siphon\reset-notification.json` | Pending Claude reset timestamp |
+| `%APPDATA%\Siphon\reset-notification-<provider>.json` | Pending Codex / Antigravity reset timestamp, one file each |
 | `%APPDATA%\Siphon\preferences.json` | Language, notification toggles, widget + main-window position, autostart, refresh interval, update checking, quota display mode, email masking, and Claude Code launch integration settings |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
 
@@ -146,7 +148,8 @@ NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
 ## Privacy
 
 - **Two destinations, both yours** — usage and quota data go only to Anthropic (`api.anthropic.com`). The only other outbound traffic is the update check against the GitHub Releases API and, if you download an update, the installer itself from GitHub. Nothing about your usage is sent there. No telemetry, no analytics, no third-party data sharing.
-- **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, and `%APPDATA%\Siphon\`.
+- **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, Codex's `~/.codex/sessions/` logs (rate-limit entries only — never `auth.json`), Antigravity's `main.log`, and `%APPDATA%\Siphon\`.
+- **Antigravity stays on your machine** — Siphon reads the access token of Antigravity's local quota server from that process's command line and sends it only to `127.0.0.1`, without a proxy. It is never stored or logged.
 - **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI (via the `windows` crate) before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
 - **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
 

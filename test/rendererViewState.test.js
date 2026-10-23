@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { resolveView } from '../src/renderer/viewState.js';
+import { resolveProvider, resolveView } from '../src/renderer/viewState.js';
 
 test('signed out state always resolves to onboarding', () => {
   assert.equal(resolveView({ isSignedIn: false }, 'main'), 'onboard');
@@ -29,6 +29,15 @@ test('a signed-in state is not dragged back to onboarding by mid-flow flags', ()
   assert.equal(resolveView({ isSignedIn: true, awaitingBrowser: true }, 'main'), 'main');
   assert.equal(resolveView({ isSignedIn: true, awaitingBrowser: true }, 'settings'), 'settings');
   assert.equal(resolveView({ isSignedIn: true, awaitingCode: true }, 'main'), 'main');
+});
+
+test('a provider tab resolves only while that provider exists', () => {
+  const codex = { status: 'live', updatedAt: null, sections: [] };
+  assert.equal(resolveProvider({ codex }, 'codex'), 'codex');
+  assert.equal(resolveProvider({ codex: null }, 'codex'), 'claude');
+  assert.equal(resolveProvider({ codex }, 'antigravity'), 'claude');
+  assert.equal(resolveProvider({ codex }, 'settings'), 'claude');
+  assert.equal(resolveProvider(null, 'codex'), 'claude');
 });
 
 test('the waiting screen tears down its timers whenever the wait ends', () => {

@@ -15,6 +15,7 @@ mod launch;
 mod notify;
 mod oauth_server;
 mod prefs;
+mod process;
 mod token_store;
 mod tray;
 mod update_check;
@@ -86,7 +87,6 @@ fn main() {
             let prefs = Arc::new(PrefsStore::new(config_dir().join("preferences.json")));
             let tokens = Arc::new(TokenStore::new());
             let cache_path = config_dir().join("local-usage-cache.json");
-            let reset_path = config_dir().join("reset-notification.json");
             let exe_path = std::env::current_exe()
                 .map(|p| p.to_string_lossy().into_owned())
                 .unwrap_or_default();
@@ -96,7 +96,7 @@ fn main() {
                 prefs.clone(),
                 tokens.clone(),
                 cache_path,
-                reset_path,
+                config_dir(),
             ));
 
             app.manage(AppContext {
@@ -147,6 +147,7 @@ fn main() {
                 // leave the numbers stale for longer than the user asked for.
                 let mut last_local = Utc::now();
                 let mut last_quota = Utc::now();
+                let mut last_antigravity = Utc::now();
                 loop {
                     tokio::time::sleep(TICK).await;
                     let now = Utc::now();
@@ -161,6 +162,12 @@ fn main() {
                     {
                         last_quota = now;
                         c.refresh_quota().await;
+                    }
+                    // Antigravity needs no Claude sign-in; its local server is
+                    // asked on the quota cadence like any other quota source.
+                    if (now - last_antigravity).num_seconds() >= quota_interval {
+                        last_antigravity = now;
+                        c.refresh_antigravity().await;
                     }
                 }
             });

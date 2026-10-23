@@ -35,6 +35,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 
 * **Cota da sessão** | Barra de progresso da sessão atual de 5 horas, com contagem regressiva até a redefinição
 * **Limites semanais** | Acompanha o limite semanal para todos os modelos a partir do endpoint de uso OAuth
+* **Codex e Antigravity** | Abas no trilho lateral com limite de sessão e semanal próprios, que aparecem quando o app está instalado. O Codex é lido dos logs de sessão que ele grava localmente (sem login, sem rede), então reflete sua última interação com o Codex neste PC. O Antigravity é lido do app aberto e mostra os limites de Gemini e de Claude e GPT separados; com o app fechado, a última leitura continua na tela com um aviso. Os dois recebem as mesmas notificações de 70/90/100% e de redefinição do Claude; o ícone da bandeja e o widget continuam no Claude
 * **Acompanhamento do uso** | Uso de hoje e do mês em USD, calculado localmente com os arquivos de uso e preços do Claude Code
 * **Alertas de cota** | Avisos na interface quando o uso da sessão chega a 70% e 90% (dispensáveis por sessão); notificações opcionais do Windows aos 70%, 90% e 100%, cada uma configurável separadamente
 * **Notificação de redefinição** | Notificação do Windows quando a sessão é redefinida. Se o aplicativo estava fechado, ela aparece na próxima abertura
@@ -97,7 +98,8 @@ Os valores de uso são calculados localmente a partir dos dados do Claude Code. 
 | Arquivo | Finalidade |
 |---------|------------|
 | `%APPDATA%\Siphon\credentials.json` | Tokens OAuth (permissão `0600`) |
-| `%APPDATA%\Siphon\reset-notification.json` | Horário de redefinição pendente |
+| `%APPDATA%\Siphon\reset-notification.json` | Horário de redefinição pendente do Claude |
+| `%APPDATA%\Siphon\reset-notification-<provedor>.json` | Horário de redefinição pendente do Codex / Antigravity, um arquivo para cada |
 | `%APPDATA%\Siphon\preferences.json` | Idioma, notificações, posição do widget e da janela principal, inicialização automática, intervalo de atualização, busca por atualizações, modo de exibição da cota, ocultação do e-mail e integração para abrir com o Claude Code |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Cache incremental que pode ser reconstruído a partir dos arquivos JSONL de uso do Claude Code |
 
@@ -127,7 +129,8 @@ Os testes de JS ficam em `test/` e cobrem `src/shared/`, `src/renderer/viewState
 ## Privacidade
 
 - **Dois destinos, ambos relacionados ao aplicativo** — os dados de uso e cota vão apenas para a Anthropic (`api.anthropic.com`). O único outro tráfego de saída é a busca por atualizações na API do GitHub Releases e, se você baixar uma atualização, o próprio instalador vindo do GitHub. Nenhum dado sobre seu uso é enviado ao GitHub. Sem telemetria, análises ou compartilhamento de dados com terceiros.
-- **Sem varredura do disco** — o aplicativo lê apenas caminhos conhecidos: `~/.claude/readout-*.json`, arquivos JSONL em `~/.claude/projects/` e `%APPDATA%\Siphon\`.
+- **Sem varredura do disco** — o aplicativo lê apenas caminhos conhecidos: `~/.claude/readout-*.json`, arquivos JSONL em `~/.claude/projects/`, os logs de `~/.codex/sessions/` (só as entradas de limite — nunca o `auth.json`), o `main.log` do Antigravity e `%APPDATA%\Siphon\`.
+- **O Antigravity fica na sua máquina** — o Siphon lê o token de acesso do servidor local de cota do Antigravity na linha de comando desse processo e o envia apenas para `127.0.0.1`, sem proxy. Ele nunca é salvo nem registrado em log.
 - **Credenciais protegidas** — os tokens OAuth são criptografados com o DPAPI do Windows (por meio da crate `windows`) antes de serem gravados no disco. Eles só são gravados em texto simples se o DPAPI não estiver disponível no computador.
 - **Diagnósticos seguros** — os registros internos mostram apenas metadados de serviço e estado, nunca tokens, valores OAuth ou credenciais.
 

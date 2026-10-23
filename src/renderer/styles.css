@@ -1079,6 +1079,65 @@ body[data-view="onboard"] .app-footer {
   font-variant-numeric: tabular-nums;
 }
 
+/* Codex / Antigravity: one card per quota group, session and weekly as two
+   compact rows. Same card, meter and Pixel readout as Claude's panels, one
+   type step down so a two-group provider still fits without scrolling. */
+.provider-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.quota-group {
+  gap: var(--space-7);
+}
+
+.quota-group > .card-eyebrow {
+  margin-bottom: calc(-1 * var(--space-3));
+}
+
+.quota-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.quota-row-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.quota-row-label {
+  font-size: var(--text-sm);
+  color: var(--subtle-foreground);
+}
+
+.quota-row .quota-percent {
+  font-size: var(--text-2xl);
+}
+
+.quota-row .reset-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--subtle-foreground);
+}
+
+.provider-status {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  text-align: center;
+  color: var(--subtle-foreground);
+}
+
+.provider-status:empty {
+  display: none;
+}
+
 .quota-pace {
   display: inline-flex;
   align-items: center;

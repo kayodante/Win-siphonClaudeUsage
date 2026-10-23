@@ -177,6 +177,15 @@ test('icon-only rail buttons carry translated accessible names and tooltips', ()
   assert.match(elementWithId('providerClaudeButton'), /aria-current="page"[^>]*aria-label="Claude"/);
 });
 
+test('Codex and Antigravity tabs are named and start hidden until detected', () => {
+  for (const [id, name] of [['providerCodexButton', 'Codex'], ['providerAntigravityButton', 'Antigravity']]) {
+    const el = elementWithId(id);
+    assert.match(el, new RegExp(`aria-label="${name}"`), `#${id} aria-label`);
+    assert.match(el, /\shidden[\s>]/, `#${id} hidden by default`);
+    assert.doesNotMatch(el, /aria-current/, `#${id} is not the current tab at boot`);
+  }
+});
+
 test('the main window min width matches the Rust restore floor', () => {
   const conf = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
   const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
