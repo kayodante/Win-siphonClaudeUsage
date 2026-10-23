@@ -48,6 +48,9 @@ is added above it.
   "May run out" (PT-BR "Sem dados", "Acaba antes"; Japanese labels shortened
   too). The peak badge's tooltip now opens when hovering anywhere on the
   badge, not only its info icon.
+- Settings tabs follow the updated design: 13px labels on a darker tray, with
+  a raised pill behind the active tab. The Sign out button is now lighter at
+  the top than at the bottom.
 
 ### Security
 
@@ -59,6 +62,13 @@ is added above it.
 
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
+- Inactive Settings tab labels now meet WCAG AA contrast (4.53:1, up from
+  about 4.27:1).
+- Screen readers announce the session percentage on the floating widget's
+  open button ("Current Session: 42% used, Open Siphon") instead of only
+  "Open Siphon".
+- Screen readers no longer re-announce the floating widget's reset time on
+  every refresh; it is announced only when it changes.
 
 ## [1.15.1] - 2026-10-19
 

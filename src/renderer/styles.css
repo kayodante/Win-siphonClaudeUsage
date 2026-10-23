@@ -45,8 +45,8 @@
 
   /* ── Colors: Surface ── */
   --card:            oklch(20% 0 0);
-  --card-elevated:   oklch(24% 0 0);
-  --card-foreground: oklch(25.91% 0 0);
+  --card-elevated:   oklch(28.91% 0 0);
+  --card-foreground: oklch(23.93% 0 0);
   --surface-raised:  oklch(18% 0 0);
   --muted:           oklch(22% 0 0);
   --input:           oklch(16% 0 0);
@@ -86,6 +86,13 @@
 
   /* ── Colors: Misc ── */
   --chip-currency: oklch(63% 0.264 304);
+
+  /* ── Colors: Window surfaces ── */
+  /* Black over the DWM acrylic backdrop; the alpha is the only darkening on
+     Windows 11 builds that ignore the acrylic tint (DESIGN.md §5). */
+  --shell-bg:         oklch(0% 0 0 / 0.75);
+  --floating-bg:      oklch(0% 0 0 / 0.60);
+  --floating-mini-bg: oklch(0% 0 0 / 0.85);
 
   /* ── Typography: Families ── */
   --font-sans:  "Geist", "Inter", "Segoe UI", system-ui, sans-serif;
@@ -255,7 +262,7 @@ h3 {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(40% 0.008 270);
+  background: var(--muted-foreground);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -276,7 +283,7 @@ h3 {
   flex: 1 0 0;
   min-height: 0;
   overflow: hidden;
-  background: oklch(0% 0 0 / 0.75);
+  background: var(--shell-bg);
   border-radius: var(--radius-sm);
   box-shadow: var(--inner-light);
 }
@@ -450,7 +457,7 @@ body[data-view="onboard"] .topbar .brand {
   width: 40px;
   height: 1px;
   flex-shrink: 0;
-  background: var(--border-subtle);
+  background: var(--border-strong);
 }
 
 .rail-provider {
@@ -462,7 +469,7 @@ body[data-view="onboard"] .topbar .brand {
   justify-content: center;
   border: none;
   border-radius: var(--radius-sm);
-  background: oklch(100% 0 0 / 0.03);
+  background: var(--border-subtle);
   color: var(--subtle-foreground);
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease),
@@ -470,7 +477,7 @@ body[data-view="onboard"] .topbar .brand {
 }
 
 .rail-provider[aria-current="page"] {
-  background: oklch(100% 0 0 / 0.12);
+  background: var(--border-strong);
   color: var(--accent);
   box-shadow: var(--inner-light);
 }
@@ -740,7 +747,7 @@ body[data-view="onboard"] .app-footer {
   background: transparent;
   color: var(--subtle-foreground);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
 
 /* Both icons stack in the same slot (transitions-dev "Icon swap") — the copy
@@ -855,7 +862,7 @@ body[data-view="onboard"] .app-footer {
   min-height: 64px;
   height: 64px;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid oklch(100% 0 0 / 0.10);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--card);
   color: var(--foreground);
@@ -2073,7 +2080,7 @@ body[data-refreshing="true"] .card::after {
   margin-top: 0;
   padding: var(--space-6) var(--space-9);
   border-radius: 14px;
-  background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
+  background: linear-gradient(180deg, var(--card-elevated) 0%, var(--card-foreground) 100%);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-md);
@@ -2085,7 +2092,7 @@ body[data-refreshing="true"] .card::after {
 
 .btn-secondary:hover {
   filter: brightness(1.15);
-  background: linear-gradient(180deg, var(--card-foreground) 0%, var(--card-elevated) 100%);
+  background: linear-gradient(180deg, var(--card-elevated) 0%, var(--card-foreground) 100%);
 }
 
 .btn-secondary:active {
@@ -2131,7 +2138,7 @@ body[data-refreshing="true"] .card::after {
 
 .settings-divider {
   height: 1px;
-  background: var(--border-subtle);
+  background: var(--border-strong);
 }
 
 .settings-row-label {
@@ -2232,7 +2239,7 @@ body[data-refreshing="true"] .card::after {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: oklch(0 0 0 / 60%);
+  background: var(--floating-bg);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -2689,7 +2696,7 @@ button:focus-visible {
 
 .switch input:checked + .switch-track .switch-thumb {
   transform: translateX(13px);
-  background: oklch(15% 0.01 270);
+  background: var(--accent-foreground);
 }
 
 .switch input:disabled + .switch-track {
@@ -3290,7 +3297,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   width: calc((100% - var(--space-1) * 2) / 3);
   height: calc(100% - var(--space-1) * 2);
   border-radius: var(--radius-pill);
-  background: var(--border-strong);
+  background: var(--card-elevated);
   box-shadow: var(--inner-light);
   transform: translateX(calc(var(--tab-index) * 100%));
   transition: transform var(--duration-normal) var(--ease-out);
@@ -3308,9 +3315,10 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   background: transparent;
   color: var(--subtle-foreground);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
   cursor: pointer;
-  transition: color 120ms ease, transform var(--duration-press) var(--ease-press);
+  transition: color var(--duration-fast) var(--ease), transform var(--duration-press) var(--ease-press);
 }
 
 .settings-tab--active {
@@ -3393,7 +3401,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   cursor: pointer;
   text-align: left;
   box-shadow: var(--inner-light);
-  transition: border-color 120ms ease, box-shadow 120ms ease,
+  transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease),
     transform var(--duration-press) var(--ease-press);
 }
 
@@ -3466,7 +3474,7 @@ body:not([data-entering]) #sessionMeter[data-level="critical"][data-filled="40"]
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-none);
-  background: oklch(0 0 0 / 0.85);
+  background: var(--floating-mini-bg);
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-subtle);
   -webkit-app-region: drag;
