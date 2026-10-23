@@ -19,7 +19,11 @@ is added above it.
   it reflects your last Codex turn here. Antigravity is read from the running
   app and shows the Gemini and Claude-and-GPT limits separately; while it is
   closed, the last reading stays with an "Open Antigravity to update" note.
-  A window whose reset time has passed reads 0%.
+  A window whose reset time has passed says it is waiting for a new reading
+  instead of showing a guessed 0%, a reading from another day names the day,
+  and a window the source does not offer is not shown. When Antigravity holds
+  back the Claude-and-GPT models behind a spent weekly limit, the card says
+  "Blocked by the weekly limit" and no session-reset toast promises otherwise.
 - Codex and Antigravity get the same 70/90/100% and session-reset toasts as
   Claude, named after the provider ("Codex · Critical usage"). The tray icon,
   floating widget, in-app banners and sounds stay on Claude.
@@ -60,6 +64,11 @@ is added above it.
 
 ### Fixed
 
+- Switching tabs again before the fade finished (Claude → Codex → Claude)
+  could leave the main window empty until the next refresh.
+- The window's first render on launch no longer stops partway through.
+- Screen readers now read "used" or "left" after each quota percentage, so
+  the two display modes no longer sound the same.
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
 - Inactive Settings tab labels now meet WCAG AA contrast (4.53:1, up from

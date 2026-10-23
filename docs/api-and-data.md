@@ -631,12 +631,23 @@ Codex 0.160):
 }
 ```
 
-- `resets_at` is Unix seconds; either window may be `null`.
-- Siphon stats every `rollout-*.jsonl`, reads the last 512 KB of the most
-  recently modified one (up to five files back while none has a reading),
-  and takes the **last** qualifying line.
-- A window whose `resets_at` has passed reads 0% (`providers::normalize_slot`):
-  the log only moves when Codex is used on this machine.
+- `resets_at` is Unix seconds; either window may be `null` (its row is then
+  not shown).
+- Windows are named by `window_minutes`: 300 → session, 10080 → weekly. A
+  window without it falls back to its position (`primary` → session,
+  `secondary` → weekly); any other length is left out.
+- Siphon stats every `rollout-*.jsonl` and opens, newest mtime first, only
+  those modified since the reading it already holds (up to 40 per attempt).
+  In each it takes the **last** qualifying line of the last 512 KB, then of
+  the last 4 MB if the shorter tail has none. Across files the reading with
+  the latest event `timestamp` wins; mtime only bounds the search, since any
+  event touches a file without carrying a new quota.
+- `providers::apply` keeps the newest reading: an older or undated line, an
+  empty search or a read error (`status: error`) never replaces or erases it.
+- A window whose `resets_at` has passed is marked `rolledOver`
+  (`providers::normalize_window`) and shown as waiting for a new reading,
+  never as a measured 0%: the log only moves when Codex is used on this
+  machine.
 - `~/.codex/auth.json` is never read.
 
 ## 6. Antigravity local quota server (read-only, loopback)
@@ -649,11 +660,15 @@ serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
 - **Port:** the newest `https://127.0.0.1:<port>/` in
   `%APPDATA%\Antigravity\logs\main.log` (the app logs
   `Local:       https://127.0.0.1:<port>/` whenever it changes). That file
-  existing is what makes the Antigravity tab appear.
+  existing is what makes the Antigravity tab appear; only its absence removes
+  the tab, while any other read error keeps it under `status: error`.
 - **CSRF token:** `--csrf_token <uuid>` on the `language_server` process
   command line (read with `NtQueryInformationProcess`, `process.rs`), taken only
   from a command line that also carries `--override_ide_name antigravity` or
   `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged it; 2.16 stopped.
+  No such process → `status: closed`. Two with different tokens →
+  `status: error`: nothing ties the logged port to either process, so Siphon
+  does not guess.
 
 ### Request
 
@@ -669,6 +684,8 @@ Content-Type: application/json
 Sent by a dedicated client: invalid certificates accepted, no proxy, no
 redirects, 5-second timeout. Connection refused or timeout → `status: closed`;
 any non-2xx (a stale token gives 401) or unparseable body → `status: error`.
+Port and token are rediscovered on every attempt, so a restarted server
+recovers on the next refresh. The last reading stays through all of these.
 
 ### Response (200, observed on 2.16)
 
@@ -694,8 +711,12 @@ any non-2xx (a stale token gives 401) or unparseable body → `status: error`.
 | `3p-5h` / `3p-weekly` | `thirdParty` → `session` / `weekly` |
 
 `percent = (1 − remainingFraction) × 100`, clamped. A bucket without
-`remainingFraction` reads as unknown (`--`), not as exhausted. `disabled: true`
-(the 5-hour window while the weekly one is spent) is not read.
+`remainingFraction` reads as unknown ("No reading available"), not as
+exhausted. A response in which no window has a usable value is
+`status: error`, not a reading. `disabled: true` (the 5-hour window while the
+weekly one is spent) marks the section `blocked`: the card says so instead of
+suggesting a message, and that section's session-reset toast is not shown
+while the block lasts.
 
 ## Field cheat sheet
 
