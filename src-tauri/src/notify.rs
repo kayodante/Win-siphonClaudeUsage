@@ -7,10 +7,10 @@
 //! directly and keeps the shape the plugin produced: title, one body line,
 //! silent (the renderer plays its own mp3), short duration.
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use tauri_winrt_notification::{Duration, Toast};
 
-pub fn show(app: &AppHandle, title: &str, body: &str) {
+pub fn show(app: &AppHandle, title: &str, body: &str, provider: &'static str) {
     // The AppUserModelID has to be one Windows knows about, and only the
     // installed app has it — the NSIS shortcut is what registers the bundle
     // identifier. In dev, fall back to the PowerShell id, same as the plugin
@@ -34,6 +34,7 @@ pub fn show(app: &AppHandle, title: &str, body: &str) {
             // loop itself. The user clicked, so taking focus is what they asked
             // for — unlike the SessionStart hook, which must not steal it.
             crate::windows_ctl::show_main(&handle);
+            let _ = handle.emit("provider-select", provider);
             Ok(())
         })
         .show();

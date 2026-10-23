@@ -53,6 +53,7 @@
     installUpdate: () => invoke('update_install'),
 
     onView: callback => on('view-changed', callback),
+    onProviderSelect: callback => on('provider-select', callback),
     onState: callback => on('state-changed', callback),
     onResetSound: callback => on('play-reset-sound', () => callback()),
     onWindowShown: callback => on('window-shown', () => callback()),

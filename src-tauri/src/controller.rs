@@ -156,7 +156,7 @@ impl Controller {
                 label.as_deref(),
             );
             for alert in alerts {
-                crate::notify::show(&self.app, &alert.title, &alert.body);
+                crate::notify::show(&self.app, &alert.title, &alert.body, channel.provider_id());
             }
         }
     }
@@ -939,7 +939,7 @@ impl Controller {
             let blocked = channel.blocks_reset_toast(&controller.state.lock().unwrap());
             if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) && !blocked {
                 let toast = channel.reset_toast(&prefs.load().language);
-                crate::notify::show(&app, &toast.title, &toast.body);
+                crate::notify::show(&app, &toast.title, &toast.body, channel.provider_id());
                 if channel.plays_reset_sound()
                     && prefs.get("notifications.sound") == Some(Value::Bool(true))
                 {

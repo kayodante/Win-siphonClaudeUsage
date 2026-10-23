@@ -880,6 +880,14 @@ try {
     elements.appVersionText.textContent = `Siphon - Claude Usage  —  v ${appInfo.version}`;
   }
   window.siphon.onView(showView);
+  window.siphon.onProviderSelect?.(provider => {
+    if (provider === 'claude' || provider === 'codex' || provider === 'antigravity') {
+      requestedProvider = provider;
+      requestedView = 'main';
+      if (currentState) render(currentState);
+      else renderActiveView();
+    }
+  });
 
 
   if (!i18nCache) {

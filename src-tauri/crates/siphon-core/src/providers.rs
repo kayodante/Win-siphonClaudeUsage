@@ -231,6 +231,15 @@ impl Channel {
         }
     }
 
+    /// The renderer tab (`claude`, `codex`, `antigravity`) this channel belongs to.
+    pub const fn provider_id(self) -> &'static str {
+        match self {
+            Channel::Claude => "claude",
+            Channel::Codex => "codex",
+            Channel::AntigravityGemini | Channel::AntigravityThirdParty => "antigravity",
+        }
+    }
+
     /// Claude keeps the file it always had, so an armed reset survives the
     /// upgrade without a migration.
     pub fn reset_file(self) -> String {
@@ -506,6 +515,14 @@ mod tests {
         let files: std::collections::HashSet<_> =
             Channel::ALL.iter().map(|c| c.reset_file()).collect();
         assert_eq!(files.len(), Channel::ALL.len());
+    }
+
+    #[test]
+    fn channels_map_to_their_renderer_provider_tab() {
+        assert_eq!(Channel::Claude.provider_id(), "claude");
+        assert_eq!(Channel::Codex.provider_id(), "codex");
+        assert_eq!(Channel::AntigravityGemini.provider_id(), "antigravity");
+        assert_eq!(Channel::AntigravityThirdParty.provider_id(), "antigravity");
     }
 
     #[test]
