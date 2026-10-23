@@ -64,6 +64,18 @@ test('pace and tray strings exist in both languages', () => {
   }
 });
 
+test('every pace status has a tooltip in every language', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const status of ['no_data', 'on_track', 'high_pace', 'likely_out', 'depleted']) {
+      const key = `pace.${status}Tooltip`;
+      assert.notEqual(t(key, lang), key);
+      // t() falls back to English, so a missing translation would equal it.
+      if (lang !== 'en') assert.notEqual(t(key, lang), t(key, 'en'), `${lang} is missing ${key}`);
+    }
+    assert.match(t('pace.likely_outTooltip', lang), /\{time\}/);
+  }
+});
+
 test('error.scope_insufficient exists in both languages', () => {
   for (const lang of SUPPORTED_LANGUAGES) {
     assert.notEqual(t('error.scope_insufficient', lang), 'error.scope_insufficient');

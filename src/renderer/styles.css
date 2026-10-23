@@ -1163,6 +1163,13 @@ body[data-view="onboard"] .app-footer {
   letter-spacing: 0.06em;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: help;
+}
+
+/* Focusable so keyboard users can open its tooltip. */
+.quota-pace:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: var(--space-0);
 }
 
 /* CORES DO TEXTO DO PACE BADGE*/
@@ -1207,6 +1214,7 @@ body[data-view="onboard"] .app-footer {
   width: fit-content;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: help;
 }
 
 .peak-badge .cost-info-btn {
@@ -1350,8 +1358,8 @@ body[data-refreshing="true"] .card::after {
 
 /* ─── Tooltip ─── */
 
-/* Shared by the three .cost-info-btn triggers (Today/Month cost info +
-   peak-hours info). position:fixed so it escapes .shell-scroll's
+/* Shared by the .cost-info-btn triggers (Today/Month cost info +
+   peak-hours info) and the session pace badge. position:fixed so it escapes .shell-scroll's
    overflow-y:auto instead of being clipped by it — renderer.js's
    positionTooltip() writes top/left from getBoundingClientRect() and clamps
    left to the viewport on every show. */

@@ -44,7 +44,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Configurable refresh** | Defaults to 30 seconds; 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window opens on login
 * **Launch with Claude Code** | Optional `SessionStart` hook that opens Siphon if it is closed and leaves an already-running app's window and focus alone. Uses a direct executable hook without PowerShell; requires Claude Code with exec-form hook support (`command` + `args`)
-* **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
+* **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early; hover it to see what the state means and, when it may run out, around what time
 * **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
 * **Color-coded tray icon** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
 * **Localization** | English, Brazilian Portuguese, Japanese, and Korean, switchable from Settings

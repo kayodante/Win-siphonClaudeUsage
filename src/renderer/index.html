@@ -294,7 +294,8 @@
               <span class="quota-suffix" id="sessionQuotaSuffix" aria-hidden="true"></span>
             </span>
             <div class="quota-pace-stack">
-              <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
+              <div id="sessionPace" class="quota-pace" data-status="no_data" tabindex="0" aria-describedby="sessionPaceHint">--</div>
+              <span id="sessionPaceHint" hidden></span>
             </div>
           </div>
           <div id="sessionMeter" class="meter" aria-hidden="true"></div>
@@ -702,10 +703,11 @@
     <span id="politeAnnouncer" role="status" aria-live="polite" aria-atomic="true"></span>
     <span id="assertiveAnnouncer" role="alert" aria-live="assertive" aria-atomic="true"></span>
 
-    <!-- Shared tooltip for the three .cost-info-btn triggers (Today/Month
-         cost info + peak-hours info). Each trigger's aria-label already
-         carries this same sentence as its accessible name, so the bubble
-         itself is aria-hidden — a screen reader must not announce it twice. -->
+    <!-- Shared tooltip for the .cost-info-btn triggers (Today/Month cost
+         info + peak-hours info) and the session pace badge. Each trigger
+         already exposes this same sentence (aria-label, or aria-describedby
+         for the pace badge), so the bubble itself is aria-hidden — a screen
+         reader must not announce it twice. -->
     <div class="tooltip" id="tooltip" aria-hidden="true" data-show="false"></div>
 
     <script src="./siphonBridge.js"></script>

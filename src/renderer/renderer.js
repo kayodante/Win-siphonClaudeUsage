@@ -53,6 +53,7 @@ const elements = {
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   sessionPace: document.querySelector('#sessionPace'),
+  sessionPaceHint: document.querySelector('#sessionPaceHint'),
   peakHoursBadge: document.querySelector('#peakHoursBadge'),
   peakHoursInfo: document.querySelector('#peakHoursInfo'),
   weeklyPercent: document.querySelector('#weeklyPercent'),
@@ -387,20 +388,19 @@ function setQuotaColorDrift(element, pct) {
   element.style.setProperty('--quota-h', h.toFixed(2));
 }
 
-// ── Tooltip (Today/Month "Usage estimate" info + peak-hours info) ──
+// ── Tooltip (Today/Month "Usage estimate" info, peak hours, session pace) ──
 // Native `title` can't do this job: the copy is multi-line and runs past
-// 100 characters, and the three .cost-info-btn triggers live inside
-// .shell-scroll (overflow-y: auto), which would clip an absolutely
-// positioned bubble. One fixed-position element, shared by all three
-// triggers, reads its text from dataset.tooltip — never `.title` for these
-// three — and repositions itself in viewport coordinates on every show.
-// applyTranslations() and updateQuotaMeters() are the two writers of that
-// text; see the data-i18n-tooltip loop and the peakHoursInfo branch below.
+// 100 characters, and the triggers live inside .shell-scroll
+// (overflow-y: auto), which would clip an absolutely positioned bubble.
+// One fixed-position element, shared by every trigger, reads its text from
+// dataset.tooltip — never `.title` for these — and repositions itself in
+// viewport coordinates on every show. applyTranslations(),
+// updateQuotaMeters() and renderPace() are the writers of that text.
 let tooltipTrigger = null;
 
-function positionTooltip(trigger) {
+function positionTooltip(anchor) {
   const tip = elements.tooltip;
-  const rect = trigger.getBoundingClientRect();
+  const rect = anchor.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
   const margin = 8;
   // Clamp horizontally to the viewport — the window's minimum width is
@@ -413,12 +413,12 @@ function positionTooltip(trigger) {
   tip.style.top = `${top}px`;
 }
 
-function showTooltip(trigger) {
+function showTooltip(trigger, anchor = trigger) {
   const text = trigger.dataset.tooltip;
   if (!text) return;
   tooltipTrigger = trigger;
   elements.tooltip.textContent = text;
-  positionTooltip(trigger);
+  positionTooltip(anchor);
   elements.tooltip.dataset.show = 'true';
 }
 
@@ -427,12 +427,20 @@ function hideTooltip() {
   elements.tooltip.dataset.show = 'false';
 }
 
-document.querySelectorAll('.cost-info-btn').forEach(trigger => {
-  trigger.addEventListener('pointerenter', () => showTooltip(trigger));
-  trigger.addEventListener('pointerleave', hideTooltip);
+// Hovering anywhere on hoverTarget opens the trigger's tooltip; focus stays on
+// the trigger. The peak badge uses this so the whole "PEAK" pill responds,
+// not just its small info icon (which keeps keyboard focus).
+function wireTooltip(trigger, hoverTarget = trigger) {
+  hoverTarget.addEventListener('pointerenter', () => showTooltip(trigger, hoverTarget));
+  hoverTarget.addEventListener('pointerleave', hideTooltip);
   trigger.addEventListener('focus', () => showTooltip(trigger));
   trigger.addEventListener('blur', hideTooltip);
+}
+
+document.querySelectorAll('.cost-info-btn').forEach(trigger => {
+  wireTooltip(trigger, trigger.closest('.peak-badge') ?? trigger);
 });
+wireTooltip(elements.sessionPace);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && tooltipTrigger) hideTooltip();
 });
@@ -1322,8 +1330,14 @@ async function refreshNow() {
 
 function renderPace(element, pace, lang = currentLanguage()) {
   if (!element) return;
-  element.dataset.status = pace?.status ?? 'no_data';
-  element.textContent = t(`pace.${pace?.status ?? 'no_data'}`, lang);
+  const status = pace?.status ?? 'no_data';
+  element.dataset.status = status;
+  element.textContent = t(`pace.${status}`, lang);
+  const hint = tFormat(`pace.${status}Tooltip`, lang, { time: formatClockTime(pace?.projectedDepletionAt) });
+  element.dataset.tooltip = hint;
+  elements.sessionPaceHint.textContent = hint;
+  // Runs every refresh tick: keep an open bubble in sync with the new copy.
+  if (tooltipTrigger === element) elements.tooltip.textContent = hint;
 }
 
 function setCostValue(element, cost) {

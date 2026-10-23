@@ -44,7 +44,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 * **Atualização configurável** | A cada 30 segundos por padrão; opções de 1, 5 e 15 minutos em Configurações
 * **Iniciar com o Windows** | Inicialização automática opcional, com uma configuração separada para abrir ou não a janela ao entrar no sistema
 * **Abrir com o Claude Code** | Hook `SessionStart` opcional que abre o Siphon se estiver fechado e preserva a janela e o foco quando já estiver em execução. Usa o executável diretamente, sem PowerShell; requer Claude Code com suporte a hooks no formato exec (`command` + `args`)
-* **Indicador de ritmo** | Mostra se seu ritmo de uso está adequado ou se você provavelmente atingirá o limite antes da hora
+* **Indicador de ritmo** | Mostra se seu ritmo de uso está adequado ou se você provavelmente atingirá o limite antes da hora; passe o mouse para ver o que o estado significa e, quando pode acabar antes, por volta de que horas
 * **Indicador de horário de pico** | Sinaliza o período de pico da Anthropic (dias úteis, das 5h às 11h no horário do Pacífico), quando as cotas se esgotam mais rápido; ajusta automaticamente o horário de verão
 * **Ícone colorido na bandeja** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="Exemplo do ícone na bandeja" /> - Mostra simultaneamente os níveis das cotas da sessão e da semana por meio de duas cores independentes
 * **Idiomas** | Inglês, português do Brasil, japonês e coreano, selecionáveis em Configurações

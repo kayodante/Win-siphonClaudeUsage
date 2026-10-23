@@ -23,6 +23,8 @@ is added above it.
 - Codex and Antigravity get the same 70/90/100% and session-reset toasts as
   Claude, named after the provider ("Codex · Critical usage"). The tray icon,
   floating widget, in-app banners and sounds stay on Claude.
+- The session pace badge explains its state on hover or keyboard focus, and
+  "May run out" names the time the session is projected to hit 100%.
 
 ### Changed
 
@@ -42,6 +44,10 @@ is added above it.
   reads "PEAK", the Today / This Month info button moves next to the card
   title, and "Usage estimate" becomes "Estimate". Titles that still don't
   fit end in an ellipsis.
+- Shorter pace badge labels so they fit beside the percentage: "No data",
+  "May run out" (PT-BR "Sem dados", "Acaba antes"; Japanese labels shortened
+  too). The peak badge's tooltip now opens when hovering anywhere on the
+  badge, not only its info icon.
 
 ### Security
 
