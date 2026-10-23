@@ -12,8 +12,10 @@
 //! that interprets what comes back is here. The server exists only while the
 //! app is open, so a closed app is an expected state, not an error.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
+use regex_lite::Regex;
 use serde_json::Value;
 
 use crate::format::parse_iso;
@@ -23,6 +25,7 @@ use crate::providers::{iso, ProviderWindow, QuotaSection};
 pub const QUOTA_RPC_PATH: &str =
     "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary";
 pub const CSRF_HEADER: &str = "X-Codeium-Csrf-Token";
+const LOG_TAIL_BYTES: u64 = 256 * 1024;
 
 /// `%APPDATA%\Antigravity\logs\main.log`. Its presence is what "installed"
 /// means for the tab.
@@ -36,11 +39,43 @@ pub fn main_log_path() -> Option<PathBuf> {
     )
 }
 
+fn port_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"https://127\.0\.0\.1:(\d{1,5})/").expect("valid port regex"))
+}
+
+fn token_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"--csrf_token[ =](\S+)").expect("valid csrf_token regex"))
+}
+
+/// Read the newest loopback port from `main.log`, checking the last 256 KB
+/// first so a multi-megabyte log is not loaded into memory on every tick, and
+/// falling back to the full file only if the tail held no port line.
+pub fn read_log_port(path: &Path) -> std::io::Result<Option<u16>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let len = file.metadata()?.len();
+    let start = len.saturating_sub(LOG_TAIL_BYTES);
+    file.seek(SeekFrom::Start(start))?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)?;
+    if let Some(port) = find_port(&String::from_utf8_lossy(&buf)) {
+        return Ok(Some(port));
+    }
+    if start == 0 {
+        return Ok(None);
+    }
+    file.seek(SeekFrom::Start(0))?;
+    buf.clear();
+    file.read_to_end(&mut buf)?;
+    Ok(find_port(&String::from_utf8_lossy(&buf)))
+}
+
 /// The newest loopback port the app logged. The host is never taken from the
 /// log: the caller always talks to `127.0.0.1`.
 pub fn find_port(main_log: &str) -> Option<u16> {
-    let re = regex_lite::Regex::new(r"https://127\.0\.0\.1:(\d{1,5})/").ok()?;
-    let last = re.captures_iter(main_log).last()?;
+    let last = port_regex().captures_iter(main_log).last()?;
     last[1].parse::<u16>().ok().filter(|p| *p != 0)
 }
 
@@ -53,8 +88,7 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
     {
         return None;
     }
-    let re = regex_lite::Regex::new(r"--csrf_token[ =](\S+)").ok()?;
-    let token = re.captures(command_line)?[1].to_string();
+    let token = token_regex().captures(command_line)?[1].to_string();
     // A UUID today. Anything outside this set would not survive as a header
     // value anyway; refusing it here keeps a malformed line from reaching one.
     let plausible = (8..=128).contains(&token.len())
@@ -62,6 +96,100 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     plausible.then_some(token)
+}
+
+/// A running `language_server` process and the loopback TCP ports its PID is
+/// listening on (`127.0.0.1`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerProcess {
+    pub command_line: String,
+    pub ports: Vec<u16>,
+}
+
+/// Resolution of which loopback port(s) and CSRF token to query.
+#[derive(Debug, PartialEq, Eq)]
+pub enum EndpointPick {
+    /// No Antigravity server is running: the app is closed.
+    Closed,
+    /// Candidate loopback ports (best first) and the CSRF token to send.
+    Ready { ports: Vec<u16>, token: String },
+    /// Running server(s) found, but port or token cannot be chosen safely.
+    Ambiguous,
+}
+
+/// Combine the port from `main.log` with the running `language_server`
+/// processes and their OS-owned loopback ports.
+///
+/// * If the kernel TCP table ties `log_port` to a process (or processes sharing
+///   one token), that token wins even when another server with a different
+///   token is also running.
+/// * Otherwise, if all Antigravity processes share one token, `log_port` is
+///   tried first, followed by any loopback ports owned by the process (covering
+///   rotated logs or future builds that stop logging the URL).
+pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> EndpointPick {
+    let servers: Vec<(String, &[u16])> = processes
+        .iter()
+        .filter_map(|p| Some((csrf_token(&p.command_line)?, p.ports.as_slice())))
+        .collect();
+    if servers.is_empty() {
+        return EndpointPick::Closed;
+    }
+
+    if let Some(port) = log_port.filter(|p| *p != 0) {
+        let owners = servers
+            .iter()
+            .filter(|(_, ports)| ports.contains(&port))
+            .map(|(t, _)| t.as_str());
+        match unique_token(owners) {
+            TokenPick::One(token) => {
+                let mut ports = vec![port];
+                for (t, p_ports) in &servers {
+                    if *t == token {
+                        for &p in *p_ports {
+                            if p != 0 && !ports.contains(&p) {
+                                ports.push(p);
+                            }
+                        }
+                    }
+                }
+                return EndpointPick::Ready { ports, token };
+            }
+            TokenPick::Ambiguous => return EndpointPick::Ambiguous,
+            TokenPick::None => {}
+        }
+    }
+
+    let TokenPick::One(token) = unique_token(servers.iter().map(|(t, _)| t.as_str())) else {
+        return EndpointPick::Ambiguous;
+    };
+
+    let mut ports = Vec::new();
+    if let Some(port) = log_port.filter(|p| *p != 0) {
+        ports.push(port);
+    }
+    for (_, p_ports) in &servers {
+        for &p in *p_ports {
+            if p != 0 && !ports.contains(&p) {
+                ports.push(p);
+            }
+        }
+    }
+    if ports.is_empty() {
+        EndpointPick::Ambiguous
+    } else {
+        EndpointPick::Ready { ports, token }
+    }
+}
+
+fn unique_token<'a>(tokens: impl IntoIterator<Item = &'a str>) -> TokenPick {
+    let mut found: Option<String> = None;
+    for token in tokens {
+        match &found {
+            Some(seen) if seen != token => return TokenPick::Ambiguous,
+            _ => found = Some(token.to_string()),
+        }
+    }
+    found.map_or(TokenPick::None, TokenPick::One)
 }
 
 /// The token to send, out of every `language_server` command line. Two
@@ -286,6 +414,44 @@ Host bridge server listening on http://127.0.0.1:60106
         assert_eq!(
             csrf_token("language_server.exe --override_ide_name antigravity"),
             None
+        );
+    }
+
+    #[test]
+    fn resolves_endpoint_from_pid_ports_and_disambiguates_two_servers() {
+        let proc_with = |token: &str, ports: &[u16]| ServerProcess {
+            command_line: format!(
+                "language_server.exe --override_ide_name antigravity --csrf_token {token}"
+            ),
+            ports: ports.to_vec(),
+        };
+        let a = proc_with("aaaaaaaa-1111-4222-8333-944455556666", &[50083, 60106]);
+        let b = proc_with("bbbbbbbb-1111-4222-8333-944455556666", &[51200]);
+
+        assert_eq!(resolve_endpoint(Some(50083), &[]), EndpointPick::Closed);
+
+        // Two servers with different tokens, but the OS TCP table ties 50083 to `a`.
+        assert_eq!(
+            resolve_endpoint(Some(50083), &[a.clone(), b.clone()]),
+            EndpointPick::Ready {
+                ports: vec![50083, 60106],
+                token: "aaaaaaaa-1111-4222-8333-944455556666".to_string(),
+            }
+        );
+
+        // When main.log rotated or has no port, falls back to the single server's owned ports.
+        assert_eq!(
+            resolve_endpoint(None, std::slice::from_ref(&b)),
+            EndpointPick::Ready {
+                ports: vec![51200],
+                token: "bbbbbbbb-1111-4222-8333-944455556666".to_string(),
+            }
+        );
+
+        // Two servers with different tokens and no matching port: still refuses to guess.
+        assert_eq!(
+            resolve_endpoint(Some(59999), &[a, b]),
+            EndpointPick::Ambiguous
         );
     }
 }

@@ -172,14 +172,31 @@ impl Controller {
             state.is_signed_in = self.tokens.load().ok().flatten().is_some();
             state.preferences = self.prefs.load();
         }
+        let now = Utc::now();
+        let mut missed = Vec::new();
         for channel in Channel::ALL {
-            self.restore_reset(channel);
+            if let Some((key, when)) = self.load_stored_reset(channel) {
+                if when > now {
+                    self.channel(channel).reset.lock().unwrap().current_key = Some(key.clone());
+                    self.arm_reset(channel, key, when);
+                } else {
+                    missed.push((channel, key, when));
+                }
+            }
         }
         self.clone().refresh_local_blocking().await;
         self.refresh_antigravity().await;
         if self.get_state().is_signed_in {
             self.refresh_profile().await;
             self.refresh_quota().await;
+        }
+        for (channel, key, when) in missed {
+            let mut r = self.channel(channel).reset.lock().unwrap();
+            if r.current_key.is_none() {
+                r.current_key = Some(key.clone());
+                drop(r);
+                self.arm_reset(channel, key, when);
+            }
         }
         self.emit();
     }
@@ -262,46 +279,53 @@ impl Controller {
     /// The CSRF token lives only in this function.
     async fn read_antigravity(&self) -> Observation {
         use siphon_core::antigravity::{
-            find_port, main_log_path, parse_quota_summary, pick_token, TokenPick,
+            main_log_path, parse_quota_summary, read_log_port, resolve_endpoint, EndpointPick,
         };
         let Some(path) = main_log_path() else {
             return Observation::NotInstalled;
         };
-        let log = match tokio::fs::read(&path).await {
-            Ok(log) => log,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+        let pick = tauri::async_runtime::spawn_blocking(move || -> Result<EndpointPick, std::io::Error> {
+            let log_port = read_log_port(&path)?;
+            let processes = crate::process::server_processes("language_server");
+            Ok(resolve_endpoint(log_port, &processes))
+        })
+        .await;
+        let (ports, token) = match pick {
+            Ok(Ok(EndpointPick::Closed)) => return Observation::NoReading(ProviderStatus::Closed),
+            Ok(Ok(EndpointPick::Ambiguous)) => {
+                return Observation::NoReading(ProviderStatus::Error)
+            }
+            Ok(Ok(EndpointPick::Ready { ports, token })) => (ports, token),
+            Ok(Err(e)) if e.kind() == std::io::ErrorKind::NotFound => {
                 return Observation::NotInstalled
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 log::warn!("Antigravity log unreadable: {}", e.kind());
                 return Observation::NoReading(ProviderStatus::Error);
             }
+            Err(_) => return Observation::NoReading(ProviderStatus::Error),
         };
-        let port = find_port(&String::from_utf8_lossy(&log));
-        let token = tauri::async_runtime::spawn_blocking(|| {
-            pick_token(&crate::process::command_lines("language_server"))
-        })
-        .await
-        .unwrap_or(TokenPick::None);
-        let token = match token {
-            TokenPick::None => return Observation::NoReading(ProviderStatus::Closed),
-            TokenPick::Ambiguous => return Observation::NoReading(ProviderStatus::Error),
-            TokenPick::One(token) => token,
-        };
-        let Some(port) = port else {
-            return Observation::NoReading(ProviderStatus::Error);
-        };
-        match self.http.antigravity_quota(port, &token).await {
-            Ok(raw) => match parse_quota_summary(&raw) {
-                Some(sections) => Observation::Reading {
-                    taken_at: Some(siphon_core::providers::iso(Utc::now())),
-                    sections,
+        let mut saw_unreadable = false;
+        for port in ports {
+            match self.http.antigravity_quota(port, &token).await {
+                Ok(raw) => match parse_quota_summary(&raw) {
+                    Some(sections) => {
+                        return Observation::Reading {
+                            taken_at: Some(siphon_core::providers::iso(Utc::now())),
+                            sections,
+                        };
+                    }
+                    None => saw_unreadable = true,
                 },
-                None => Observation::NoReading(ProviderStatus::Error),
-            },
+                Err(LoopbackError::Unreachable) => {}
+                Err(LoopbackError::Unreadable) => saw_unreadable = true,
+            }
+        }
+        if saw_unreadable {
+            Observation::NoReading(ProviderStatus::Error)
+        } else {
             // The server is starting, or exited since the process list.
-            Err(LoopbackError::Unreachable) => Observation::NoReading(ProviderStatus::Closed),
-            Err(LoopbackError::Unreadable) => Observation::NoReading(ProviderStatus::Error),
+            Observation::NoReading(ProviderStatus::Closed)
         }
     }
 
@@ -813,25 +837,20 @@ impl Controller {
         }
     }
 
-    fn restore_reset(&self, channel: Channel) {
+    fn load_stored_reset(&self, channel: Channel) -> Option<(String, chrono::DateTime<Utc>)> {
         let runtime = self.channel(channel);
-        let Some(state) = runtime.reset_store.load().ok().flatten() else {
-            return;
-        };
-        let Some(resets_at) = state.get("resetsAt").and_then(|v| v.as_str()) else {
-            return;
-        };
+        let state = runtime.reset_store.load().ok().flatten()?;
+        let resets_at = state.get("resetsAt").and_then(|v| v.as_str())?;
         let Ok(when) = chrono::DateTime::parse_from_rfc3339(resets_at) else {
             let _ = runtime.reset_store.save(None);
-            return;
+            return None;
         };
         let key = state
             .get("resetKey")
             .and_then(|v| v.as_str())
             .unwrap_or(resets_at)
             .to_string();
-        runtime.reset.lock().unwrap().current_key = Some(key.clone());
-        self.arm_reset(channel, key, when.with_timezone(&Utc));
+        Some((key, when.with_timezone(&Utc)))
     }
 
     fn update_reset(&self, channel: Channel, session: Option<&Slot>) {

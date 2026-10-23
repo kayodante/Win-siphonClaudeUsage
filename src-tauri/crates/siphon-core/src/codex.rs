@@ -52,8 +52,6 @@ pub fn read_quota(codex_home: &Path, known_at: Option<DateTime<Utc>>) -> Observa
     if !sessions.is_dir() {
         return Observation::NotInstalled;
     }
-    // ponytail: stats every rollout on each refresh, O(files); cache by mtime
-    // like local_data if the history ever makes this slow.
     let mut files = Vec::new();
     let mut failed = !collect_rollouts(&sessions, &mut files);
     files.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));
@@ -95,13 +93,17 @@ fn is_later(found: &Reading, best: &Reading) -> bool {
 }
 
 /// `false` when a directory could not be listed, so the caller can tell a
-/// failed read from a history with nothing in it.
+/// failed read from a history with nothing in it. Walks `YYYY/MM/DD` entries
+/// newest-first so old months are not opened once enough recent rollouts are
+/// found.
 fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
-    let Ok(entries) = std::fs::read_dir(dir) else {
+    let Ok(read_dir) = std::fs::read_dir(dir) else {
         return false;
     };
+    let mut entries: Vec<_> = read_dir.flatten().collect();
+    entries.sort_by_key(|e| std::cmp::Reverse(e.file_name()));
     let mut complete = true;
-    for entry in entries.flatten() {
+    for entry in entries {
         // `DirEntry::file_type` does not follow symlinks, so a linked
         // directory cannot send the walk in a loop.
         let Ok(kind) = entry.file_type() else {
@@ -109,6 +111,9 @@ fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) -> bool {
         };
         let path = entry.path();
         if kind.is_dir() {
+            if out.len() >= MAX_FILES * 2 {
+                break;
+            }
             complete &= collect_rollouts(&path, out);
             continue;
         }

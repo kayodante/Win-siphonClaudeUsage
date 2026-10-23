@@ -44,9 +44,6 @@ pub fn decide_update(
     let Some(session) = session else {
         return ResetDecision::NoChange;
     };
-    let Some(resets_at_raw) = &session.resets_at else {
-        return ResetDecision::NoChange;
-    };
 
     if session.percent < 15.0 {
         return ResetDecision::Clear;
@@ -54,6 +51,10 @@ pub fn decide_update(
     if session.percent < 100.0 {
         return ResetDecision::NoChange;
     }
+
+    let Some(resets_at_raw) = &session.resets_at else {
+        return ResetDecision::NoChange;
+    };
 
     let Ok(resets_at) = DateTime::parse_from_rfc3339(resets_at_raw) else {
         return ResetDecision::NoChange;
@@ -88,6 +89,11 @@ mod tests {
     fn clears_below_15() {
         let q = quota_with(10.0, Some("2026-07-06T15:00:00.000Z"));
         assert_eq!(decide_update(Some(&q), None, None), ResetDecision::Clear);
+        let rolled = quota_with(0.0, None);
+        assert_eq!(
+            decide_update(Some(&rolled), Some("2026-07-06T15:00:00.000Z"), None),
+            ResetDecision::Clear
+        );
     }
 
     #[test]
