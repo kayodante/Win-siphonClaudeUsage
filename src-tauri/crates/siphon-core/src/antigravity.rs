@@ -215,11 +215,11 @@ pub fn pick_token<S: AsRef<str>>(command_lines: &[S]) -> TokenPick {
     found.map_or(TokenPick::None, TokenPick::One)
 }
 
-/// `RetrieveUserQuotaSummary` → the two sections the UI shows: `gemini`
-/// (Gemini Flash / Pro) and `thirdParty` (Claude and GPT models). Other groups
-/// (model-specific allowances such as Argon) are left out. `None` when the
-/// payload has neither, or when not one of their windows carries a usable
-/// value, which the caller reports as an unreadable response.
+/// `RetrieveUserQuotaSummary` → the sections the UI shows: `gemini`
+/// (Gemini Flash / Pro), `thirdParty` (Claude and GPT models), and `argon`
+/// (Gemini 4 Argon). `None` when the payload has none of them, or when not one
+/// of their windows carries a usable value, which the caller reports as an
+/// unreadable response.
 pub fn parse_quota_summary(raw: &Value) -> Option<Vec<QuotaSection>> {
     let groups = raw
         .pointer("/response/groups")
@@ -237,29 +237,33 @@ pub fn parse_quota_summary(raw: &Value) -> Option<Vec<QuotaSection>> {
             .copied()
     };
 
-    let sections: Vec<QuotaSection> = [("gemini", "gemini"), ("thirdParty", "3p")]
-        .into_iter()
-        .filter_map(|(id, prefix)| {
-            let session = find(&format!("{prefix}-5h"));
-            let weekly = find(&format!("{prefix}-weekly"));
-            if session.is_none() && weekly.is_none() {
-                return None;
-            }
-            // `disabled` sits on the window that cannot be used even though
-            // its own fraction may read full (the 5-hour one while the
-            // weekly one is spent); it holds back the whole group.
-            let blocked = [session, weekly]
-                .into_iter()
-                .flatten()
-                .any(|b| b.get("disabled").and_then(Value::as_bool) == Some(true));
-            Some(QuotaSection {
-                id: id.to_string(),
-                session: session.map(parse_bucket),
-                weekly: weekly.map(parse_bucket),
-                blocked,
-            })
+    let sections: Vec<QuotaSection> = [
+        ("gemini", "gemini"),
+        ("thirdParty", "3p"),
+        ("argon", "gemini-argon-wtu"),
+    ]
+    .into_iter()
+    .filter_map(|(id, prefix)| {
+        let session = find(&format!("{prefix}-5h"));
+        let weekly = find(&format!("{prefix}-weekly"));
+        if session.is_none() && weekly.is_none() {
+            return None;
+        }
+        // `disabled` sits on the window that cannot be used even though
+        // its own fraction may read full (the 5-hour one while the
+        // weekly one is spent); it holds back the whole group.
+        let blocked = [session, weekly]
+            .into_iter()
+            .flatten()
+            .any(|b| b.get("disabled").and_then(Value::as_bool) == Some(true));
+        Some(QuotaSection {
+            id: id.to_string(),
+            session: session.map(parse_bucket),
+            weekly: weekly.map(parse_bucket),
+            blocked,
         })
-        .collect();
+    })
+    .collect();
     let measured = sections
         .iter()
         .flat_map(|s| [&s.session, &s.weekly])
@@ -307,10 +311,10 @@ mod tests {
     ]}}"#;
 
     #[test]
-    fn maps_the_real_response_to_two_sections() {
+    fn maps_the_real_response_to_three_sections() {
         let raw: Value = serde_json::from_str(REAL_RESPONSE).unwrap();
         let sections = parse_quota_summary(&raw).unwrap();
-        assert_eq!(sections.len(), 2, "Argon is left out");
+        assert_eq!(sections.len(), 3);
         let gemini = &sections[0];
         assert_eq!(gemini.id, "gemini");
         assert_eq!(gemini.session.as_ref().unwrap().percent, Some(0.0));
@@ -327,6 +331,14 @@ mod tests {
         // A full 5-hour window behind a spent weekly one cannot be used.
         assert_eq!(third.session.as_ref().unwrap().percent, Some(0.0));
         assert!(third.blocked, "`disabled: true` blocks the group");
+        let argon = &sections[2];
+        assert_eq!(argon.id, "argon");
+        assert!(argon.session.is_none(), "Argon has only a weekly bucket");
+        assert_eq!(argon.weekly.as_ref().unwrap().percent, Some(0.0));
+        assert_eq!(
+            argon.weekly.as_ref().unwrap().resets_at.as_deref(),
+            Some("2026-10-30T02:40:54.000Z")
+        );
     }
 
     #[test]

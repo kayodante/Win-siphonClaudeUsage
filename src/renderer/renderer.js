@@ -1346,6 +1346,7 @@ const groupCards = new Map();
 function groupTitle(id, lang) {
   if (id === 'gemini') return 'Gemini';
   if (id === 'thirdParty') return t('provider.antigravity.thirdParty', lang);
+  if (id === 'argon') return 'Gemini 4 Argon';
   return PROVIDER_NAMES[id] ?? id;
 }
 

@@ -708,7 +708,8 @@ recovers on the next refresh. The last reading stays through all of these.
       { "displayName": "Claude and GPT models", "buckets": [
           { "bucketId": "3p-weekly", "window": "weekly", "remainingFraction": 0, "resetTime": "2026-10-27T00:54:20Z" },
           { "bucketId": "3p-5h",     "window": "5h",     "remainingFraction": 1, "disabled": true, "resetTime": "2026-10-23T07:40:54Z" } ] },
-      { "displayName": "Gemini 4 Argon", "buckets": [ /* model-specific — not shown */ ] }
+      { "displayName": "Gemini 4 Argon", "buckets": [
+          { "bucketId": "gemini-argon-wtu-weekly", "window": "weekly", "remainingFraction": 1, "resetTime": "2026-10-30T02:40:54Z" } ] }
     ]
   }
 }
@@ -718,6 +719,7 @@ recovers on the next refresh. The last reading stays through all of these.
 |---|---|
 | `gemini-5h` / `gemini-weekly` | `gemini` → `session` / `weekly` |
 | `3p-5h` / `3p-weekly` | `thirdParty` → `session` / `weekly` |
+| `gemini-argon-wtu-5h` / `gemini-argon-wtu-weekly` | `argon` → `session` / `weekly` |
 
 `percent = (1 − remainingFraction) × 100`, clamped. A bucket without
 `remainingFraction` reads as unknown ("No reading available"), not as
