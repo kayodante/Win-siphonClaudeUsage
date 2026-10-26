@@ -767,7 +767,8 @@ body[data-view="onboard"] .app-footer {
   background: transparent;
   color: var(--subtle-foreground);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+  transition: background-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
 /* Both icons stack in the same slot (transitions-dev "Icon swap") — the copy
@@ -1404,10 +1405,15 @@ body[data-refreshing="true"] .card::after {
   white-space: pre-line; /* home.peakHoursTooltip carries a literal \n */
   opacity: 0;
   transform: scale(0.98);
+  transform-origin: bottom center;
   pointer-events: none;
   /* Hide rule (the default): no delay, so leaving a trigger closes the
      bubble immediately. */
   transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.tooltip[data-placement="bottom"] {
+  transform-origin: top center;
 }
 
 .tooltip[data-show="true"] {
@@ -1417,6 +1423,13 @@ body[data-refreshing="true"] .card::after {
      shows it. */
   transition: opacity var(--duration-base) var(--ease-out) 80ms,
     transform var(--duration-base) var(--ease-out) 80ms;
+}
+
+/* Skip delay and animation when moving directly from an already-open tooltip. */
+.tooltip[data-instant],
+.tooltip[data-instant][data-show="true"] {
+  transition-duration: 0ms;
+  transition-delay: 0ms;
 }
 
 /* ─── Last updated / DMX ─── */
@@ -2061,16 +2074,35 @@ body[data-refreshing="true"] .card::after {
   gap: var(--space-2);
 }
 
+.account-email-toggle {
+  position: relative;
+}
+
+.account-email-toggle svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: opacity var(--duration-slow) var(--ease-out-quart),
+    filter var(--duration-slow) var(--ease-out-quart),
+    transform var(--duration-slow) var(--ease-out-quart);
+}
+
 .account-email-toggle .icon-view-off {
-  display: none;
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.85);
 }
 
 .account-email-toggle[data-masked="true"] .icon-view {
-  display: none;
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.85);
 }
 
 .account-email-toggle[data-masked="true"] .icon-view-off {
-  display: inline-flex;
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
 }
 
 .account-badge-row {
@@ -2222,7 +2254,8 @@ body[data-refreshing="true"] .card::after {
   height: var(--space-9);
   color: var(--subtle-foreground);
   text-decoration: none;
-  transition: color var(--duration-fast) var(--ease);
+  transition: color var(--duration-fast) var(--ease),
+    transform var(--duration-press) var(--ease-press);
   flex-shrink: 0;
 }
 
@@ -2355,6 +2388,7 @@ body[data-refreshing="true"] .card::after {
   color: var(--foreground);
   cursor: pointer;
   -webkit-app-region: no-drag;
+  transition: transform var(--duration-press) var(--ease-press);
 }
 
 .floating-percent-button:hover {
@@ -2637,6 +2671,8 @@ button:focus-visible {
    a deeper scale — at 28px, 0.97 is under a pixel and reads as nothing. */
 .window-control-btn:active,
 .icon-button:active,
+.onboard-url-copy:active,
+.settings-github-link:active,
 .rail-provider:active,
 .floating-action-btn:active,
 .usage-alert-dismiss:active,
@@ -2654,6 +2690,7 @@ button:focus-visible {
 .settings-tab:active,
 .settings-test-btn:active,
 .settings-style-card:active,
+.floating-percent-button:active,
 .floating-expand-btn:active {
   transform: scale(0.97);
 }
@@ -3197,7 +3234,10 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   .tooltip[data-show="true"],
   .notif-badge,
   .notif-icon-wrap svg,
+  .onboard-url-copy,
   .onboard-url-copy svg,
+  .account-email-toggle svg,
+  .settings-github-link,
   .usage-alert-banner,
   .offline-banner,
   .update-banner,
@@ -3211,6 +3251,7 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   .back-btn,
   .btn-secondary,
   .floating-action-btn,
+  .floating-percent-button,
   .floating-expand-btn,
   .floating-expand-btn svg,
   button,
@@ -3253,6 +3294,8 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
 
   .window-control-btn:active,
   .icon-button:active,
+  .onboard-url-copy:active,
+  .settings-github-link:active,
   .floating-action-btn:active,
   .usage-alert-dismiss:active,
   .offline-banner-dismiss:active,
@@ -3269,6 +3312,7 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   .settings-tab:active,
   .settings-test-btn:active,
   .settings-style-card:active,
+  .floating-percent-button:active,
   .floating-expand-btn:active {
     transform: none;
   }
@@ -3283,14 +3327,31 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
 }
 
 /* A touch screen fires :hover on tap and holds it until the next tap, so the
-   brightness lift sticks to whatever was last pressed. The press scale already
-   carries the feedback there — drop the lift rather than let it linger. */
+   brightness lift and hover tint stick to whatever was last pressed. The press
+   scale already carries the feedback there — drop the hover state rather than
+   let it linger. */
 @media (hover: none) {
   button:hover,
   .btn-primary:hover,
   .btn-secondary:hover,
+  .rail-provider:hover,
   .auth-button-stack .btn-save:hover {
     filter: none;
+  }
+
+  .window-control-btn:hover,
+  .window-control-btn#closeButton:hover,
+  .icon-button:hover,
+  .onboard-url-copy:hover,
+  .auth-button-stack .btn-cancel:hover,
+  .back-btn:hover,
+  .reauth-button:hover,
+  .settings-test-btn:hover,
+  .floating-expand-btn:hover,
+  .usage-alert-dismiss:hover,
+  .offline-banner-dismiss:hover,
+  .update-banner-dismiss:hover {
+    background: transparent;
   }
 }
 

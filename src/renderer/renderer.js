@@ -415,7 +415,12 @@ function setQuotaColorDrift(element, pct) {
 // dataset.tooltip — never `.title` for these — and repositions itself in
 // viewport coordinates on every show. applyTranslations(),
 // updateQuotaMeters() and renderPace() are the writers of that text.
+const TOOLTIP_APPEAR_DELAY_MS = 80;
+const TOOLTIP_WARM_MS = 300;
 let tooltipTrigger = null;
+let tooltipAppearTimer = null;
+let tooltipWarmTimer = null;
+let tooltipWarm = false;
 
 function positionTooltip(anchor) {
   const tip = elements.tooltip;
@@ -427,7 +432,9 @@ function positionTooltip(anchor) {
   let left = rect.left + rect.width / 2 - tipRect.width / 2;
   left = Math.max(margin, Math.min(left, window.innerWidth - tipRect.width - margin));
   let top = rect.top - tipRect.height - margin;
-  if (top < margin) top = rect.bottom + margin; // no room above: flip below
+  const flipped = top < margin;
+  if (flipped) top = rect.bottom + margin; // no room above: flip below
+  tip.dataset.placement = flipped ? 'bottom' : 'top';
   tip.style.left = `${left}px`;
   tip.style.top = `${top}px`;
 }
@@ -435,6 +442,16 @@ function positionTooltip(anchor) {
 function showTooltip(trigger, anchor = trigger) {
   const text = trigger.dataset.tooltip;
   if (!text) return;
+  clearTimeout(tooltipWarmTimer);
+  clearTimeout(tooltipAppearTimer);
+  if (tooltipWarm) {
+    elements.tooltip.dataset.instant = '';
+  } else {
+    delete elements.tooltip.dataset.instant;
+    tooltipAppearTimer = setTimeout(() => {
+      tooltipWarm = true;
+    }, TOOLTIP_APPEAR_DELAY_MS);
+  }
   tooltipTrigger = trigger;
   elements.tooltip.textContent = text;
   positionTooltip(anchor);
@@ -442,8 +459,16 @@ function showTooltip(trigger, anchor = trigger) {
 }
 
 function hideTooltip() {
+  clearTimeout(tooltipAppearTimer);
+  clearTimeout(tooltipWarmTimer);
   tooltipTrigger = null;
   elements.tooltip.dataset.show = 'false';
+  if (tooltipWarm) {
+    tooltipWarmTimer = setTimeout(() => {
+      tooltipWarm = false;
+      delete elements.tooltip.dataset.instant;
+    }, TOOLTIP_WARM_MS);
+  }
 }
 
 // Hovering anywhere on hoverTarget opens the trigger's tooltip; focus stays on
