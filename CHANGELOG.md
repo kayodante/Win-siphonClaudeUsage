@@ -64,6 +64,14 @@ is added above it.
 
 ### Fixed
 
+- Antigravity discovery no longer requires `main.log`: Windows process identity
+  and PID-owned loopback ports determine which endpoints may receive the token.
+  Stale log ports are excluded, ownership is rediscovered before each request,
+  and inspection failures preserve the last reading instead of hiding the tab.
+- Antigravity quota parsing respects explicit window durations and source-group
+  identity. Unknown durations and duplicate windows fail conservatively;
+  supported summary envelopes and nested remaining fractions retain measured
+  values without turning missing measurements into zero usage.
 - Switching tabs again before the fade finished (Claude → Codex → Claude)
   could leave the main window empty until the next refresh.
 - The window's first render on launch no longer stops partway through.

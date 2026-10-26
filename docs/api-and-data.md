@@ -662,22 +662,26 @@ Read by `siphon_core::antigravity` (parsing) and `controller::read_antigravity`
 supported, and only while it runs: its `resources\bin\language_server.exe`
 serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
 
-- **Port:** the newest `https://127.0.0.1:<port>/` in the tail (last 256 KB,
-  with a full-file fallback) of `%APPDATA%\Antigravity\logs\main.log` (the app
-  logs `Local:       https://127.0.0.1:<port>/` whenever it changes), cross-checked
-  against loopback TCP ports owned by each `language_server` PID via
-  `GetExtendedTcpTable` (`process.rs` + `antigravity::resolve_endpoint`). If
-  `main.log` rotated past the port line and a single `language_server` owns one
-  loopback port, that PID-owned port is used directly. That log file
-  existing is what makes the Antigravity tab appear; only its absence removes
-  the tab, while any other read error keeps it under `status: error`.
+- **Ports:** IPv4 loopback TCP listeners owned by each identified
+  `language_server` PID, from `GetExtendedTcpTable` (`process.rs`). The newest
+  port in `%APPDATA%\Antigravity\logs\main.log` (256 KB tail, full-file fallback)
+  is an optional hint: it can prioritize or disambiguate only an already-owned
+  port. An unowned, historical or reused log port is never a candidate. Missing
+  and unreadable logs do not prevent valid process-based discovery.
 - **CSRF token:** `--csrf_token <uuid>` on the `language_server` process
   command line (read with `NtQueryInformationProcess`, `process.rs`), taken only
   from a command line that also carries `--override_ide_name antigravity` or
   `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged it; 2.16 stopped.
-  No such process → `status: closed`. Two with different tokens are disambiguated
+  Identity flags require an exact `antigravity` value. A recognized server with
+  no usable token is an error. Two with different tokens are disambiguated
   when only one process owns the logged loopback port; otherwise →
   `status: error`: Siphon does not guess.
+- **Presence:** a running identified server establishes presence without files.
+  With no such server, an existing `%APPDATA%\Antigravity` data directory or
+  `%LOCALAPPDATA%\Programs\Antigravity` installation means `status: closed`.
+  Only successful inspection finding no server and neither path yields
+  `NotInstalled` (tab removed). Process/TCP enumeration, command-line access or
+  presence-check errors yield `status: error`, preserving the previous reading.
 
 ### Request
 
@@ -691,10 +695,15 @@ Content-Type: application/json
 ```
 
 Sent by a dedicated client: invalid certificates accepted, no proxy, no
-redirects, 5-second timeout. Connection refused or timeout → `status: closed`;
-any non-2xx (a stale token gives 401) or unparseable body → `status: error`.
-Port and token are rediscovered on every attempt, so a restarted server
-recovers on the next refresh. The last reading stays through all of these.
+redirects, 5-second timeout per request. Connection refused or timeout leads
+to a fresh discovery: no server with installation evidence means `closed`;
+a server still present but unreachable means `error`. Non-2xx (a stale token
+gives 401) and unparseable bodies mean `error`.
+Port/token association is rediscovered before every authenticated request,
+including retries on another candidate. If it changed, the old attempt stops;
+the next refresh can use the restarted server. No generic HTTP probe establishes
+identity. Overlapping refreshes are dropped until state application finishes;
+cancellation releases the guard. Failed reads preserve the previous reading.
 
 ### Response (200, observed on 2.16)
 
@@ -721,13 +730,50 @@ recovers on the next refresh. The last reading stays through all of these.
 | `3p-5h` / `3p-weekly` | `thirdParty` → `session` / `weekly` |
 | `gemini-argon-wtu-5h` / `gemini-argon-wtu-weekly` | `argon` → `session` / `weekly` |
 
-`percent = (1 − remainingFraction) × 100`, clamped. A bucket without
+The parser accepts `/response/groups`, `/summary/groups`, and root `groups`.
+It preserves source-group identity: the three exact source display names above
+scope their buckets; otherwise only unambiguous known bucket IDs infer a group.
+No translated-name matching is performed. Repeated section IDs across source
+groups or two buckets targeting the same window make the response unreadable.
+Foreign IDs in an explicitly identified group cannot supply another group's quota.
+
+An explicit `window` takes priority over the bucket-ID suffix: `5h` is session,
+`weekly` is weekly (including a `-5h` ID explicitly marked `weekly`). Only an
+absent `window` uses the known ID's duration. Unknown, empty, null or non-string
+durations on recognized buckets make the response unreadable, preserving the
+previous reading rather than inventing a session or hiding an offered window.
+Weekly-only sections have no session row or session alert.
+
+`percent = (1 − remainingFraction) × 100`, clamped. Besides the direct field,
+`remaining.remainingFraction` and the tagged form
+`remaining: { case: "remainingFraction", value: 0.25 }` are supported.
+The summary envelope and nested forms are compatibility contracts exercised
+by the external RPC parser and sanitized tests, not new live captures from
+this Siphon session. CLI-only snake_case fields, generic `id` aliases and
+model-specific quotas are not inferred from those CLI fixtures.
+A bucket without
 `remainingFraction` reads as unknown ("No reading available"), not as
 exhausted. A response in which no window has a usable value is
 `status: error`, not a reading. `disabled: true` (the 5-hour window while the
 weekly one is spent) marks the section `blocked`: the card says so instead of
 suggesting a message, and that section's session-reset toast is not shown
 while the block lasts.
+
+### Freshness and alternative source (deferred)
+
+Manual and scheduled refresh still send `{}` to `RetrieveUserQuotaSummary`.
+Win-CodexBar at `98a3ca7c7f6929f8fa6925ba9f4a0b5026a8791d`
+(`rust/src/providers/antigravity/mod.rs:417–478`) sends `forceRefresh: true`
+and optionally enriches or falls back through `GetUserStatus`. This proves its
+implementation contract, not stale data or RPC compatibility on this machine.
+No Antigravity process was available during this change, so neither feature
+was adopted and polling/request timeouts remain unchanged.
+
+Before adoption, capture sanitized local RPC responses and compare quota and
+reset changes after use with and without `forceRefresh`, including latency.
+Establish bounded fallback behavior and known window durations. Identity lookup
+must remain optional and must never discard valid summary quota data; model
+quotas without a duration must not become session/weekly quotas.
 
 ## Field cheat sheet
 

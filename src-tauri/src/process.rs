@@ -7,29 +7,65 @@
 
 use siphon_core::antigravity::ServerProcess;
 
+/// Rebuilt for every refresh and before each authenticated request. Log read
+/// failures discard only the hint; process ownership remains authoritative.
+pub fn antigravity_endpoint() -> Result<
+    siphon_core::antigravity::EndpointPick,
+    siphon_core::providers::Observation,
+> {
+    use siphon_core::antigravity::{discover_endpoint, main_log_path, read_log_port};
+    let log_port = main_log_path().and_then(|path| read_log_port(&path).ok().flatten());
+    let processes = server_processes("language_server");
+    let installed = antigravity_installed();
+    discover_endpoint(
+        log_port,
+        processes.as_deref().map_err(std::io::Error::kind),
+        installed,
+    )
+}
+
+fn antigravity_installed() -> Result<bool, std::io::ErrorKind> {
+    let mut error = None;
+    for (variable, suffix) in [
+        ("APPDATA", "Antigravity"),
+        ("LOCALAPPDATA", "Programs/Antigravity"),
+    ] {
+        let Some(root) = std::env::var_os(variable) else {
+            error = Some(std::io::ErrorKind::NotFound);
+            continue;
+        };
+        match std::path::PathBuf::from(root).join(suffix).try_exists() {
+            Ok(true) => return Ok(true),
+            Ok(false) => {}
+            Err(e) => error = Some(e.kind()),
+        }
+    }
+    error.map_or(Ok(false), Err)
+}
+
 /// Running processes whose executable name starts with `exe_prefix` (ASCII,
 /// case-insensitive), paired with any IPv4 loopback (`127.0.0.1`) TCP ports
 /// their PID is listening on. Processes that cannot be opened (another user's,
-/// protected ones) are skipped.
+/// protected ones) cause an inspection error rather than a false absence.
 #[cfg(windows)]
-pub fn server_processes(exe_prefix: &str) -> Vec<ServerProcess> {
-    use windows::Win32::Foundation::CloseHandle;
+pub fn server_processes(exe_prefix: &str) -> std::io::Result<Vec<ServerProcess>> {
+    use windows::Win32::Foundation::{CloseHandle, ERROR_NO_MORE_FILES};
     use windows::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     };
 
     let mut out = Vec::new();
-    let Ok(snapshot) = (unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }) else {
-        return out;
-    };
-    let listeners = loopback_listeners();
+    let listeners = loopback_listeners()?;
+    let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }
+        .map_err(|_| std::io::Error::other("Process snapshot unavailable"))?;
     let mut entry = PROCESSENTRY32W {
         dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
         ..Default::default()
     };
-    let mut more = unsafe { Process32FirstW(snapshot, &mut entry) }.is_ok();
-    while more {
+    let mut step = unsafe { Process32FirstW(snapshot, &mut entry) };
+    let mut inspection_error = false;
+    while step.is_ok() {
         let len = entry
             .szExeFile
             .iter()
@@ -48,19 +84,29 @@ pub fn server_processes(exe_prefix: &str) -> Vec<ServerProcess> {
                     command_line,
                     ports,
                 });
+            } else {
+                inspection_error = true;
             }
         }
-        more = unsafe { Process32NextW(snapshot, &mut entry) }.is_ok();
+        step = unsafe { Process32NextW(snapshot, &mut entry) };
     }
     unsafe {
         let _ = CloseHandle(snapshot);
     }
-    out
+    if inspection_error
+        || step.is_err_and(|e| {
+            e.code() != windows::core::HRESULT::from_win32(ERROR_NO_MORE_FILES.0)
+        })
+    {
+        Err(std::io::Error::other("Process enumeration incomplete"))
+    } else {
+        Ok(out)
+    }
 }
 
 /// `(pid, port)` pairs for every IPv4 TCP listener bound to `127.0.0.1`.
 #[cfg(windows)]
-fn loopback_listeners() -> Vec<(u32, u16)> {
+fn loopback_listeners() -> std::io::Result<Vec<(u32, u16)>> {
     use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
     use windows::Win32::NetworkManagement::IpHelper::{
         GetExtendedTcpTable, MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID,
@@ -83,7 +129,7 @@ fn loopback_listeners() -> Vec<(u32, u16)> {
         )
     };
     if status != ERROR_INSUFFICIENT_BUFFER.0 || size == 0 || size > MAX_BYTES {
-        return Vec::new();
+        return Err(std::io::Error::other("TCP table size unavailable"));
     }
     let mut buf = vec![0u64; (size as usize).div_ceil(8)];
     let status = unsafe {
@@ -97,18 +143,21 @@ fn loopback_listeners() -> Vec<(u32, u16)> {
         )
     };
     if status != 0 {
-        return Vec::new();
+        return Err(std::io::Error::other("TCP table unavailable"));
     }
     let total_bytes = (size as usize).min(buf.len() * 8);
     let table_offset = std::mem::offset_of!(MIB_TCPTABLE_OWNER_PID, table);
     let row_size = std::mem::size_of::<MIB_TCPROW_OWNER_PID>();
     if total_bytes < table_offset {
-        return Vec::new();
+        return Err(std::io::Error::other("TCP table truncated"));
     }
     let table_ptr = buf.as_ptr() as *const MIB_TCPTABLE_OWNER_PID;
     let reported = unsafe { (*table_ptr).dwNumEntries } as usize;
     let max_rows = (total_bytes - table_offset) / row_size;
-    let count = reported.min(max_rows);
+    if reported > max_rows {
+        return Err(std::io::Error::other("TCP table truncated"));
+    }
+    let count = reported;
     let rows =
         unsafe { std::slice::from_raw_parts(std::ptr::addr_of!((*table_ptr).table[0]), count) };
     let mut out = Vec::new();
@@ -120,7 +169,7 @@ fn loopback_listeners() -> Vec<(u32, u16)> {
             }
         }
     }
-    out
+    Ok(out)
 }
 
 #[cfg(windows)]
@@ -183,6 +232,9 @@ fn command_line(pid: u32) -> Option<String> {
 }
 
 #[cfg(not(windows))]
-pub fn server_processes(_exe_prefix: &str) -> Vec<ServerProcess> {
-    Vec::new()
+pub fn server_processes(_exe_prefix: &str) -> std::io::Result<Vec<ServerProcess>> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "Windows process inspection required",
+    ))
 }

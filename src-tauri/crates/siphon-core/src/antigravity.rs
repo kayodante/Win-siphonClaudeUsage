@@ -3,8 +3,8 @@
 //! loopback HTTPS port with a self-signed certificate and a per-launch CSRF
 //! token:
 //!
-//! * the port: the app logs it to `%APPDATA%\Antigravity\logs\main.log`
-//!   (`Local:       https://127.0.0.1:<port>/`) every time it changes;
+//! * the ports: PID-owned loopback listeners; `main.log` is an optional hint
+//!   that only prioritizes ports already owned by an identified server;
 //! * the token: only on the server's command line (`--csrf_token <uuid>`).
 //!   Up to 2.15 the log carried it too; 2.16 stopped writing it there.
 //!
@@ -19,7 +19,7 @@ use regex_lite::Regex;
 use serde_json::Value;
 
 use crate::format::parse_iso;
-use crate::providers::{iso, ProviderWindow, QuotaSection};
+use crate::providers::{iso, Observation, ProviderStatus, ProviderWindow, QuotaSection};
 
 /// Connect path of the quota call, POSTed with a `{}` body.
 pub const QUOTA_RPC_PATH: &str =
@@ -27,8 +27,7 @@ pub const QUOTA_RPC_PATH: &str =
 pub const CSRF_HEADER: &str = "X-Codeium-Csrf-Token";
 const LOG_TAIL_BYTES: u64 = 256 * 1024;
 
-/// `%APPDATA%\Antigravity\logs\main.log`. Its presence is what "installed"
-/// means for the tab.
+/// Optional port hint at `%APPDATA%\Antigravity\logs\main.log`.
 pub fn main_log_path() -> Option<PathBuf> {
     let appdata = std::env::var_os("APPDATA")?;
     Some(
@@ -83,9 +82,7 @@ pub fn find_port(main_log: &str) -> Option<u16> {
 /// Antigravity's server: Windsurf and other Codeium builds run a
 /// `language_server` too, and their token must not be sent anywhere.
 pub fn csrf_token(command_line: &str) -> Option<String> {
-    if !command_line.contains("--override_ide_name antigravity")
-        && !command_line.contains("--app_data_dir antigravity")
-    {
+    if !is_antigravity(command_line) {
         return None;
     }
     let token = token_regex().captures(command_line)?[1].to_string();
@@ -96,6 +93,15 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     plausible.then_some(token)
+}
+
+fn is_antigravity(command_line: &str) -> bool {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"(?:^|\s)--(?:override_ide_name|app_data_dir)[ =]antigravity(?:\s|$)")
+            .expect("valid identity regex")
+    })
+    .is_match(command_line)
 }
 
 /// A running `language_server` process and the loopback TCP ports its PID is
@@ -123,10 +129,15 @@ pub enum EndpointPick {
 /// * If the kernel TCP table ties `log_port` to a process (or processes sharing
 ///   one token), that token wins even when another server with a different
 ///   token is also running.
-/// * Otherwise, if all Antigravity processes share one token, `log_port` is
-///   tried first, followed by any loopback ports owned by the process (covering
-///   rotated logs or future builds that stop logging the URL).
+/// * Otherwise, if all Antigravity processes share one token, only their
+///   owned ports are candidates. An unowned log port is never authenticated.
 pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> EndpointPick {
+    if processes
+        .iter()
+        .any(|p| is_antigravity(&p.command_line) && csrf_token(&p.command_line).is_none())
+    {
+        return EndpointPick::Ambiguous;
+    }
     let servers: Vec<(String, &[u16])> = processes
         .iter()
         .filter_map(|p| Some((csrf_token(&p.command_line)?, p.ports.as_slice())))
@@ -146,7 +157,12 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
                 for (t, p_ports) in &servers {
                     if *t == token {
                         for &p in *p_ports {
-                            if p != 0 && !ports.contains(&p) {
+                            if p != 0
+                                && !ports.contains(&p)
+                                && !servers
+                                    .iter()
+                                    .any(|(other, owned)| *other != token && owned.contains(&p))
+                            {
                                 ports.push(p);
                             }
                         }
@@ -164,9 +180,6 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
     };
 
     let mut ports = Vec::new();
-    if let Some(port) = log_port.filter(|p| *p != 0) {
-        ports.push(port);
-    }
     for (_, p_ports) in &servers {
         for &p in *p_ports {
             if p != 0 && !ports.contains(&p) {
@@ -178,6 +191,25 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
         EndpointPick::Ambiguous
     } else {
         EndpointPick::Ready { ports, token }
+    }
+}
+
+/// Running processes establish presence even without any files. Inspection
+/// failures are errors, never proof that an installation disappeared.
+pub fn discover_endpoint(
+    log_port: Option<u16>,
+    processes: Result<&[ServerProcess], std::io::ErrorKind>,
+    installed: Result<bool, std::io::ErrorKind>,
+) -> Result<EndpointPick, Observation> {
+    let error = || Observation::NoReading(ProviderStatus::Error);
+    match resolve_endpoint(log_port, processes.map_err(|_| error())?) {
+        EndpointPick::Ready { ports, token } => Ok(EndpointPick::Ready { ports, token }),
+        EndpointPick::Ambiguous => Err(error()),
+        EndpointPick::Closed => match installed {
+            Ok(true) => Err(Observation::NoReading(ProviderStatus::Closed)),
+            Ok(false) => Err(Observation::NotInstalled),
+            Err(_) => Err(error()),
+        },
     }
 }
 
@@ -223,53 +255,96 @@ pub fn pick_token<S: AsRef<str>>(command_lines: &[S]) -> TokenPick {
 pub fn parse_quota_summary(raw: &Value) -> Option<Vec<QuotaSection>> {
     let groups = raw
         .pointer("/response/groups")
+        .or_else(|| raw.pointer("/summary/groups"))
         .or_else(|| raw.get("groups"))?
         .as_array()?;
-    let buckets: Vec<&Value> = groups
-        .iter()
-        .filter_map(|g| g.get("buckets")?.as_array())
-        .flatten()
-        .collect();
-    let find = |id: &str| {
-        buckets
-            .iter()
-            .find(|b| b.get("bucketId").and_then(Value::as_str) == Some(id))
-            .copied()
-    };
-
-    let sections: Vec<QuotaSection> = [
+    let mut sections = Vec::new();
+    for (id, prefix) in [
         ("gemini", "gemini"),
         ("thirdParty", "3p"),
         ("argon", "gemini-argon-wtu"),
-    ]
-    .into_iter()
-    .filter_map(|(id, prefix)| {
-        let session = find(&format!("{prefix}-5h"));
-        let weekly = find(&format!("{prefix}-weekly"));
-        if session.is_none() && weekly.is_none() {
-            return None;
-        }
-        // `disabled` sits on the window that cannot be used even though
-        // its own fraction may read full (the 5-hour one while the
-        // weekly one is spent); it holds back the whole group.
-        let blocked = [session, weekly]
-            .into_iter()
-            .flatten()
-            .any(|b| b.get("disabled").and_then(Value::as_bool) == Some(true));
-        Some(QuotaSection {
+    ] {
+        let mut section = QuotaSection {
             id: id.to_string(),
-            session: session.map(parse_bucket),
-            weekly: weekly.map(parse_bucket),
-            blocked,
-        })
-    })
-    .collect();
+            session: None,
+            weekly: None,
+            blocked: false,
+        };
+        let mut owner = None;
+        for (group_index, group) in groups.iter().enumerate() {
+            // These are source labels from the observed RPC fixture, not
+            // translated UI titles or fuzzy model-name matching.
+            let group_prefix = match group.get("displayName").and_then(Value::as_str) {
+                Some("Gemini Models") => Some("gemini"),
+                Some("Claude and GPT models") => Some("3p"),
+                Some("Gemini 4 Argon") => Some("gemini-argon-wtu"),
+                _ => None,
+            };
+            if group_prefix.is_some_and(|known| known != prefix) {
+                continue;
+            }
+            let Some(buckets) = group.get("buckets").and_then(Value::as_array) else {
+                continue;
+            };
+            if group_prefix.is_none() {
+                let mut inferred_group = None;
+                for (candidate, _) in buckets.iter().filter_map(bucket_identity) {
+                    if inferred_group.is_some_and(|known| known != candidate) {
+                        return None;
+                    }
+                    inferred_group = Some(candidate);
+                }
+            }
+            for bucket in buckets {
+                let Some((bucket_prefix, inferred)) = bucket_identity(bucket) else {
+                    continue;
+                };
+                if bucket_prefix != prefix {
+                    continue;
+                }
+                // A section belongs to one source group; never join buckets
+                // from repeated IDs in unrelated groups or pick the first one.
+                if owner.is_some_and(|index| index != group_index) {
+                    return None;
+                }
+                owner = Some(group_index);
+                let duration = match bucket.get("window") {
+                    None => inferred,
+                    Some(value) => value.as_str()?,
+                };
+                let target = match duration {
+                    "5h" => &mut section.session,
+                    "weekly" => &mut section.weekly,
+                    _ => return None,
+                };
+                if target.replace(parse_bucket(bucket)).is_some() {
+                    return None;
+                }
+                section.blocked |= bucket.get("disabled").and_then(Value::as_bool) == Some(true);
+            }
+        }
+        if owner.is_some() {
+            sections.push(section);
+        }
+    }
     let measured = sections
         .iter()
         .flat_map(|s| [&s.session, &s.weekly])
         .flatten()
         .any(|w| w.percent.is_some());
     measured.then_some(sections)
+}
+
+fn bucket_identity(bucket: &Value) -> Option<(&'static str, &'static str)> {
+    match bucket.get("bucketId")?.as_str()? {
+        "gemini-5h" => Some(("gemini", "5h")),
+        "gemini-weekly" => Some(("gemini", "weekly")),
+        "3p-5h" => Some(("3p", "5h")),
+        "3p-weekly" => Some(("3p", "weekly")),
+        "gemini-argon-wtu-5h" => Some(("gemini-argon-wtu", "5h")),
+        "gemini-argon-wtu-weekly" => Some(("gemini-argon-wtu", "weekly")),
+        _ => None,
+    }
 }
 
 /// A bucket without `remainingFraction` is unmeasured, not exhausted (sources
@@ -280,6 +355,17 @@ fn parse_bucket(bucket: &Value) -> ProviderWindow {
     let percent = bucket
         .get("remainingFraction")
         .and_then(Value::as_f64)
+        .or_else(|| {
+            bucket
+                .pointer("/remaining/remainingFraction")
+                .and_then(Value::as_f64)
+        })
+        .or_else(|| {
+            let remaining = bucket.get("remaining")?;
+            (remaining.get("case")?.as_str()? == "remainingFraction")
+                .then(|| remaining.get("value")?.as_f64())
+                .flatten()
+        })
         .map(|remaining| (1.0 - remaining.clamp(0.0, 1.0)) * 100.0);
     let resets_at = bucket
         .get("resetTime")
@@ -296,6 +382,249 @@ fn parse_bucket(bucket: &Value) -> ProviderWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn server(token: &str, ports: &[u16]) -> ServerProcess {
+        ServerProcess {
+            command_line: format!(
+                "language_server.exe --override_ide_name antigravity --csrf_token {token}"
+            ),
+            ports: ports.to_vec(),
+        }
+    }
+
+    #[test]
+    fn an_unowned_log_port_is_never_authenticated() {
+        let processes = [server("aaaaaaaa-1111", &[50001])];
+        assert_eq!(
+            resolve_endpoint(Some(59999), &processes),
+            EndpointPick::Ready {
+                ports: vec![50001],
+                token: "aaaaaaaa-1111".into(),
+            }
+        );
+        assert_eq!(
+            resolve_endpoint(Some(59999), &[server("aaaaaaaa-1111", &[])]),
+            EndpointPick::Ambiguous
+        );
+    }
+
+    #[test]
+    fn every_fallback_port_must_have_an_unambiguous_token_owner() {
+        let processes = [
+            server("aaaaaaaa-1111", &[50001, 50002]),
+            server("bbbbbbbb-2222", &[50002, 50003]),
+        ];
+        assert_eq!(
+            resolve_endpoint(Some(50001), &processes),
+            EndpointPick::Ready {
+                ports: vec![50001],
+                token: "aaaaaaaa-1111".into(),
+            }
+        );
+        assert_eq!(
+            resolve_endpoint(Some(50002), &processes),
+            EndpointPick::Ambiguous
+        );
+    }
+
+    #[test]
+    fn identifiable_servers_with_missing_tokens_are_errors_not_closed() {
+        let process = ServerProcess {
+            command_line: "language_server.exe --override_ide_name antigravity".into(),
+            ports: vec![50001],
+        };
+        assert_eq!(resolve_endpoint(None, &[process]), EndpointPick::Ambiguous);
+        assert_eq!(csrf_token("language_server.exe --override_ide_name antigravity-other --csrf_token aaaaaaaa-1111"), None);
+    }
+
+    #[test]
+    fn duration_overrides_the_bucket_id_and_unknown_duration_is_not_a_session() {
+        let raw = serde_json::json!({"groups":[{"buckets":[
+            {"bucketId":"gemini-5h","window":"weekly","remainingFraction":0.25}
+        ]}]});
+        let sections = parse_quota_summary(&raw).unwrap();
+        assert!(sections[0].session.is_none());
+        assert_eq!(sections[0].weekly.as_ref().unwrap().percent, Some(75.0));
+        for duration in [
+            serde_json::json!("daily"),
+            serde_json::json!(""),
+            serde_json::json!(300),
+            Value::Null,
+        ] {
+            let mut raw = raw.clone();
+            raw["groups"][0]["buckets"][0]["window"] = duration;
+            assert!(parse_quota_summary(&raw).is_none());
+        }
+    }
+
+    #[test]
+    fn duplicate_windows_and_cross_group_ids_are_not_combined() {
+        let raw = serde_json::json!({"groups":[
+            {"buckets":[{"bucketId":"gemini-5h","remainingFraction":0.25}]},
+            {"buckets":[{"bucketId":"gemini-5h","remainingFraction":0.9}]}
+        ]});
+        assert!(
+            parse_quota_summary(&raw).is_none(),
+            "no first-match winner across groups"
+        );
+        let raw = serde_json::json!({"groups":[{"buckets":[
+            {"bucketId":"gemini-5h","window":"weekly","remainingFraction":0.25},
+            {"bucketId":"gemini-weekly","remainingFraction":0.9}
+        ]}]});
+        assert!(
+            parse_quota_summary(&raw).is_none(),
+            "conflicting buckets target one window"
+        );
+    }
+
+    #[test]
+    fn summary_envelope_and_nested_rpc_fractions_preserve_measurements() {
+        // Compatibility contracts from Win-CodexBar's RPC parser, not a live capture.
+        for remaining in [
+            serde_json::json!({"remainingFraction":0.25}),
+            serde_json::json!({"case":"remainingFraction","value":0.25}),
+        ] {
+            let raw = serde_json::json!({"summary":{"groups":[{"buckets":[
+                {"bucketId":"gemini-5h","window":"5h","remaining":remaining},
+                {"bucketId":"gemini-weekly","window":"weekly"}
+            ]}]}});
+            let sections = parse_quota_summary(&raw).unwrap();
+            assert_eq!(sections[0].session.as_ref().unwrap().percent, Some(75.0));
+            assert_eq!(sections[0].weekly.as_ref().unwrap().percent, None);
+        }
+        let raw = serde_json::json!({"groups":[{"buckets":[
+            {"bucketId":"gemini-5h","remaining":{"case":"other","value":0.25}}
+        ]}]});
+        assert!(parse_quota_summary(&raw).is_none());
+    }
+
+    #[test]
+    fn restart_uses_only_the_new_instances_ports_and_token() {
+        assert_eq!(
+            resolve_endpoint(Some(50001), &[server("bbbbbbbb-2222", &[50002])]),
+            EndpointPick::Ready {
+                ports: vec![50002],
+                token: "bbbbbbbb-2222".into(),
+            }
+        );
+        assert_eq!(
+            resolve_endpoint(
+                None,
+                &[
+                    server("aaaaaaaa-1111", &[50001]),
+                    server("bbbbbbbb-2222", &[50002])
+                ]
+            ),
+            EndpointPick::Ambiguous
+        );
+    }
+
+    #[test]
+    fn discovery_uses_processes_without_a_log_and_preserves_failures() {
+        use std::io::ErrorKind::PermissionDenied;
+        let processes = [server("aaaaaaaa-1111", &[50001])];
+        for installed in [Ok(false), Err(PermissionDenied)] {
+            assert!(matches!(
+                discover_endpoint(None, Ok(&processes), installed),
+                Ok(EndpointPick::Ready { .. })
+            ));
+        }
+        assert_eq!(
+            discover_endpoint(None, Ok(&[]), Ok(false)),
+            Err(Observation::NotInstalled)
+        );
+        assert_eq!(
+            discover_endpoint(None, Ok(&[]), Ok(true)),
+            Err(Observation::NoReading(ProviderStatus::Closed))
+        );
+        assert_eq!(
+            discover_endpoint(None, Err(PermissionDenied), Ok(false)),
+            Err(Observation::NoReading(ProviderStatus::Error))
+        );
+        assert_eq!(
+            discover_endpoint(None, Ok(&[]), Err(PermissionDenied)),
+            Err(Observation::NoReading(ProviderStatus::Error))
+        );
+    }
+
+    #[test]
+    fn buckets_keep_their_source_group_identity() {
+        let raw = serde_json::json!({"groups":[
+            {"displayName":"Gemini Models","buckets":[{"bucketId":"gemini-5h","remainingFraction":0.25}]},
+            {"displayName":"Claude and GPT models","buckets":[
+                {"bucketId":"gemini-5h","remainingFraction":0.9},
+                {"bucketId":"3p-weekly","remainingFraction":0.5}
+            ]}
+        ]});
+        let sections = parse_quota_summary(&raw).unwrap();
+        assert_eq!(sections[0].session.as_ref().unwrap().percent, Some(75.0));
+        assert_eq!(sections[1].weekly.as_ref().unwrap().percent, Some(50.0));
+        assert!(sections[1].session.is_none());
+    }
+
+    #[test]
+    fn unnamed_mixed_groups_are_ambiguous_not_an_identity_hint() {
+        let raw = serde_json::json!({"groups":[{"displayName":"Unknown group","buckets":[
+            {"bucketId":"gemini-5h","remainingFraction":0.9},
+            {"bucketId":"3p-weekly","remainingFraction":0.5}
+        ]}]});
+        assert!(parse_quota_summary(&raw).is_none());
+    }
+
+    #[test]
+    fn groups_without_buckets_do_not_discard_other_valid_quotas() {
+        let raw = serde_json::json!({"groups":[
+            {"displayName":"Future group"},
+            {"displayName":"Gemini 4 Argon","buckets":null},
+            {"buckets":[{"bucketId":"gemini-5h","remainingFraction":0.5}]}
+        ]});
+        let sections = parse_quota_summary(&raw).unwrap();
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].session.as_ref().unwrap().percent, Some(50.0));
+    }
+
+    #[test]
+    fn parsed_windows_keep_block_reset_and_notification_semantics() {
+        use crate::providers::{apply, Channel};
+        use crate::state::AppState;
+        let raw: Value = serde_json::from_str(REAL_RESPONSE).unwrap();
+        let now = parse_iso("2026-10-22T00:00:00Z").unwrap();
+        let quota = apply(
+            None,
+            Observation::Reading {
+                taken_at: Some(iso(now)),
+                sections: parse_quota_summary(&raw).unwrap(),
+            },
+            now,
+        );
+        let state = AppState {
+            antigravity: quota.clone(),
+            ..Default::default()
+        };
+        assert_eq!(
+            Channel::AntigravityGemini.session(&state).unwrap().percent,
+            0.0
+        );
+        assert!(Channel::AntigravityThirdParty.blocks_reset_toast(&state));
+        let later = parse_iso("2026-10-25T00:00:00Z").unwrap();
+        let kept = apply(quota, Observation::NoReading(ProviderStatus::Error), later).unwrap();
+        assert_eq!(kept.status, ProviderStatus::Error);
+        assert!(kept.sections[0].session.as_ref().unwrap().rolled_over);
+        assert_eq!(kept.sections[0].session.as_ref().unwrap().percent, None);
+        assert!(kept.sections[1].blocked);
+        assert!(kept.sections[2].session.is_none());
+        let recovered = apply(
+            Some(kept),
+            Observation::Reading {
+                taken_at: Some(iso(later)),
+                sections: parse_quota_summary(&raw).unwrap(),
+            },
+            later,
+        )
+        .unwrap();
+        assert_eq!(recovered.status, ProviderStatus::Live);
+        assert!(recovered.sections[0].session.as_ref().unwrap().rolled_over);
+    }
 
     /// A real `RetrieveUserQuotaSummary` response from Antigravity 2.16
     /// (descriptions trimmed). No account data in it.

@@ -70,7 +70,7 @@
             <li><code>~/.claude/projects/**/*.jsonl</code></li>
           </ul>
           <p>When Codex is installed, Siphon also reads the rate-limit entries Codex writes to its session logs (<code>~/.codex/sessions/**/rollout-*.jsonl</code>) to show your Codex session and weekly limits. It reads only those entries&rsquo; percentages and reset times; it does not read <code>~/.codex/auth.json</code> or any other credential.</p>
-          <p>When the Antigravity app is installed, Siphon reads the port its local server listens on from <code>%APPDATA%\Antigravity\logs\main.log</code>, and the access token for that server from the server process&rsquo;s command line. It uses them only to ask that server, on <code>127.0.0.1</code>, for your quota. The token never leaves your machine and is never stored or logged.</p>
+          <p>For Antigravity, Siphon reads the identified server process&rsquo;s command line and Windows&rsquo; PID-owned loopback listeners. It sends that process&rsquo;s access token only to its verified ports on <code>127.0.0.1</code> to request quota data. <code>%APPDATA%\Antigravity\logs\main.log</code> is an optional port-ordering hint; missing or unreadable logs do not block process-based discovery. Siphon checks whether <code>%APPDATA%\Antigravity</code> and <code>%LOCALAPPDATA%\Programs\Antigravity</code> exist to distinguish a closed app from an absent installation. The token never leaves your machine and is never stored or logged.</p>
           <p>These files are never uploaded or shared.</p>
 
           <h2>External network requests</h2>

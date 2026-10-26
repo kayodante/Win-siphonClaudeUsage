@@ -270,8 +270,15 @@ impl Controller {
         if self.antigravity_busy.swap(true, Ordering::AcqRel) {
             return;
         }
+        struct BusyGuard<'a>(&'a AtomicBool);
+        impl Drop for BusyGuard<'_> {
+            fn drop(&mut self) {
+                self.0.store(false, Ordering::Release);
+            }
+        }
+        // Keep ownership through state application; cancellation also releases it.
+        let _busy = BusyGuard(&self.antigravity_busy);
         let observation = self.read_antigravity().await;
-        self.antigravity_busy.store(false, Ordering::Release);
 
         {
             let mut state = self.state.lock().unwrap();
@@ -283,41 +290,31 @@ impl Controller {
         self.emit();
     }
 
-    /// Only a missing log means "not installed": any other failure to read it
-    /// keeps the tab and its numbers. "Closed" means no Antigravity server is
-    /// running; one that runs but cannot be reached with certainty (no port
-    /// logged, two servers with different tokens, a bad answer) is an error.
-    /// The CSRF token lives only in this function.
+    /// Process-based discovery, with an optional log hint. Only a confirmed
+    /// absence of processes and known installation/data paths removes the tab.
+    /// Discovery and response errors preserve the last reading.
     async fn read_antigravity(&self) -> Observation {
-        use siphon_core::antigravity::{
-            main_log_path, parse_quota_summary, read_log_port, resolve_endpoint, EndpointPick,
-        };
-        let Some(path) = main_log_path() else {
-            return Observation::NotInstalled;
-        };
-        let pick = tauri::async_runtime::spawn_blocking(move || -> Result<EndpointPick, std::io::Error> {
-            let log_port = read_log_port(&path)?;
-            let processes = crate::process::server_processes("language_server");
-            Ok(resolve_endpoint(log_port, &processes))
-        })
-        .await;
+        use siphon_core::antigravity::{parse_quota_summary, EndpointPick};
+        let pick = tauri::async_runtime::spawn_blocking(crate::process::antigravity_endpoint).await;
         let (ports, token) = match pick {
-            Ok(Ok(EndpointPick::Closed)) => return Observation::NoReading(ProviderStatus::Closed),
-            Ok(Ok(EndpointPick::Ambiguous)) => {
-                return Observation::NoReading(ProviderStatus::Error)
-            }
             Ok(Ok(EndpointPick::Ready { ports, token })) => (ports, token),
-            Ok(Err(e)) if e.kind() == std::io::ErrorKind::NotFound => {
-                return Observation::NotInstalled
-            }
-            Ok(Err(e)) => {
-                log::warn!("Antigravity log unreadable: {}", e.kind());
-                return Observation::NoReading(ProviderStatus::Error);
-            }
-            Err(_) => return Observation::NoReading(ProviderStatus::Error),
+            Ok(Err(observation)) => return observation,
+            _ => return Observation::NoReading(ProviderStatus::Error),
         };
         let mut saw_unreadable = false;
         for port in ports {
+            // A failed request may have raced a restart. Never reuse its
+            // token/port list without a fresh process + ownership snapshot.
+            let current =
+                tauri::async_runtime::spawn_blocking(crate::process::antigravity_endpoint).await;
+            match current {
+                Ok(Ok(EndpointPick::Ready {
+                    ports,
+                    token: current_token,
+                })) if current_token == token && ports.contains(&port) => {}
+                Ok(Err(observation)) => return observation,
+                _ => return Observation::NoReading(ProviderStatus::Error),
+            }
             match self.http.antigravity_quota(port, &token).await {
                 Ok(raw) => match parse_quota_summary(&raw) {
                     Some(sections) => {
@@ -332,11 +329,12 @@ impl Controller {
                 Err(LoopbackError::Unreadable) => saw_unreadable = true,
             }
         }
-        if saw_unreadable {
-            Observation::NoReading(ProviderStatus::Error)
-        } else {
-            // The server is starting, or exited since the process list.
-            Observation::NoReading(ProviderStatus::Closed)
+        // Unreachable is not proof of closure; a fresh snapshot decides that.
+        match tauri::async_runtime::spawn_blocking(crate::process::antigravity_endpoint).await {
+            Ok(Err(Observation::NoReading(ProviderStatus::Closed))) if !saw_unreadable => {
+                Observation::NoReading(ProviderStatus::Closed)
+            }
+            _ => Observation::NoReading(ProviderStatus::Error),
         }
     }
 

@@ -99,7 +99,8 @@ impl ProviderQuota {
 /// What one attempt to read a provider found.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Observation {
-    /// The source is gone (no Codex `sessions` dir, no Antigravity log): the
+    /// The source is gone (no Codex `sessions` dir; no Antigravity server or
+    /// known installation/data paths after successful inspection): the
     /// tab goes with it.
     NotInstalled,
     /// A reading, taken at `taken_at` (ISO-8601; `None` when the source did
