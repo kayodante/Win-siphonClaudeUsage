@@ -163,9 +163,10 @@ fn main() {
                         last_quota = now;
                         c.refresh_quota().await;
                     }
-                    // Antigravity needs no Claude sign-in; its local server is
-                    // asked on the quota cadence like any other quota source.
-                    if (now - last_antigravity).num_seconds() >= quota_interval {
+                    // Antigravity needs no Claude sign-in and runs over loopback
+                    // (127.0.0.1) with no external rate limits, so it rides the
+                    // local refresh cadence.
+                    if (now - last_antigravity).num_seconds() >= interval {
                         last_antigravity = now;
                         c.refresh_antigravity().await;
                     }

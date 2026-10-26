@@ -38,9 +38,28 @@ pub fn main_log_path() -> Option<PathBuf> {
     )
 }
 
+/// Optional fallback port hint at `%APPDATA%\Antigravity\logs\language_server.log`.
+pub fn language_server_log_path() -> Option<PathBuf> {
+    let appdata = std::env::var_os("APPDATA")?;
+    Some(
+        PathBuf::from(appdata)
+            .join("Antigravity")
+            .join("logs")
+            .join("language_server.log"),
+    )
+}
+
 fn port_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| Regex::new(r"https://127\.0\.0\.1:(\d{1,5})/").expect("valid port regex"))
+}
+
+fn ls_port_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"Language server listening on random port at (\d{1,5}) for HTTPS")
+            .expect("valid language_server port regex")
+    })
 }
 
 fn token_regex() -> &'static Regex {
@@ -52,6 +71,15 @@ fn token_regex() -> &'static Regex {
 /// first so a multi-megabyte log is not loaded into memory on every tick, and
 /// falling back to the full file only if the tail held no port line.
 pub fn read_log_port(path: &Path) -> std::io::Result<Option<u16>> {
+    read_tail_port(path, find_port)
+}
+
+/// Read the newest HTTPS loopback port from `language_server.log`.
+pub fn read_language_server_log_port(path: &Path) -> std::io::Result<Option<u16>> {
+    read_tail_port(path, find_language_server_port)
+}
+
+fn read_tail_port(path: &Path, parser: fn(&str) -> Option<u16>) -> std::io::Result<Option<u16>> {
     use std::io::{Read, Seek, SeekFrom};
     let mut file = std::fs::File::open(path)?;
     let len = file.metadata()?.len();
@@ -59,7 +87,7 @@ pub fn read_log_port(path: &Path) -> std::io::Result<Option<u16>> {
     file.seek(SeekFrom::Start(start))?;
     let mut buf = Vec::new();
     file.read_to_end(&mut buf)?;
-    if let Some(port) = find_port(&String::from_utf8_lossy(&buf)) {
+    if let Some(port) = parser(&String::from_utf8_lossy(&buf)) {
         return Ok(Some(port));
     }
     if start == 0 {
@@ -68,13 +96,19 @@ pub fn read_log_port(path: &Path) -> std::io::Result<Option<u16>> {
     file.seek(SeekFrom::Start(0))?;
     buf.clear();
     file.read_to_end(&mut buf)?;
-    Ok(find_port(&String::from_utf8_lossy(&buf)))
+    Ok(parser(&String::from_utf8_lossy(&buf)))
 }
 
 /// The newest loopback port the app logged. The host is never taken from the
 /// log: the caller always talks to `127.0.0.1`.
 pub fn find_port(main_log: &str) -> Option<u16> {
     let last = port_regex().captures_iter(main_log).last()?;
+    last[1].parse::<u16>().ok().filter(|p| *p != 0)
+}
+
+/// The newest HTTPS loopback port logged in `language_server.log`.
+pub fn find_language_server_port(ls_log: &str) -> Option<u16> {
+    let last = ls_port_regex().captures_iter(ls_log).last()?;
     last[1].parse::<u16>().ok().filter(|p| *p != 0)
 }
 
@@ -85,7 +119,8 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
     if !is_antigravity(command_line) {
         return None;
     }
-    let token = token_regex().captures(command_line)?[1].to_string();
+    let raw = &token_regex().captures(command_line)?[1];
+    let token = raw.trim_matches(['"', '\'']).to_string();
     // A UUID today. Anything outside this set would not survive as a header
     // value anyway; refusing it here keeps a malformed line from reaching one.
     let plausible = (8..=128).contains(&token.len())
@@ -98,7 +133,7 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
 fn is_antigravity(command_line: &str) -> bool {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"(?:^|\s)--(?:override_ide_name|app_data_dir)[ =]antigravity(?:\s|$)")
+        Regex::new(r#"(?:^|\s)--(?:override_ide_name|app_data_dir)[ =]["']?antigravity["']?(?:\s|$)"#)
             .expect("valid identity regex")
     })
     .is_match(command_line)
@@ -741,10 +776,33 @@ Host bridge server listening on http://127.0.0.1:60106
     }
 
     #[test]
+    fn takes_the_newest_port_from_language_server_log() {
+        let log = "\
+I1026 17:22:34.019406 server.go:672] Language server will attempt to listen on host localhost
+I1026 17:22:34.033718 server.go:687] Language server listening on random port at 52609 for HTTPS (gRPC)
+I1026 17:22:34.033718 server.go:695] Language server listening on random port at 52610 for HTTP
+";
+        assert_eq!(find_language_server_port(log), Some(52609));
+        assert_eq!(find_language_server_port("random port at 0 for HTTPS"), None);
+        assert_eq!(find_language_server_port("random port at 70000 for HTTPS"), None);
+        assert_eq!(find_language_server_port("random port at 52610 for HTTP"), None);
+    }
+
+    #[test]
     fn reads_the_token_only_from_antigravity_servers() {
         let ag = r"C:\Users\x\AppData\Local\Programs\antigravity\resources\bin\language_server.exe --standalone --override_ide_name antigravity --https_server_port 0 --csrf_token 0f8e2c1a-1111-4222-8333-944455556666 --app_data_dir antigravity";
         assert_eq!(
             csrf_token(ag).as_deref(),
+            Some("0f8e2c1a-1111-4222-8333-944455556666")
+        );
+        let ag_quoted = r#"language_server.exe --override_ide_name="antigravity" --csrf_token="0f8e2c1a-1111-4222-8333-944455556666" --app_data_dir="antigravity""#;
+        assert_eq!(
+            csrf_token(ag_quoted).as_deref(),
+            Some("0f8e2c1a-1111-4222-8333-944455556666")
+        );
+        let ag_single_quotes = r"language_server.exe --override_ide_name 'antigravity' --csrf_token '0f8e2c1a-1111-4222-8333-944455556666'";
+        assert_eq!(
+            csrf_token(ag_single_quotes).as_deref(),
             Some("0f8e2c1a-1111-4222-8333-944455556666")
         );
         let windsurf = "language_server_windows_x64.exe --ide_name windsurf --csrf_token 0f8e2c1a-1111-4222-8333-944455556666";

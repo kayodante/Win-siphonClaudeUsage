@@ -325,8 +325,7 @@ impl Controller {
                     }
                     None => saw_unreadable = true,
                 },
-                Err(LoopbackError::Unreachable) => {}
-                Err(LoopbackError::Unreadable) => saw_unreadable = true,
+                Err(LoopbackError::Unreachable | LoopbackError::Unreadable) => {}
             }
         }
         // Unreachable is not proof of closure; a fresh snapshot decides that.

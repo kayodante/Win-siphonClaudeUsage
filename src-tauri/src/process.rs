@@ -13,8 +13,16 @@ pub fn antigravity_endpoint() -> Result<
     siphon_core::antigravity::EndpointPick,
     siphon_core::providers::Observation,
 > {
-    use siphon_core::antigravity::{discover_endpoint, main_log_path, read_log_port};
-    let log_port = main_log_path().and_then(|path| read_log_port(&path).ok().flatten());
+    use siphon_core::antigravity::{
+        discover_endpoint, language_server_log_path, main_log_path, read_language_server_log_port,
+        read_log_port,
+    };
+    let log_port = main_log_path()
+        .and_then(|path| read_log_port(&path).ok().flatten())
+        .or_else(|| {
+            language_server_log_path()
+                .and_then(|path| read_language_server_log_port(&path).ok().flatten())
+        });
     let processes = server_processes("language_server");
     let installed = antigravity_installed();
     discover_endpoint(
@@ -29,9 +37,11 @@ fn antigravity_installed() -> Result<bool, std::io::ErrorKind> {
     for (variable, suffix) in [
         ("APPDATA", "Antigravity"),
         ("LOCALAPPDATA", "Programs/Antigravity"),
+        ("USERPROFILE", ".gemini/antigravity"),
+        ("ProgramFiles", "Antigravity"),
+        ("ProgramFiles(x86)", "Antigravity"),
     ] {
         let Some(root) = std::env::var_os(variable) else {
-            error = Some(std::io::ErrorKind::NotFound);
             continue;
         };
         match std::path::PathBuf::from(root).join(suffix).try_exists() {
@@ -93,7 +103,7 @@ pub fn server_processes(exe_prefix: &str) -> std::io::Result<Vec<ServerProcess>>
     unsafe {
         let _ = CloseHandle(snapshot);
     }
-    if inspection_error
+    if (inspection_error && out.is_empty())
         || step.is_err_and(|e| {
             e.code() != windows::core::HRESULT::from_win32(ERROR_NO_MORE_FILES.0)
         })

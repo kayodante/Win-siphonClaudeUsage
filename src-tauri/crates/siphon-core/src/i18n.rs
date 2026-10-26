@@ -51,6 +51,7 @@ const EN: &[(&str, &str)] = &[
     ("alert.critical.title", "Critical usage"),
     ("alert.critical.body", "Session has reached 90%."),
     ("provider.antigravityThirdParty", "Claude and GPT"),
+    ("provider.antigravity.thirdParty", "Claude and GPT"),
     (
         "notification.providerResetTitle",
         "{provider} session reset",
@@ -92,6 +93,7 @@ const PT: &[(&str, &str)] = &[
     ("alert.critical.title", "Uso crítico"),
     ("alert.critical.body", "Sessão atingiu 90%."),
     ("provider.antigravityThirdParty", "Claude e GPT"),
+    ("provider.antigravity.thirdParty", "Claude e GPT"),
     (
         "notification.providerResetTitle",
         "Sessão do {provider} reiniciada",
@@ -136,6 +138,7 @@ const JA: &[(&str, &str)] = &[
     ("alert.critical.title", "使用量が限界に近いです"),
     ("alert.critical.body", "セッションの90%に達しました。"),
     ("provider.antigravityThirdParty", "ClaudeとGPT"),
+    ("provider.antigravity.thirdParty", "ClaudeとGPT"),
     (
         "notification.providerResetTitle",
         "{provider}のセッションがリセットされました",
@@ -177,6 +180,7 @@ const KO: &[(&str, &str)] = &[
     ("alert.critical.title", "사용량 위험"),
     ("alert.critical.body", "세션의 90%에 도달했습니다."),
     ("provider.antigravityThirdParty", "Claude 및 GPT"),
+    ("provider.antigravity.thirdParty", "Claude 및 GPT"),
     ("notification.providerResetTitle", "{provider} 세션 리셋"),
     (
         "notification.providerResetBody",

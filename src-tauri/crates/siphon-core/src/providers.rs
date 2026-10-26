@@ -258,7 +258,7 @@ impl Channel {
             Channel::AntigravityGemini => Some("Antigravity · Gemini".to_string()),
             Channel::AntigravityThirdParty => Some(format!(
                 "Antigravity · {}",
-                t("provider.antigravityThirdParty", lang)
+                t("provider.antigravity.thirdParty", lang)
             )),
         }
     }

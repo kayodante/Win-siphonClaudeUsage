@@ -1112,6 +1112,16 @@ function providerSessionPeak(state, provider) {
         bestPercent = pct;
         bestSectionId = section.id;
       }
+    } else if (!win) {
+      // Sections without a session window (e.g. Gemini 4 Argon) contribute their weekly quota
+      const weeklyWin = section?.weekly;
+      if (weeklyWin && weeklyWin.percent != null && !weeklyWin.rolledOver) {
+        const pct = clampPercent(weeklyWin.percent);
+        if (pct > bestPercent || bestSectionId === null) {
+          bestPercent = pct;
+          bestSectionId = section.id;
+        }
+      }
     }
   }
   return { percent: bestPercent, sectionId: bestSectionId };
