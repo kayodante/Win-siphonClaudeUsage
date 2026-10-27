@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { resolveProvider, resolveView } from '../src/renderer/viewState.js';
+import {
+  detectThresholdCrossings,
+  extractChannelPercents,
+  resolveProvider,
+  resolveView
+} from '../src/renderer/viewState.js';
 
 test('signed out state always resolves to onboarding', () => {
   assert.equal(resolveView({ isSignedIn: false }, 'main'), 'onboard');
@@ -54,4 +59,75 @@ test('the escape hatch and the deadline use the agreed constants', () => {
   const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
   assert.match(renderer, /const AUTH_DEADLINE_MS = 150_000;/);
   assert.match(renderer, /const AUTH_HATCH_MS = 60_000;/);
+});
+
+
+test('extractChannelPercents captures session percentages across all providers', () => {
+  const state = {
+    quota: { session: { percent: 45.2 } },
+    codex: {
+      sections: [
+        { id: 'codex', session: { percent: 72.8, rolledOver: false } }
+      ]
+    },
+    antigravity: {
+      sections: [
+        { id: 'gemini', session: { percent: 91.0, rolledOver: false } },
+        { id: 'thirdParty', session: { percent: 100.0, rolledOver: false } },
+        { id: 'argon', weekly: { percent: 50.0, rolledOver: false } }
+      ]
+    }
+  };
+
+  const map = extractChannelPercents(state);
+  assert.equal(map.get('claude'), 45);
+  assert.equal(map.get('codex:codex'), 73);
+  assert.equal(map.get('antigravity:gemini'), 91);
+  assert.equal(map.get('antigravity:thirdParty'), 100);
+  assert.equal(map.has('antigravity:argon'), false);
+});
+
+test('extractChannelPercents maps rolled-over windows to 0%', () => {
+  const state = {
+    codex: {
+      sections: [
+        { id: 'codex', session: { percent: null, rolledOver: true } }
+      ]
+    }
+  };
+
+  const map = extractChannelPercents(state);
+  assert.equal(map.get('codex:codex'), 0);
+});
+
+test('detectThresholdCrossings reports alerts per channel crossing', () => {
+  const prev = new Map([
+    ['claude', 60],
+    ['codex:codex', 88],
+    ['antigravity:gemini', 95]
+  ]);
+  const current = new Map([
+    ['claude', 72],
+    ['codex:codex', 92],
+    ['antigravity:gemini', 100]
+  ]);
+
+  // Both limit and expire sounds enabled -> 100% takes precedence
+  const res1 = detectThresholdCrossings(prev, current, { expireSound: true, limitSound: true });
+  assert.equal(res1.playFull, true);
+
+  // Only limit sound enabled
+  const res2 = detectThresholdCrossings(prev, current, { expireSound: false, limitSound: true });
+  assert.equal(res2.playFull, false);
+  assert.equal(res2.playLimit, true);
+
+  // Sounds disabled
+  const res3 = detectThresholdCrossings(prev, current, { expireSound: false, limitSound: false });
+  assert.equal(res3.playFull, false);
+  assert.equal(res3.playLimit, false);
+
+  // No previous map (first render)
+  const res4 = detectThresholdCrossings(null, current, { expireSound: true, limitSound: true });
+  assert.equal(res4.playFull, false);
+  assert.equal(res4.playLimit, false);
 });

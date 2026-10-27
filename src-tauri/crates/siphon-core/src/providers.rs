@@ -295,9 +295,9 @@ impl Channel {
         })
     }
 
-    /// The reset sound is Claude's cue; other providers get the toast only.
+    /// Every channel plays the reset sound when reset toasts/sounds are enabled.
     pub fn plays_reset_sound(self) -> bool {
-        self == Channel::Claude
+        true
     }
 
     pub fn reset_toast(self, lang: &str) -> Alert {
@@ -471,9 +471,9 @@ mod tests {
     }
 
     #[test]
-    fn only_claude_plays_the_reset_sound() {
+    fn all_channels_play_the_reset_sound() {
         for channel in Channel::ALL {
-            assert_eq!(channel.plays_reset_sound(), channel == Channel::Claude);
+            assert!(channel.plays_reset_sound());
         }
     }
 

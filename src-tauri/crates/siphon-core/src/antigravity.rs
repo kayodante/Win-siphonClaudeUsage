@@ -133,8 +133,10 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
 fn is_antigravity(command_line: &str) -> bool {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r#"(?:^|\s)--(?:override_ide_name|app_data_dir)[ =]["']?antigravity["']?(?:\s|$)"#)
-            .expect("valid identity regex")
+        Regex::new(
+            r#"(?:^|\s)--(?:override_ide_name|app_data_dir)[ =]["']?antigravity["']?(?:\s|$)"#,
+        )
+        .expect("valid identity regex")
     })
     .is_match(command_line)
 }
@@ -783,9 +785,18 @@ I1026 17:22:34.033718 server.go:687] Language server listening on random port at
 I1026 17:22:34.033718 server.go:695] Language server listening on random port at 52610 for HTTP
 ";
         assert_eq!(find_language_server_port(log), Some(52609));
-        assert_eq!(find_language_server_port("random port at 0 for HTTPS"), None);
-        assert_eq!(find_language_server_port("random port at 70000 for HTTPS"), None);
-        assert_eq!(find_language_server_port("random port at 52610 for HTTP"), None);
+        assert_eq!(
+            find_language_server_port("random port at 0 for HTTPS"),
+            None
+        );
+        assert_eq!(
+            find_language_server_port("random port at 70000 for HTTPS"),
+            None
+        );
+        assert_eq!(
+            find_language_server_port("random port at 52610 for HTTP"),
+            None
+        );
     }
 
     #[test]

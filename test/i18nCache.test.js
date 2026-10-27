@@ -110,6 +110,8 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const createViewSwitcher = () => () => {};
     const resolveView = () => 'main';
     const resolveProvider = () => 'claude';
+    const extractChannelPercents = () => new Map();
+    const detectThresholdCrossings = () => ({ playFull: false, playLimit: false });
   `;
 
   const testExecution = `

@@ -18,7 +18,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { resolveProvider, resolveView } from './viewState.js';
+import { detectThresholdCrossings, extractChannelPercents, resolveProvider, resolveView } from './viewState.js';
 
 let i18nCache = null;
 
@@ -173,7 +173,7 @@ const criticalDismissed = new Set();
 let currentSettingsTab = 'system';
 let _tabTransitioning = false;
 let _tabTransitionTimer = null;
-let prevSessionPercent = null;
+const prevChannelPercents = new Map();
 let prevRenderedSessionPct = null;
 let prevRenderedWeeklyPct = null;
 let updateUrl = null;
@@ -1049,7 +1049,7 @@ function render(state) {
   const sessionPercent = clampPercent(session?.percent ?? 0);
   const weeklyPercent = clampPercent(weekly?.percent ?? 0);
 
-  handleThresholdSounds(state, sessionPercent);
+  handleThresholdSounds(state);
 
   renderProviderTabs(state);
   renderProviderView(state, lang);
@@ -1127,16 +1127,29 @@ function providerSessionPeak(state, provider) {
   return { percent: bestPercent, sectionId: bestSectionId };
 }
 
-function handleThresholdSounds(state, sessionPercent) {
-  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
-  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
+function handleThresholdSounds(state) {
+  const expireSound = state.preferences?.notifications?.expireSound ?? false;
+  const limitSound = state.preferences?.notifications?.limitSound ?? false;
+  const currentChannels = extractChannelPercents(state);
 
-  // Threshold crossing detection — play sound on upward cross
-  if (prevSessionPercent !== null) {
-    if (expireSoundEnabled && prevSessionPercent < 100 && sessionPercent >= 100) playFullSound();
-    else if (limitSoundEnabled && prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
-    else if (limitSoundEnabled && prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
+  const { playFull, playLimit } = detectThresholdCrossings(prevChannelPercents, currentChannels, {
+    expireSound,
+    limitSound
+  });
+
+  if (playFull) {
+    playFullSound();
+  } else if (playLimit) {
+    playLimitSound();
   }
+
+  for (const key of prevChannelPercents.keys()) {
+    if (!currentChannels.has(key)) prevChannelPercents.delete(key);
+  }
+  for (const [key, pct] of currentChannels.entries()) {
+    prevChannelPercents.set(key, pct);
+  }
+
   // Reset dismissed state per provider when percent drops back below threshold
   for (const provider of ['claude', 'codex', 'antigravity']) {
     const { percent } = providerSessionPeak(state, provider);
@@ -1147,7 +1160,6 @@ function handleThresholdSounds(state, sessionPercent) {
       criticalDismissed.delete(provider);
     }
   }
-  prevSessionPercent = sessionPercent;
 }
 
 function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang }) {
