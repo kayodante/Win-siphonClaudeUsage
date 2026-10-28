@@ -19,7 +19,7 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
       createElement: () => ({ className: '', dataset: {}, classList: { add: () => {}, remove: () => {} }, style: { setProperty: () => {} }, setAttribute: () => {} }),
       documentElement: { lang: '' },
       body: { dataset: {} },
-      querySelector: () => ({ children: [], replaceChildren: () => {}, appendChild: () => {}, hasAttribute: () => false, setAttribute: () => {}, removeAttribute: () => {},
+      querySelector: () => ({ children: [], querySelectorAll: () => [], replaceChildren: () => {}, appendChild: () => {}, hasAttribute: () => false, setAttribute: () => {}, removeAttribute: () => {},
         addEventListener: () => {},
         style: {
           setProperty: () => {},
@@ -78,6 +78,7 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const clearTimeout = () => {};
     const setInterval = () => {};
     const requestAnimationFrame = (cb) => { cb(); };
+    const cancelAnimationFrame = () => {};
     const getComputedStyle = () => ({ getPropertyValue: () => '0ms' });
     const navigator = { clipboard: { writeText: () => Promise.resolve() } };
     const clearInterval = () => {};
@@ -110,6 +111,8 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const createViewSwitcher = () => () => {};
     const resolveView = () => 'main';
     const resolveProvider = () => 'claude';
+    const resolveNavigation = () => null;
+    const overviewProviders = () => [];
     const extractChannelPercents = () => new Map();
     const detectThresholdCrossings = () => ({ playFull: false, playLimit: false });
   `;

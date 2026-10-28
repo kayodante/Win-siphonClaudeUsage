@@ -36,6 +36,23 @@ function setup() {
   return { views, clock, show, claude, codex, settings };
 }
 
+test('a zero-duration crossfade settles synchronously without timers or animation frames', () => {
+  const outgoing = fakeView('settings', false);
+  const incoming = fakeView('provider');
+  let visible = 0;
+  let settled = 0;
+  const show = createViewSwitcher([outgoing, incoming], {
+    fadeMs: () => 0,
+    setTimer: () => assert.fail('zero-duration transition queued a timer'),
+    nextFrame: () => assert.fail('zero-duration transition queued a frame')
+  });
+  show(incoming, { onVisible: () => { visible++; }, onSettled: () => { settled++; } });
+  assert.equal(outgoing.hidden, true);
+  assert.equal(incoming.hidden, false);
+  assert.equal(visible, 1);
+  assert.equal(settled, 1);
+});
+
 function assertOnlyVisible(views, expected) {
   const visible = views.filter(v => !v.hidden).map(v => v.name);
   assert.deepEqual(visible, [expected.name]);

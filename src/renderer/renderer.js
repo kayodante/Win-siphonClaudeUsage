@@ -18,11 +18,18 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { detectThresholdCrossings, extractChannelPercents, resolveProvider, resolveView } from './viewState.js';
+import { detectThresholdCrossings, extractChannelPercents, overviewProviders, resolveNavigation, resolveProvider, resolveView } from './viewState.js';
 
 let i18nCache = null;
 
 const elements = {
+  overviewButton: document.querySelector('#overviewButton'),
+  overviewView: document.querySelector('#overviewView'),
+  overviewCards: document.querySelector('#overviewCards'),
+  overviewCardTemplate: document.querySelector('#overviewCardTemplate'),
+  overviewSectionTemplate: document.querySelector('#overviewSectionTemplate'),
+  rail: document.querySelector('#navigationRail'),
+  railToggleButton: document.querySelector('#railToggleButton'),
   refreshButton: document.querySelector('#refreshButton'),
   settingsButton: document.querySelector('#settingsButton'),
   backButton: document.querySelector('#backButton'),
@@ -155,16 +162,25 @@ let appInfo = {
 };
 let currentState = null;
 let requestedView = 'main';
-// Not persisted: the app always opens on Claude.
-let requestedProvider = 'claude';
+// Not persisted: the app always opens on Overview.
+let requestedProvider = 'overview';
 // View state lives up here, not beside renderActiveView: the bootstrap's
 // first render() runs before module evaluation reaches the bottom half of
 // this file, and a `let` read before its line throws.
 const crossfadeTo = createViewSwitcher(
-  [elements.onboardView, elements.mainView, elements.providerView, elements.settingsView],
+  [elements.onboardView, elements.overviewView, elements.mainView, elements.providerView, elements.settingsView],
   { fadeMs: () => cssMs('--duration-view-fade', 150) }
 );
 let renderedView = null;
+let renderedProvider = null;
+const PROVIDER_NAMES = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
+const overviewCards = new Map();
+const groupCards = new Map();
+const ENTER_SEQUENCE_MS = 900;
+const ENTER_DEDUPE_MS = 250;
+let enterSequenceTimer = null;
+let windowEntranceFrame = null;
+let lastEntranceAt = -Infinity;
 let settingsReturnFocus = null;
 let offlineDismissed = false;
 let updateDismissed = false;
@@ -182,7 +198,6 @@ let lastDownloadAnnouncementBucket = -1;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
-let isEntering = false;
 const animatingElements = new Map();
 
 for (const announcer of [elements.politeAnnouncer, elements.assertiveAnnouncer]) {
@@ -236,7 +251,7 @@ function setErrorText(message) {
   const text = String(message ?? '');
   if (elements.errorText.textContent === text) return;
   elements.errorText.textContent = text;
-  if (text && elements.mainView.hidden) {
+  if (text && elements.errorText.hidden) {
     announce(elements.assertiveAnnouncer, text);
   } else if (!text) {
     lastAnnouncements.delete(elements.assertiveAnnouncer);
@@ -493,7 +508,7 @@ document.addEventListener('keydown', event => {
 document.querySelector('.shell-scroll')?.addEventListener('scroll', hideTooltip, { passive: true });
 
 elements.refreshButton.addEventListener('click', () => refreshNow());
-elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
+elements.settingsButton.addEventListener('click', () => showView('settings'));
 elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
 elements.settingsTabNotification.addEventListener('click', () => switchSettingsTab('notification'));
 elements.settingsTabWidget.addEventListener('click', () => switchSettingsTab('widget'));
@@ -516,21 +531,27 @@ elements.settingsTabs.addEventListener('keydown', event => {
   event.preventDefault();
   switchSettingsTab(tabs[nextIndex][0], { focus: true });
 });
-elements.backButton.addEventListener('click', () => window.siphon.showMainView());
+elements.backButton.addEventListener('click', () => showView('main'));
+elements.railToggleButton.addEventListener('click', () => {
+  elements.rail.hidden = !elements.rail.hidden;
+  renderNavigation(currentState);
+});
 // Picking a provider always lands on its dashboard, Settings included.
 for (const [provider, button] of [
+  ['overview', elements.overviewButton],
   ['claude', elements.providerClaudeButton],
   ['codex', elements.providerCodexButton],
   ['antigravity', elements.providerAntigravityButton]
 ]) {
   button.addEventListener('click', () => {
     requestedProvider = provider;
+    requestedView = 'main';
     if (currentState) render(currentState);
-    window.siphon.showMainView();
   });
 }
 elements.railProviders?.addEventListener('keydown', event => {
   const buttons = [
+    elements.overviewButton,
     elements.providerClaudeButton,
     elements.providerCodexButton,
     elements.providerAntigravityButton
@@ -940,6 +961,7 @@ try {
       requestedView = 'main';
       if (currentState) render(currentState);
       else renderActiveView();
+      queueWindowEntrance();
     }
   });
 
@@ -976,6 +998,15 @@ function cancelCountUp(element) {
 
 function setPercentValue(element, value) {
   element.textContent = formatPercent(value);
+}
+
+function updateReading(element, target, setValue) {
+  const value = target == null ? '' : String(target);
+  const unchanged = element.dataset.entryValue === value;
+  element.dataset.entryValue = value;
+  if (unchanged && animatingElements.has(element)) return;
+  cancelCountUp(element);
+  setValue(element, target);
 }
 
 function animateCountUp(element, target, setValue, { duration = 650, delay = 0 } = {}) {
@@ -1051,10 +1082,10 @@ function render(state) {
 
   handleThresholdSounds(state);
 
-  renderProviderTabs(state);
+  renderOverview(state, lang);
   renderProviderView(state, lang);
-  renderActiveView();
   renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
+  renderActiveView();
 
   elements.signOutButton.hidden = !state.isSignedIn;
   const awaitingCode = Boolean(state.awaitingCode);
@@ -1195,38 +1226,25 @@ function updateStatsAndPills({ state, notificationsEnabled, lang }) {
   updateLastUpdatedLine();
 }
 
-function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode = 'used' }) {
+function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode = 'used' }) {
   const displaySession = quotaDisplayValue(sessionPercent, mode);
   const displayWeekly = quotaDisplayValue(weeklyPercent, mode);
-  if (entering) {
-    animateCountUp(elements.sessionPercent, displaySession, setPercentValue, { duration: 650, delay: 310 });
-    animateCountUp(elements.weeklyPercent, displayWeekly, setPercentValue, { duration: 650, delay: 380 });
-    animateCountUp(elements.todayCost, state.todayStats?.cost, setCostValue, { duration: 600, delay: 440 });
-    animateCountUp(elements.monthCost, state.monthStats?.cost, setCostValue, { duration: 600, delay: 470 });
-    prevRenderedSessionPct = sessionPercent;
-    prevRenderedWeeklyPct = weeklyPercent;
-  } else {
-    cancelCountUp(elements.sessionPercent);
-    elements.sessionPercent.textContent = session ? formatPercent(displaySession) : '--';
-    if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
-      triggerResetFlash();
-    } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
-      flashUpdate(elements.sessionPercent);
-    }
-    prevRenderedSessionPct = sessionPercent;
-
-    cancelCountUp(elements.weeklyPercent);
-    elements.weeklyPercent.textContent = weekly ? formatPercent(displayWeekly) : '--';
-    if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
-      flashUpdate(elements.weeklyPercent);
-    }
-    prevRenderedWeeklyPct = weeklyPercent;
-
-    if (!animatingElements.has(elements.todayCost))
-      setCostValue(elements.todayCost, state.todayStats?.cost);
-    if (!animatingElements.has(elements.monthCost))
-      setCostValue(elements.monthCost, state.monthStats?.cost);
+  updateReading(elements.sessionPercent, session ? displaySession : null, setPercentValue);
+  if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
+    triggerResetFlash();
+  } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
+    flashUpdate(elements.sessionPercent);
   }
+  prevRenderedSessionPct = sessionPercent;
+
+  updateReading(elements.weeklyPercent, weekly ? displayWeekly : null, setPercentValue);
+  if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
+    flashUpdate(elements.weeklyPercent);
+  }
+  prevRenderedWeeklyPct = weeklyPercent;
+
+  updateReading(elements.todayCost, state.todayStats?.cost, setCostValue);
+  updateReading(elements.monthCost, state.monthStats?.cost, setCostValue);
 }
 
 function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
@@ -1247,10 +1265,7 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
   renderExtraUsage(state.quota?.extraUsage);
   updateStatsAndPills({ state, notificationsEnabled, lang });
 
-  const entering = isEntering;
-  isEntering = false;
-
-  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode });
+  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode });
 }
 
 function renderSettingsControls(state, lang) {
@@ -1324,7 +1339,7 @@ function renderBannersAndErrors(state, _sessionPercent, lang) {
   if (!state.isOffline) offlineDismissed = false;
   if (state.isOffline && !offlineDismissed) showBanner(elements.offlineBanner);
   else hideBanner(elements.offlineBanner);
-  elements.reauthButton.hidden = !state.needsReauth;
+  elements.reauthButton.hidden = !state.needsReauth || resolveView(state, requestedView) !== 'main' || !['overview', 'claude'].includes(active);
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   setErrorText([
     state.localError ? t(state.localError, lang) : null,
@@ -1337,7 +1352,7 @@ function updateLastUpdatedLine() {
   if (!currentState) return;
   const lang = currentLanguage();
   const provider = activeProvider();
-  if (provider === 'claude') {
+  if (provider === 'claude' || provider === 'overview') {
     const stamp = currentState.lastUpdated;
     elements.lastUpdated.textContent = stamp
       ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(stamp)) })
@@ -1346,32 +1361,38 @@ function updateLastUpdatedLine() {
   }
   // A provider's stamp is when its source last reported, which can be days
   // ago (Codex unused, Antigravity closed): name the day when it is not today.
-  const stamp = currentState[provider]?.updatedAt;
-  if (!stamp) {
+  const time = providerReadingTime(currentState[provider], lang);
+  if (!time) {
     elements.lastUpdated.textContent = '--';
     return;
   }
-  const at = new Date(stamp);
-  const time = at.toDateString() === new Date().toDateString()
-    ? formatClockTime(at)
-    : formatWeekdayClock(at, lang);
   const isLive = provider === 'antigravity' && currentState.antigravity?.status === 'live';
   const key = isLive ? 'time.updated.at' : 'provider.lastReading';
   elements.lastUpdated.textContent = tFormat(key, lang, { time });
+}
+
+function providerReadingTime(quota, lang) {
+  if (!quota?.updatedAt) return '';
+  const at = new Date(quota.updatedAt);
+  return at.toDateString() === new Date().toDateString()
+    ? formatClockTime(at)
+    : formatWeekdayClock(at, lang);
 }
 
 function activeProvider() {
   return resolveProvider(currentState, requestedProvider);
 }
 
-function renderProviderTabs(state) {
-  const active = activeProvider();
+function renderNavigation(state) {
+  const active = resolveNavigation(state, requestedView, requestedProvider);
   for (const [provider, button] of [
+    ['overview', elements.overviewButton],
     ['claude', elements.providerClaudeButton],
     ['codex', elements.providerCodexButton],
-    ['antigravity', elements.providerAntigravityButton]
+    ['antigravity', elements.providerAntigravityButton],
+    ['settings', elements.settingsButton]
   ]) {
-    if (provider !== 'claude') button.hidden = !state[provider];
+    if (provider === 'codex' || provider === 'antigravity') button.hidden = !state?.[provider];
     if (provider === active) {
       button.setAttribute('aria-current', 'page');
       delete button.dataset.alert;
@@ -1383,12 +1404,12 @@ function renderProviderTabs(state) {
       else delete button.dataset.alert;
     }
   }
+  const expanded = !elements.rail.hidden;
+  elements.railToggleButton.setAttribute('aria-expanded', String(expanded));
+  const label = t(expanded ? 'navigation.hideSidebar' : 'navigation.showSidebar', currentLanguage());
+  elements.railToggleButton.setAttribute('aria-label', label);
+  elements.railToggleButton.title = label;
 }
-
-const PROVIDER_NAMES = { codex: 'Codex', antigravity: 'Antigravity' };
-// One card per quota group, reused across renders so meters transition in
-// place instead of being rebuilt every tick.
-const groupCards = new Map();
 
 function groupTitle(id, lang) {
   if (id === 'gemini') return 'Gemini';
@@ -1407,6 +1428,12 @@ function providerStatusText(provider, quota, lang) {
   return '';
 }
 
+function renderProviderStatus(element, text, status) {
+  element.hidden = !text;
+  element.dataset.tone = status === 'error' ? 'error' : status === 'closed' ? 'warning' : 'info';
+  element.querySelector('[data-status-text]').textContent = text;
+}
+
 // `window` is a `providers::ProviderWindow`, or null when the source does not
 // offer that window at all — then the row is not shown.
 function renderQuotaRow(row, label, window, kind, ctx) {
@@ -1417,7 +1444,7 @@ function renderQuotaRow(row, label, window, kind, ctx) {
   row.querySelector('[data-label]').textContent = label;
   const value = row.querySelector('[data-percent]');
   const prevPct = value.dataset.prevPercent != null ? Number(value.dataset.prevPercent) : null;
-  value.textContent = measured ? formatPercent(quotaDisplayValue(percent, ctx.mode)) : '--';
+  updateReading(value, measured ? quotaDisplayValue(percent, ctx.mode) : null, setPercentValue);
   if (measured) {
     if (prevPct !== null && kind === 'session' && prevPct >= 95 && percent <= 5) {
       triggerResetFlash(value);
@@ -1440,7 +1467,74 @@ function renderQuotaRow(row, label, window, kind, ctx) {
     renderPace(paceEl, pace, ctx.lang);
   }
   renderMeter(row.querySelector('[data-meter]'), percent);
-  row.querySelector('[data-reset]').textContent = buildProviderResetLine(window, kind, ctx);
+  const reset = buildProviderResetLine(window, kind, ctx);
+  row.querySelector('[data-reset]').textContent = reset;
+  row.title = reset;
+}
+
+function renderOverview(state, lang) {
+  if (!state.isSignedIn) return;
+  const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
+  const cards = overviewProviders(state).map(({ id, sections }) => {
+    let card = overviewCards.get(id);
+    if (!card) {
+      card = elements.overviewCardTemplate.content.firstElementChild.cloneNode(true);
+      card.dataset.provider = id;
+      const title = card.querySelector('[data-overview-title]');
+      title.id = `overview-${id}-heading`;
+      title.textContent = PROVIDER_NAMES[id];
+      card.setAttribute('aria-labelledby', title.id);
+      const reading = card.querySelector('[data-overview-reading]');
+      reading.id = `overview-${id}-reading`;
+      card.setAttribute('aria-describedby', reading.id);
+      const button = { claude: elements.providerClaudeButton, codex: elements.providerCodexButton, antigravity: elements.providerAntigravityButton }[id];
+      card.querySelector('[data-overview-icon]').appendChild(button.querySelector('svg').cloneNode(true));
+      overviewCards.set(id, card);
+    }
+    const container = card.querySelector('[data-overview-sections]');
+    const shown = [...container.children];
+    const groups = sections.map((section, index) => {
+      let group = shown.find(node => node.dataset.section === section.id);
+      if (!group) {
+        group = elements.overviewSectionTemplate.content.firstElementChild.cloneNode(true);
+        group.dataset.section = section.id;
+        wireTooltip(group.querySelector('[data-pace]'));
+      }
+      const compact = id === 'antigravity' ? section.id !== 'gemini' : index > 0;
+      group.classList.toggle('overview-section--compact', compact);
+      const heading = group.querySelector('[data-group-title]');
+      heading.hidden = !compact;
+      heading.textContent = groupTitle(section.id, lang);
+      const rowCtx = { ...ctx, blocked: Boolean(section.blocked), weeklySpent: (section.weekly?.percent ?? 0) >= 100 };
+      const [session, weekly] = group.querySelectorAll('.quota-row');
+      session.classList.toggle('overview-compact', compact);
+      session.querySelector('[data-label]').classList.toggle('notif-label', !compact);
+      session.querySelector('[data-meter]').dataset.segments = compact ? '20' : '40';
+      session.querySelector('[data-pace]').hidden = compact;
+      session.querySelector('[data-reset]').classList.toggle('notif-label', compact);
+      renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
+      renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
+      const notes = [];
+      for (const [kind, window] of [['session', section.session], ['weekly', section.weekly]]) {
+        if (window && (compact || kind === 'weekly') && (window.rolledOver || window.percent == null || (kind === 'session' && section.blocked))) {
+          notes.push(buildProviderResetLine(window, kind, rowCtx));
+        }
+      }
+      if (!section.session && !section.weekly) notes.push(t('provider.window.unknown', lang));
+      group.querySelector('[data-section-status]').textContent = [...new Set(notes)].join(' · ');
+      return group;
+    });
+    if (groups.length !== shown.length || groups.some((group, i) => group !== shown[i])) container.replaceChildren(...groups);
+    const status = id === 'claude' ? '' : providerStatusText(id, state[id], lang);
+    renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
+    const time = providerReadingTime(state[id], lang);
+    const reading = time ? tFormat('provider.lastReading', lang, { time }) : '';
+    card.title = reading;
+    card.querySelector('[data-overview-reading]').textContent = reading;
+    return card;
+  });
+  const shown = [...elements.overviewCards.children];
+  if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) elements.overviewCards.replaceChildren(...cards);
 }
 
 function renderProviderView(state, lang) {
@@ -1457,7 +1551,11 @@ function renderProviderView(state, lang) {
       if (paceEl) wireTooltip(paceEl);
       groupCards.set(section.id, card);
     }
-    card.querySelector('[data-group-title]').textContent = groupTitle(section.id, lang);
+    const title = card.querySelector('[data-group-title]');
+    title.textContent = groupTitle(section.id, lang);
+    title.hidden = section.id === provider;
+    title.id = `quota-${provider}-${section.id}-heading`;
+    card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
     const [session, weekly] = card.querySelectorAll('.quota-row');
     const rowCtx = {
       ...ctx,
@@ -1476,15 +1574,15 @@ function renderProviderView(state, lang) {
   if (elements.providerCostGrid) {
     elements.providerCostGrid.hidden = !hasStats;
     if (hasStats) {
-      setCostValue(elements.providerTodayCost, quota.todayStats?.cost);
+      updateReading(elements.providerTodayCost, quota.todayStats?.cost, setCostValue);
       elements.providerTodayTokens.textContent =
         formatTokens(quota.todayStats?.totalTokens, lang) ?? '';
-      setCostValue(elements.providerMonthCost, quota.monthStats?.cost);
+      updateReading(elements.providerMonthCost, quota.monthStats?.cost, setCostValue);
       elements.providerMonthTokens.textContent =
         formatTokens(quota.monthStats?.totalTokens, lang) ?? '';
     }
   }
-  elements.providerStatus.textContent = providerStatusText(provider, quota, lang);
+  renderProviderStatus(elements.providerStatus, providerStatusText(provider, quota, lang), quota.status);
 }
 
 function renderNotificationPill(enabled, lang = currentLanguage()) {
@@ -1586,13 +1684,14 @@ function renderExtraUsage(extra) {
 }
 
 function renderMeter(meter, percent) {
-  const total = 40;
+  const total = Number(meter.dataset.segments ?? 40);
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
-  if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
+  if (meter.dataset.level === level && meter.dataset.filled === String(filled) && meter.children.length === total) return;
   meter.dataset.level = level;
   meter.dataset.filled = String(filled);
   meter.style.setProperty('--filled', filled); // width of the glow behind the filled run
+  meter.style.setProperty('--segments', total);
   if (meter.children.length !== total) {
     meter.replaceChildren();
     const fragment = document.createDocumentFragment();
@@ -1754,19 +1853,36 @@ function focusAfterViewChange(activeView, previousView) {
   });
 }
 
+function dashboardForProvider(provider) {
+  return provider === 'overview' ? elements.overviewView : provider === 'claude' ? elements.mainView : elements.providerView;
+}
+
 function renderActiveView() {
   const activeView = resolveView(currentState, requestedView);
   const previousView = renderedView;
   const viewChanged = activeView !== previousView;
+  const provider = activeProvider();
+  if (viewChanged || provider !== renderedProvider) stopEntranceSequence();
+  if (activeView !== 'main') lastEntranceAt = -Infinity;
   renderedView = activeView;
+  renderedProvider = provider;
   document.body.dataset.view = activeView;
+  renderNavigation(currentState);
+  const settings = activeView === 'settings';
+  elements.backButton.hidden = !settings;
+  elements.settingsTitle.hidden = !settings;
+  elements.providerHeading.hidden = settings;
+  elements.providerHeading.textContent = provider === 'overview' ? t('navigation.overview', currentLanguage()) : PROVIDER_NAMES[provider];
+  const showClaudeErrors = activeView === 'main' && (provider === 'overview' || provider === 'claude');
+  elements.errorText.hidden = !showClaudeErrors;
+  elements.reauthButton.hidden = !showClaudeErrors || !currentState?.needsReauth;
 
-  // 'main' is Claude's dashboard or the provider view, by the selected tab.
-  const mainPanel = activeProvider() === 'claude' ? elements.mainView : elements.providerView;
+  const mainPanel = dashboardForProvider(provider);
   const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
   crossfadeTo(viewMap[activeView], {
     onVisible: () => {
       if (activeView === 'settings' && currentState) renderSettings(currentState);
+      if (activeView === 'main' && previousView !== 'main') playEntranceSequence();
     },
     onSettled: () => {
       if (viewChanged) focusAfterViewChange(activeView, previousView);
@@ -1830,54 +1946,61 @@ function updateSliderFill(slider) {
 
 
 
-// The entrance choreography runs every time the window is shown — boot, and
-// each reopen from the tray or from minimized. It costs ~1s before the session
-// number lands on its final value, which is the whole point of the app, but
-// the reveal is what the window is *for* on a tray app: it says "this is fresh"
-// better than the numbers alone do.
-//
-// This is a deadline, not a duration: dropping `data-entering` deselects the
-// keyframes, so anything still running is cut off rather than finished. The
-// last step to land is the weekly meter's 40th segment, at
-// `39 * 6ms + 295ms + 210ms` = 739ms (see the `body[data-entering] #weeklyMeter`
-// rules in styles.css). Keep that sum under this number — at the old 12ms
-// stagger it was 973ms and the last six segments snapped instead of settling.
-const ENTER_SEQUENCE_MS = 900;
-const ENTER_DEDUPE_MS = 250;
-let enterSequenceTimer = null;
-let lastEntranceAt = -Infinity;
+function stopEntranceSequence() {
+  cancelAnimationFrame(windowEntranceFrame);
+  windowEntranceFrame = null;
+  clearTimeout(enterSequenceTimer);
+  enterSequenceTimer = null;
+  delete document.body.dataset.entering;
+  for (const view of [elements.overviewView, elements.mainView, elements.providerView]) delete view.dataset.entering;
+  for (const element of animatingElements.keys()) {
+    cancelCountUp(element);
+    const target = element.dataset.entryValue === '' ? null : Number(element.dataset.entryValue);
+    const setValue = element.classList.contains('stat-value') ? setCostValue : setPercentValue;
+    setValue(element, target);
+  }
+}
 
 function playEntranceSequence() {
-  // Two signals can describe the same show (the native `window-shown` and, if
-  // the webview ever does update its visibility, `visibilitychange`). Restarting
-  // the sequence milliseconds in reads as a stutter, so the second one loses.
+  if (!currentState || document.hidden || reducedMotion()) return;
+  const view = resolveView(currentState, requestedView) === 'main' ? dashboardForProvider(activeProvider()) : null;
   const now = performance.now();
-  if (now - lastEntranceAt < ENTER_DEDUPE_MS) return;
-  lastEntranceAt = now;
-  isEntering = true;
-  // Reopening inside the 900ms window would otherwise find the attribute still
-  // set and no CSS animation would restart. Drop it, force a reflow, re-add.
-  delete document.body.dataset.entering;
+  if (view?.dataset.entering && now - lastEntranceAt < ENTER_DEDUPE_MS) return;
+  if (view) lastEntranceAt = now;
+  stopEntranceSequence();
   void document.body.offsetWidth;
   document.body.dataset.entering = '1';
-  // Re-render now so the count-ups start with the CSS reveal instead of waiting
-  // for the next refresh tick, up to 30s away. Same state in, so the threshold
-  // sounds see no crossing and the view transition sees no change.
-  if (currentState) render(currentState);
-  clearTimeout(enterSequenceTimer);
+  if (view) {
+    view.dataset.entering = '1';
+    for (const element of view.querySelectorAll('[data-entry-value]')) {
+      if (element.dataset.entryValue === '') continue;
+      const cost = element.classList.contains('stat-value');
+      animateCountUp(element, Number(element.dataset.entryValue), cost ? setCostValue : setPercentValue, {
+        duration: cost ? 600 : 650,
+        delay: cost ? 440 : element.closest('[data-window="weekly"]') ? 380 : 310
+      });
+    }
+  }
   enterSequenceTimer = setTimeout(() => {
+    if (view) delete view.dataset.entering;
     delete document.body.dataset.entering;
+    enterSequenceTimer = null;
   }, ENTER_SEQUENCE_MS);
+}
+
+function queueWindowEntrance() {
+  cancelAnimationFrame(windowEntranceFrame);
+  windowEntranceFrame = requestAnimationFrame(() => {
+    windowEntranceFrame = null;
+    playEntranceSequence();
+  });
 }
 
 // The native signal, emitted by `windows_ctl::show_window` for every tray or
 // menu show and by the `Resized` handler for a taskbar restore. This is what
 // actually fires on Windows.
-// Subscribed here, at the bottom, rather than beside the other `window.siphon`
-// listeners: the module's top-level `await`s mean those run before this file's
-// tail, and an event arriving in that gap would hit `lastEntranceAt` in its
-// temporal dead zone. `?.` covers the bridge having bailed out.
-window.siphon?.onWindowShown?.(playEntranceSequence);
+// Coalesce native show/view/provider events before choosing the visible data.
+window.siphon?.onWindowShown?.(queueWindowEntrance);
 
 // Kept as a belt-and-braces second source: WebView2 does not update document
 // visibility when the native window is hidden, but a future runtime (or a
@@ -1885,7 +2008,7 @@ window.siphon?.onWindowShown?.(playEntranceSequence);
 // from playing over each other.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
-  playEntranceSequence();
+  queueWindowEntrance();
 });
 
 // The window is born hidden (`visible: false`) and shown from Rust's `setup()`
@@ -1894,4 +2017,4 @@ document.addEventListener('visibilitychange', () => {
 // entrance is simply lost, which is what happens under `npm start`. So play it
 // straight away whenever we load into a visible window; only a genuinely hidden
 // start waits for the event.
-if (!document.hidden) playEntranceSequence();
+if (!document.hidden) queueWindowEntrance();

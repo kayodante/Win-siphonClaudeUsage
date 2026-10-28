@@ -33,6 +33,9 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Features
 
+* **Overview** | The initial dashboard brings Claude, Codex and Antigravity quotas together in compact cards, with weekly mini-meters. Installed providers retain their individual tabs. Settings stays highlighted while open, and the panel header can hide or show the sidebar. Hover a provider card for its source reading time
+* **Provider navigation** | Dedicated pages keep the provider name in the page header, while Antigravity cards retain their model-family labels. Closed-source notices use an amber warning. Quota/count-up entrances play on app opening, tray restore and return from Settings; switching between provider tabs does not replay them. Reduced motion stays static
+
 * **Session quota** | Progress bar for your current 5-hour session with a reset countdown
 * **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint
 * **Codex and Antigravity** | Tabs on the side rail with their own session and weekly limits, pace indicators, and status dots, shown once either app is installed. Codex is read from the session logs Codex writes locally (no sign-in, no network, including Today and This Month token/cost estimates), so it reflects your last Codex turn on this PC. Antigravity is read from the running app and shows Gemini, Claude-and-GPT, and Gemini 4 Argon limits separately; while the app is closed, the last reading stays up with a note. A window whose reset has passed shows it is waiting for a new reading rather than a guessed 0%. Both get the same 70/90/100% and reset notifications and sounds as Claude (clicking a toast opens that provider's tab); the tray icon and widget stay on Claude

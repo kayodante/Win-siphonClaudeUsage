@@ -33,6 +33,9 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 
 ## Recursos
 
+* **Visão geral** | A tela inicial reúne as cotas de Claude, Codex e Antigravity em cartões compactos, com mini-indicadores semanais. Os provedores instalados mantêm suas abas individuais. Configurações permanece destacado enquanto estiver aberto, e o cabeçalho permite ocultar ou mostrar a barra lateral. Passe o mouse sobre o cartão de um provedor para consultar o horário da leitura de origem
+* **Navegação dos provedores** | As páginas dedicadas mantêm o nome do provedor no cabeçalho, e os cards do Antigravity preservam os nomes das famílias de modelos. O aviso de fonte fechada usa âmbar. A entrada das cotas e a contagem dos números acontecem ao abrir o app, restaurar pela bandeja e voltar de Configurações; trocar entre as abas dos provedores não repete a animação. Movimento reduzido permanece estático
+
 * **Cota da sessão** | Barra de progresso da sessão atual de 5 horas, com contagem regressiva até a redefinição
 * **Limites semanais** | Acompanha o limite semanal para todos os modelos a partir do endpoint de uso OAuth
 * **Codex e Antigravity** | Abas no trilho lateral com limite de sessão e semanal próprios, indicador de ritmo e pontos de status, que aparecem quando o app está instalado. O Codex é lido dos logs de sessão que ele grava localmente (sem login, sem rede, incluindo estimativas de tokens e custo de Hoje e Este Mês), então reflete sua última interação com o Codex neste PC. O Antigravity é lido do app aberto e mostra os limites de Gemini, de Claude e GPT e de Gemini 4 Argon separados; com o app fechado, a última leitura continua na tela com um aviso. Uma janela cujo reset já passou mostra que aguarda nova leitura, em vez de um 0% presumido. Os dois recebem as mesmas notificações e alertas sonoros de 70/90/100% e de redefinição do Claude (clicar na notificação abre a aba daquele provedor); o ícone da bandeja e o widget continuam no Claude

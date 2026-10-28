@@ -32,7 +32,8 @@ export function createViewSwitcher(views, {
       timer = null;
     }
     const outgoing = views.find(v => !v.hidden && v !== incoming);
-    if (!outgoing || interrupted) {
+    const duration = fadeMs();
+    if (!outgoing || interrupted || duration <= 0) {
       settle(incoming);
       onVisible();
       onSettled();
@@ -67,6 +68,6 @@ export function createViewSwitcher(views, {
       timer = null;
       settle(incoming);
       onSettled();
-    }, fadeMs());
+    }, duration);
   };
 }

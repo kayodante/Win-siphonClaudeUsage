@@ -19,6 +19,15 @@ test('unknown language falls back to English', () => {
   assert.equal(t('settings.language', 'fr'), 'Language');
 });
 
+test('overview navigation copy is translated in all supported languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const key of ['navigation.label', 'navigation.overview', 'navigation.hideSidebar', 'navigation.showSidebar']) {
+      assert.notEqual(t(key, lang), key);
+      if (lang !== 'en') assert.notEqual(t(key, lang), t(key, 'en'));
+    }
+  }
+});
+
 test('missing key returns the key', () => {
   assert.equal(t('missing.translation.key', 'pt-BR'), 'missing.translation.key');
 });

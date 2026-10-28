@@ -4,6 +4,10 @@ const STRINGS = Object.freeze({
   en: Object.freeze({
     'topbar.refresh': 'Refresh now',
     'topbar.settings': 'Settings',
+    'navigation.label': 'Navigation',
+    'navigation.overview': 'Overview',
+    'navigation.hideSidebar': 'Hide sidebar',
+    'navigation.showSidebar': 'Show sidebar',
     'topbar.minimize': 'Minimize',
     'topbar.close': 'Close',
 
@@ -197,6 +201,10 @@ const STRINGS = Object.freeze({
   'pt-BR': Object.freeze({
     'topbar.refresh': 'Atualizar agora',
     'topbar.settings': 'Configurações',
+    'navigation.label': 'Navegação',
+    'navigation.overview': 'Visão geral',
+    'navigation.hideSidebar': 'Ocultar barra lateral',
+    'navigation.showSidebar': 'Mostrar barra lateral',
     'topbar.minimize': 'Minimizar',
     'topbar.close': 'Fechar',
 
@@ -390,6 +398,10 @@ const STRINGS = Object.freeze({
   'ja': Object.freeze({
     'topbar.refresh': '今すぐ更新',
     'topbar.settings': '設定',
+    'navigation.label': 'ナビゲーション',
+    'navigation.overview': '概要',
+    'navigation.hideSidebar': 'サイドバーを非表示',
+    'navigation.showSidebar': 'サイドバーを表示',
     'topbar.minimize': '最小化',
     'topbar.close': '閉じる',
 
@@ -583,6 +595,10 @@ const STRINGS = Object.freeze({
   'ko': Object.freeze({
     'topbar.refresh': '지금 새로고침',
     'topbar.settings': '설정',
+    'navigation.label': '탐색',
+    'navigation.overview': '개요',
+    'navigation.hideSidebar': '사이드바 숨기기',
+    'navigation.showSidebar': '사이드바 표시',
     'topbar.minimize': '최소화',
     'topbar.close': '닫기',
 

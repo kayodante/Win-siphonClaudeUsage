@@ -101,7 +101,8 @@ test('status changes use atomic live regions and deduplicated update milestones'
 test('each main-window view and data card has a programmatic heading', () => {
   for (const [view, heading] of [
     ['onboardView', 'onboardingHeading'],
-    ['mainView', 'sessionHeading'],
+    ['overviewView', 'providerHeading'],
+    ['mainView', 'providerHeading'],
     ['providerView', 'providerHeading'],
     ['settingsView', 'settingsTitle']
   ]) assert.match(elementWithId(view), new RegExp(`aria-labelledby="${heading}"`));
@@ -168,6 +169,7 @@ test('Pill weekly switch uses a visible translated label and is limited to the P
 test('icon-only rail buttons carry translated accessible names and tooltips', () => {
   for (const [id, key] of [
     ['refreshButton', 'topbar.refresh'],
+    ['overviewButton', 'navigation.overview'],
     ['settingsButton', 'topbar.settings'],
     ['openClaudeLink', 'footer.openClaude'],
     ['footerQuitButton', 'footer.quit']
@@ -176,7 +178,9 @@ test('icon-only rail buttons carry translated accessible names and tooltips', ()
     assert.match(el, new RegExp(`data-i18n-aria-label="${key.replace('.', '\.')}"`), `#${id} aria-label`);
     assert.match(el, new RegExp(`data-i18n-title="${key.replace('.', '\.')}"`), `#${id} title`);
   }
-  assert.match(elementWithId('providerClaudeButton'), /aria-current="page"[^>]*aria-label="Claude"/);
+  assert.match(elementWithId('providerClaudeButton'), /aria-label="Claude"/);
+  assert.doesNotMatch(elementWithId('providerClaudeButton'), /aria-current/, 'selection is resolved from signed-in view state');
+  assert.match(elementWithId('railToggleButton'), /aria-controls="navigationRail"[^>]+aria-expanded="true"/);
 });
 
 test('Codex and Antigravity tabs are named and start hidden until detected', () => {
@@ -200,6 +204,6 @@ test('the main window min width matches the Rust restore floor', () => {
 
 test('quota suffixes are read, so "used" and "left" do not sound the same', () => {
   const suffixes = html.match(/<span class="quota-suffix"[^>]*>/g);
-  assert.equal(suffixes.length, 4, 'Claude session + weekly, provider session + weekly');
+  assert.equal(suffixes.length, 6, 'Claude, provider and overview session + weekly');
   for (const suffix of suffixes) assert.doesNotMatch(suffix, /aria-hidden/);
 });

@@ -8,9 +8,22 @@ export function resolveView(state, requestedView = 'main') {
 // Claude always has a tab; Codex and Antigravity only while their state
 // exists (the provider is installed). A tab that disappears falls back to Claude.
 export function resolveProvider(state, requested = 'claude') {
+  if (requested === 'overview') return 'overview';
   return (requested === 'codex' || requested === 'antigravity') && state?.[requested]
     ? requested
     : 'claude';
+}
+
+export function resolveNavigation(state, requestedView, requestedProvider) {
+  const view = resolveView(state, requestedView);
+  return view === 'onboard' ? null : view === 'settings' ? 'settings' : resolveProvider(state, requestedProvider);
+}
+
+export function overviewProviders(state) {
+  return [
+    { id: 'claude', sections: [{ id: 'claude', session: state?.quota?.session ?? null, weekly: state?.quota?.weeklyAll ?? null }] },
+    ...['codex', 'antigravity'].filter(id => state?.[id]).map(id => ({ id, sections: state[id].sections ?? [] }))
+  ];
 }
 
 export function extractChannelPercents(state) {

@@ -13,6 +13,10 @@ is added above it.
 
 ### Added
 
+- An Overview dashboard with compact Claude, Codex and Antigravity quota cards,
+  20-segment weekly meters, and provider-source timestamps on hover and for
+  screen readers. Missing, rolled-over and blocked readings retain their meaning.
+
 - Codex and Antigravity tabs on the side rail, each with its own 5-hour
   session and weekly limits, shown once the app is installed. Codex is read
   from the session logs Codex writes on this PC (no sign-in, no network), so
@@ -31,6 +35,22 @@ is added above it.
   "May run out" names the time the session is projected to hit 100%.
 
 ### Changed
+
+- Filled sidebar buttons stack the shared border tokens for default, hover and
+  active backgrounds; the active fill stays unchanged on hover.
+- Dedicated provider cards no longer repeat the page's provider name;
+  Antigravity model-family labels remain. Closed-source messages use an amber
+  warning with an icon, and read errors use the existing destructive palette.
+- Overview and every dedicated provider page share the quota/count-up entrance
+  on opening, tray restore and return from Settings. Provider-tab navigation is
+  local and does not replay it. Interrupted entries settle their readings,
+  refreshes cannot consume a pending return, and reduced-motion transitions
+  settle immediately.
+
+- Overview is the initial dashboard. The shared panel header names the current
+  view and can hide or show the sidebar. Settings keeps its active lime icon and
+  edge highlight while open, including when opened from the tray; Back restores
+  the previously selected dashboard.
 
 - The main window gains a side rail: the Claude provider tab on top, and
   refresh, notifications, settings, the claude.ai usage page and quit at the

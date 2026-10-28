@@ -286,6 +286,7 @@ h3 {
   background: var(--shell-bg);
   border-radius: var(--radius-sm);
   box-shadow: var(--inner-light);
+  padding: 1px;
 }
 
 .shell-body {
@@ -304,7 +305,7 @@ h3 {
   min-height: 0;
   overflow: hidden;
   background: var(--bg-page);
-  border-top-left-radius: var(--radius-2xl);
+  border-top-left-radius: var(--radius-sm);
   box-shadow: var(--inner-light);
 }
 
@@ -319,7 +320,56 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+  min-height: 60px;
+  flex-shrink: 0;
+  padding: var(--space-7) var(--space-9);
+}
+
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--border-subtle);
+}
+
+.panel-toggle img {
+  display: block;
+}
+
+.panel-header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--subtle-foreground);
+}
+
+.panel-header .settings-title {
+  margin-left: auto;
+  padding: 0;
+  color: var(--foreground);
+}
+
+.panel-header .back-btn {
+  padding: 0;
+}
+
+body[data-view="onboard"] .panel-header {
+  display: none;
 }
 
 /* Onboarding has no rail and no well: the copy sits straight on the frame. */
@@ -427,15 +477,14 @@ body[data-view="onboard"] .topbar .brand {
    RAIL
 ═══════════════════════════════════════════════════════════ */
 
-/* Provider tabs on top, app actions pinned to the bottom. Every target is
-   40×40 around a 20px glyph, stacked 8px apart. */
+/* Provider targets are 38px, account actions 36px; both exceed the 24px minimum. */
 .rail {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-8);
   flex-shrink: 0;
-  width: 64px;
+  width: 62px;
   padding: var(--space-8) var(--space-5) var(--space-9);
 }
 
@@ -454,7 +503,7 @@ body[data-view="onboard"] .topbar .brand {
 }
 
 .rail-divider {
-  width: 40px;
+  width: 38px;
   height: 1px;
   flex-shrink: 0;
   background: var(--border-strong);
@@ -462,18 +511,18 @@ body[data-view="onboard"] .topbar .brand {
 
 .rail-provider {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--border-subtle);
+  background: var(--border-strong);
   color: var(--subtle-foreground);
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease),
+  transition: background var(--duration-fast) var(--ease),
     transform var(--duration-press) var(--ease-press);
 }
 
@@ -496,18 +545,29 @@ body[data-view="onboard"] .topbar .brand {
   background: var(--level-critical);
 }
 
+.rail-provider:hover {
+  background: linear-gradient(var(--border-subtle), var(--border-subtle)), var(--border-strong);
+  filter: none;
+}
+
 .rail-provider[aria-current="page"] {
-  background: var(--border-strong);
+  background: linear-gradient(var(--border-strong), var(--border-strong)), var(--border-strong);
   color: var(--accent);
   box-shadow: var(--inner-light);
 }
 
-.rail-provider:hover {
-  filter: brightness(1.15);
+.overview-icon-active,
+#overviewButton[aria-current="page"] .overview-icon-default {
+  display: none;
+}
+
+#overviewButton[aria-current="page"] .overview-icon-active {
+  display: block;
 }
 
 .rail-provider:focus-visible,
-.rail-btn:focus-visible {
+.rail-btn:focus-visible,
+.panel-toggle:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: var(--space-0);
 }
@@ -521,18 +581,34 @@ body[data-view="onboard"] .topbar .brand {
 /* .icon-button owns colour, hover and press; the rail only grows the target.
    Doubled class: `.icon-button` comes later in the file at 28×28. */
 .icon-button.rail-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
+  border-radius: 10px;
 }
 
 .icon-button.rail-btn svg,
 .icon-button.rail-btn .notif-icon-wrap {
-  width: var(--space-8);
-  height: var(--space-8);
+  width: var(--space-7);
+  height: var(--space-7);
+}
+
+.rail-account-actions .rail-btn {
+  background: var(--border-strong);
+}
+
+.rail-account-actions .rail-btn:hover {
+  background: linear-gradient(var(--border-subtle), var(--border-subtle)), var(--border-strong);
+  filter: none;
+}
+
+.rail-account-actions .rail-btn[aria-current="page"] {
+  background: linear-gradient(var(--border-strong), var(--border-strong)), var(--border-strong);
+  color: var(--accent);
+  box-shadow: var(--inner-light);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -557,6 +633,7 @@ body[data-view="onboard"] .app-footer {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: -0.02em;
+  line-height: 16px;
 }
 
 /* The stamp is centred, so the leftover space on each side becomes a rule —
@@ -1175,6 +1252,171 @@ body[data-view="onboard"] .app-footer {
   display: none;
 }
 
+:is(.provider-status, .overview-status)[data-tone="warning"],
+:is(.provider-status, .overview-status)[data-tone="error"] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  text-align: left;
+}
+
+:is(.provider-status, .overview-status)[data-tone="warning"] {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+:is(.provider-status, .overview-status)[data-tone="error"] {
+  color: var(--destructive);
+  background: var(--destructive-soft);
+}
+
+:is(.provider-status, .overview-status) > svg {
+  width: var(--space-7);
+  height: var(--space-7);
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+:is(.provider-status, .overview-status)[data-tone="info"] > svg {
+  display: none;
+}
+
+.overview-card,
+.overview-sections,
+.overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.overview-card {
+  padding: var(--space-7);
+}
+
+.overview-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+}
+
+.overview-title [data-overview-icon],
+.overview-title svg {
+  display: block;
+  width: var(--space-6);
+  height: var(--space-6);
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+.overview-card .quota-row {
+  gap: var(--space-1);
+}
+
+.overview-card .quota-row-head {
+  align-items: center;
+}
+
+.overview-card .quota-value-group {
+  gap: 0;
+  line-height: 1;
+}
+
+.overview-card .quota-percent {
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+
+.overview-card .quota-suffix {
+  font-size: var(--text-md);
+}
+
+.overview-card .reset-line,
+.overview-card .quota-row-label {
+  font-size: var(--text-xs);
+  line-height: 12px;
+}
+
+.overview-card .quota-pace {
+  min-height: 14px;
+  font-size: var(--text-xs);
+  padding: var(--space-0) var(--space-2);
+  line-height: 10px;
+}
+
+.overview-card .overview-compact {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.overview-compact .quota-row-head {
+  gap: var(--space-2);
+  justify-content: flex-start;
+}
+
+.overview-card .overview-compact .quota-percent {
+  font-size: var(--text-sm);
+}
+
+.overview-compact .meter {
+  flex-shrink: 0;
+  width: 80px;
+  height: var(--space-2);
+}
+
+.overview-compact .meter-segment {
+  height: var(--space-2);
+}
+
+.overview-compact .meter::before {
+  display: none;
+}
+
+.overview-compact .quota-suffix {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.overview-section--compact {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: calc(var(--space-5) - 1px);
+  gap: var(--space-1);
+}
+
+.overview-section--compact:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.overview-group-title {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 12px;
+  color: var(--subtle-foreground);
+}
+
+.overview-status {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--subtle-foreground);
+}
+
+.overview-status:empty {
+  display: none;
+}
+
 .quota-pace {
   display: inline-flex;
   align-items: center;
@@ -1201,6 +1443,10 @@ body[data-view="onboard"] .app-footer {
 }
 
 /* CORES DO TEXTO DO PACE BADGE*/
+
+.quota-pace[data-status="no_data"] {
+  color: color-mix(in oklch, var(--subtle-foreground) 80%, var(--foreground));
+}
 
 .quota-pace[data-status="on_track"] {
   color: var(--success);
@@ -2808,7 +3054,7 @@ button:focus-visible {
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
-  width: calc((100% + 1px) * var(--filled, 0) / 40 - 1px);
+  width: max(0px, calc((100% + 1px) * var(--filled, 0) / var(--segments, 40) - 1px));
   border-radius: 999px;
   background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
   opacity: 0.5;
@@ -3092,45 +3338,45 @@ body[data-entering] {
   animation: windowEnter var(--duration-enter) var(--ease-out) both;
 }
 
-body[data-entering] #sessionPercent {
+.view[data-entering] .quota-percent {
   animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 310ms both;
 }
-body[data-entering] #sessionPace {
+.view[data-entering] .quota-pace {
   animation: subtleFadeUp 160ms var(--ease-out) 240ms both;
 }
-body[data-entering] #sessionMeter .meter-segment {
+.view[data-entering] .meter-segment {
   transform-origin: bottom;
   animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 6ms + 230ms);
 }
-body[data-entering] #sessionMeter .meter-segment.active {
+.view[data-entering] .meter-segment.active {
   animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 6ms + 230ms);
 }
 
-body[data-entering] #weeklyPercent {
+.view[data-entering] [data-window="weekly"] .quota-percent {
   animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 380ms both;
 }
-body[data-entering] #weeklyMeter .meter-segment {
+.view[data-entering] [data-window="weekly"] .meter-segment {
   transform-origin: bottom;
   animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 6ms + 295ms);
 }
-body[data-entering] #weeklyMeter .meter-segment.active {
+.view[data-entering] [data-window="weekly"] .meter-segment.active {
   animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 6ms + 295ms);
 }
 
-body[data-entering] #todayCost {
+.view[data-entering] .stat-value {
   animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
 }
-body[data-entering] #monthCost {
+.view[data-entering] .cost-card:nth-child(2) .stat-value {
   animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 470ms both;
 }
-body[data-entering] #todayTokens {
+.view[data-entering] .cost-tokens {
   animation: subtleFadeUp 160ms var(--ease-out) 350ms both;
 }
-body[data-entering] #monthTokens {
+.view[data-entering] .cost-card:nth-child(2) .cost-tokens {
   animation: subtleFadeUp 160ms var(--ease-out) 380ms both;
 }
 
@@ -3271,17 +3517,7 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   }
 
   body[data-entering],
-  body[data-entering] #sessionPercent,
-  body[data-entering] #sessionPace,
-  body[data-entering] #sessionMeter .meter-segment,
-  body[data-entering] #sessionMeter .meter-segment.active,
-  body[data-entering] #weeklyPercent,
-  body[data-entering] #weeklyMeter .meter-segment,
-  body[data-entering] #weeklyMeter .meter-segment.active,
-  body[data-entering] #todayCost,
-  body[data-entering] #monthCost,
-  body[data-entering] #todayTokens,
-  body[data-entering] #monthTokens,
+  body[data-entering] .view[data-entering] :is(.quota-percent, .quota-pace, .meter-segment, .meter-segment.active, .stat-value, .cost-tokens),
   .data-updated,
   body[data-refreshing="true"] #refreshButton svg,
   .notif-badge.notif-pop,
@@ -3352,6 +3588,11 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   .offline-banner-dismiss:hover,
   .update-banner-dismiss:hover {
     background: transparent;
+  }
+
+  .rail-provider:hover:not([aria-current="page"]),
+  .rail-account-actions .rail-btn:hover:not([aria-current="page"]) {
+    background: var(--border-strong);
   }
 }
 
