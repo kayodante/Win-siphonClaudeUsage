@@ -20,6 +20,14 @@
 }
 
 @font-face {
+  font-family: "Bitcount Single";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/BitcountSingle-VariableFont_CRSV,ELSH,ELXP,slnt,wght.ttf") format("truetype");
+}
+
+@font-face {
   font-family: "Geist Pixel";
   font-style: normal;
   font-weight: 400;
@@ -97,7 +105,7 @@
   /* ── Typography: Families ── */
   --font-sans:  "Geist", "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono:  "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
-  --font-pixel: "Geist Pixel", "Geist Mono", ui-monospace, monospace;
+  --font-pixel: "Bitcount Single", "Geist Pixel", "Geist Mono", ui-monospace, monospace;
 
   /* ── Typography: Scale ── */
   --text-xs:   10px;
@@ -551,7 +559,7 @@ body[data-view="onboard"] .topbar .brand {
 }
 
 .rail-provider[aria-current="page"] {
-  background: linear-gradient(var(--border-strong), var(--border-strong)), var(--border-strong);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--border-strong);
   color: var(--accent);
   box-shadow: var(--inner-light);
 }
@@ -606,9 +614,14 @@ body[data-view="onboard"] .topbar .brand {
 }
 
 .rail-account-actions .rail-btn[aria-current="page"] {
-  background: linear-gradient(var(--border-strong), var(--border-strong)), var(--border-strong);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--border-strong);
   color: var(--accent);
   box-shadow: var(--inner-light);
+}
+
+.rail-account-actions #footerQuitButton:hover {
+  color: var(--destructive);
+  background: var(--destructive-soft);
 }
 
 /* ═══════════════════════════════════════════════════════════
