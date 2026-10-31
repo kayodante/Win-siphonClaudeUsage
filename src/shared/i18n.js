@@ -33,7 +33,7 @@ const STRINGS = Object.freeze({
     'onboarding.submit': 'Save',
     'onboarding.cancel': 'Cancel',
 
-    'home.session': 'Current Session',
+    'home.session': '5h Session',
     'home.weekly': 'Weekly Limit',
     'provider.antigravity.thirdParty': 'Claude and GPT',
     'provider.codex.empty': 'Use Codex once on this PC to see its limits.',
@@ -230,7 +230,7 @@ const STRINGS = Object.freeze({
     'onboarding.submit': 'Salvar',
     'onboarding.cancel': 'Cancelar',
 
-    'home.session': 'Sessão Atual',
+    'home.session': 'Sessão 5h',
     'home.weekly': 'Limite Semanal',
     'provider.antigravity.thirdParty': 'Claude e GPT',
     'provider.codex.empty': 'Use o Codex uma vez neste PC para ver os limites.',
@@ -427,7 +427,7 @@ const STRINGS = Object.freeze({
     'onboarding.submit': '保存',
     'onboarding.cancel': 'キャンセル',
 
-    'home.session': '現在のセッション',
+    'home.session': '5時間セッション',
     'home.weekly': '週間制限',
     'provider.antigravity.thirdParty': 'ClaudeとGPT',
     'provider.codex.empty': 'このPCでCodexを一度使うと制限が表示されます。',
@@ -624,7 +624,7 @@ const STRINGS = Object.freeze({
     'onboarding.submit': '저장',
     'onboarding.cancel': '취소',
 
-    'home.session': '현재 세션',
+    'home.session': '5시간 세션',
     'home.weekly': '주간 한도',
     'provider.antigravity.thirdParty': 'Claude 및 GPT',
     'provider.codex.empty': '이 PC에서 Codex를 한 번 사용하면 한도가 표시됩니다.',

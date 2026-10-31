@@ -55,7 +55,8 @@ test('settings tabs implement the complete automatic-activation keyboard pattern
   assert.match(renderer, /tabs\[name\]\.tabIndex = 0;/);
   assert.match(renderer, /if \(focus\) tabs\[name\]\.focus\(\);/);
   assert.match(renderer, /clearTimeout\(_tabTransitionTimer\);/);
-  assert.match(renderer, /panel\.hidden = panelName !== currentSettingsTab;/);
+  // Mid-swap, only a third panel is dropped; the arriving one leaves from where it is.
+  assert.match(renderer, /if \(panelName === currentSettingsTab \|\| panelName === name\) continue;\s+panel\.hidden = true;/);
 });
 
 test('settings navigation moves focus to context and restores the invoking control', () => {
@@ -166,7 +167,7 @@ test('Pill weekly switch uses a visible translated label and is limited to the P
   assert.match(renderer, /setPreference\('floating\.showWeekly', event\.target\.checked\)/);
 });
 
-test('icon-only rail buttons carry translated accessible names and tooltips', () => {
+test('icon-only rail and header buttons carry translated accessible names and tooltips', () => {
   for (const [id, key] of [
     ['refreshButton', 'topbar.refresh'],
     ['overviewButton', 'navigation.overview'],
@@ -204,6 +205,6 @@ test('the main window min width matches the Rust restore floor', () => {
 
 test('quota suffixes are read, so "used" and "left" do not sound the same', () => {
   const suffixes = html.match(/<span class="quota-suffix"[^>]*>/g);
-  assert.equal(suffixes.length, 6, 'Claude, provider and overview session + weekly');
+  assert.equal(suffixes.length, 4, 'Claude page and the shared quota group, session + weekly');
   for (const suffix of suffixes) assert.doesNotMatch(suffix, /aria-hidden/);
 });

@@ -87,6 +87,34 @@ test('an uninterrupted switch settles on the new view', () => {
   assertOnlyVisible(views, codex);
 });
 
+test('a switch mid-fade parks the arriving view instead of snapping it away', () => {
+  const { show, claude, codex, settings } = setup();
+  show(codex);
+  show(settings);
+  assert.equal(claude.hidden, true, 'the view already leaving is dropped');
+  assert.equal(codex.hidden, false, 'the arriving view leaves from where its fade reached');
+  assert.equal(codex.style.position, 'absolute');
+  assert.equal(codex.style.opacity, '0');
+  assert.equal(settings.hidden, false);
+});
+
+test('a repeat call for the arriving view lets its fade run on', () => {
+  const { clock, show, claude, codex } = setup();
+  show(codex);
+  show(codex);
+  assert.equal(claude.style.position, 'absolute', 'the outgoing view is still fading');
+  clock.runAll();
+  assert.equal(claude.hidden, true);
+  assert.equal(codex.style.opacity, '');
+});
+
+test('direction decides which way each view travels', () => {
+  const { show, claude, codex } = setup();
+  show(codex, { direction: -1 });
+  assert.equal(claude.style.transform, 'translateY(6px)');
+  assert.equal(codex.style.transform, 'translateY(-6px)');
+});
+
 test('each switch settles exactly once, and the cancelled one never does', () => {
   const { clock, show, claude, codex } = setup();
   const settled = [];

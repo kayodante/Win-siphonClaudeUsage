@@ -48,10 +48,6 @@
           </button>
         </div>
         <div class="rail-actions">
-          <button class="icon-button rail-btn" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
-            <!-- Carbon: Restart -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
-          </button>
           <button type="button" class="icon-button rail-btn notif-badge" id="notificationState" data-tone="accent">
             <span id="notificationStateText" class="notif-label" data-i18n="home.notif.on">Notify reset</span>
             <span class="notif-icon-wrap" aria-hidden="true">
@@ -92,6 +88,10 @@
         </button>
         <span class="panel-title" id="providerHeading" role="heading" aria-level="1" tabindex="-1">Overview</span>
         <span class="settings-title" id="settingsTitle" role="heading" aria-level="1" tabindex="-1" data-i18n="settings.title" hidden>Settings</span>
+        <button type="button" class="icon-button panel-refresh" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
+          <!-- Carbon: Restart -->
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
+        </button>
       </header>
 
       <div class="shell-scroll">
@@ -296,8 +296,32 @@
       <template id="overviewCardTemplate">
         <section class="card overview-card">
           <div class="overview-title">
-            <span data-overview-icon aria-hidden="true"></span>
-            <span role="heading" aria-level="2" data-overview-title></span>
+            <!-- The title opens the provider's own page; a click anywhere else
+                 on the card that is not another control does the same. -->
+            <span class="overview-heading" role="heading" aria-level="2">
+              <button type="button" class="overview-open" data-overview-open>
+                <span data-overview-icon aria-hidden="true"></span>
+                <span data-overview-title></span>
+                <!-- Carbon: ChevronRight -->
+                <svg class="overview-chevron" viewBox="0 0 32 32" aria-hidden="true"><path d="M22 16L12 26l-1.4-1.4L19.2 16 10.6 7.4 12 6z"/></svg>
+              </button>
+            </span>
+            <span class="overview-title-end">
+            <!-- Shown only when the reading is old; the full sentence is the
+                 card's accessible description. -->
+            <span class="overview-reading" data-overview-stale aria-hidden="true" hidden>
+              <!-- Carbon: Time -->
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 30a14 14 0 1 1 14-14 14 14 0 0 1-14 14zm0-26a12 12 0 1 0 12 12A12 12 0 0 0 16 4z"/><path d="M20.59 22L15 16.41V7h2v8.58l5 5.01L20.59 22z"/></svg>
+              <span data-stale-text></span>
+            </span>
+            <span class="peak-badge" data-overview-peak hidden>
+              <span data-peak-label></span>
+              <button type="button" class="cost-info-btn" data-peak-info>
+                <!-- Carbon: Information -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+              </button>
+            </span>
+            </span>
           </div>
           <div class="overview-sections" data-overview-sections></div>
           <p class="overview-status" data-overview-status role="status" aria-live="polite" hidden>
@@ -311,96 +335,81 @@
       <template id="overviewSectionTemplate">
         <div class="overview-section">
           <span class="overview-group-title" role="heading" aria-level="3" data-group-title hidden></span>
+          <!-- Rows are flat grids: the same children lay out as the large
+               session row or as a compact two-line row (.overview-compact). -->
           <div class="quota-row" data-window="session">
-            <div class="quota-row-head">
-              <span class="quota-row-label" data-label></span>
-              <span class="quota-value-group">
-                <span class="quota-percent" data-percent>--</span>
-                <span class="quota-suffix" data-suffix></span>
-              </span>
-              <div class="quota-pace" data-pace data-status="no_data" tabindex="0">--</div>
-            </div>
+            <span class="quota-row-label" data-label></span>
+            <span class="quota-value-group">
+              <span class="quota-percent" data-percent>--</span>
+              <span class="quota-suffix" data-suffix></span>
+            </span>
+            <div class="quota-pace" data-pace data-status="no_data" tabindex="0">--</div>
             <div class="meter" data-meter aria-hidden="true"></div>
             <span class="reset-line" data-reset>--</span>
           </div>
           <div class="quota-row overview-compact" data-window="weekly">
-            <div class="quota-row-head">
-              <span class="quota-row-label" data-label></span>
-              <span class="quota-value-group">
-                <span class="quota-percent" data-percent>--</span>
-                <span class="quota-suffix" data-suffix></span>
-              </span>
-            </div>
-            <div class="meter" data-meter data-segments="20" aria-hidden="true"></div>
-            <span class="reset-line notif-label" data-reset>--</span>
+            <span class="quota-row-label" data-label></span>
+            <span class="quota-value-group">
+              <span class="quota-percent" data-percent>--</span>
+              <span class="quota-suffix" data-suffix></span>
+            </span>
+            <div class="meter" data-meter aria-hidden="true"></div>
+            <span class="reset-line" data-reset>--</span>
           </div>
           <p class="overview-status" data-section-status></p>
         </div>
       </template>
 
       <section id="mainView" class="view" aria-labelledby="providerHeading" hidden>
-        <section class="card quota-panel" data-window="session" aria-labelledby="sessionHeading">
-          <div class="card-eyebrow card-eyebrow-row">
-            <span class="card-eyebrow-left">
-              <!-- Carbon: Lightning -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
-              <span id="sessionHeading" role="heading" aria-level="2" data-i18n="home.session">Current Session</span>
-            </span>
-            <span id="peakHoursBadge" class="peak-badge" hidden>
-              <span data-i18n="home.peakHours">Peak</span>
-              <button type="button" class="cost-info-btn" id="peakHoursInfo" tabindex="0" aria-label="Peak hours info">
-                <!-- Carbon: Information -->
-                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
-              </button>
-            </span>
-          </div>
-          <div class="quota-headline">
-            <span class="quota-value-group">
-              <span class="quota-percent" id="sessionPercent">--</span>
-              <span class="quota-suffix" id="sessionQuotaSuffix"></span>
-            </span>
-            <div class="quota-pace-stack">
+        <!-- Same card and row grid as the Overview card, without the provider
+             title the panel header already shows. -->
+        <section class="card overview-card" aria-labelledby="sessionHeading">
+          <div class="overview-section">
+            <div class="quota-row" data-window="session">
+              <span class="quota-row-label" id="sessionHeading" role="heading" aria-level="2" data-i18n="home.session">5h Session</span>
+              <span id="peakHoursBadge" class="peak-badge" hidden>
+                <span data-i18n="home.peakHours">Peak</span>
+                <button type="button" class="cost-info-btn" id="peakHoursInfo" tabindex="0" aria-label="Peak hours info">
+                  <!-- Carbon: Information -->
+                  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+                </button>
+              </span>
+              <span class="quota-value-group">
+                <span class="quota-percent" id="sessionPercent">--</span>
+                <span class="quota-suffix" id="sessionQuotaSuffix"></span>
+              </span>
               <div id="sessionPace" class="quota-pace" data-status="no_data" tabindex="0" aria-describedby="sessionPaceHint">--</div>
               <span id="sessionPaceHint" hidden></span>
+              <div id="sessionMeter" class="meter" aria-hidden="true"></div>
+              <span id="sessionReset" class="reset-line">--</span>
+            </div>
+            <div class="quota-row overview-compact" data-window="weekly">
+              <span class="quota-row-label" id="weeklyHeading" role="heading" aria-level="2" data-i18n="home.weekly">Weekly Limit</span>
+              <span class="quota-value-group">
+                <span class="quota-percent" id="weeklyPercent">--</span>
+                <span class="quota-suffix" id="weeklyQuotaSuffix"></span>
+              </span>
+              <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
+              <span id="weeklyReset" class="reset-line">--</span>
             </div>
           </div>
-          <div id="sessionMeter" class="meter" aria-hidden="true"></div>
-          <div class="quota-meta">
-            <span id="sessionReset" class="reset-line">--</span>
-          </div>
         </section>
 
-        <section class="card quota-panel" data-window="weekly" aria-labelledby="weeklyHeading">
-          <div class="card-eyebrow">
-            <!-- Carbon: ArrayDateTime -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20,14c-3.3137,0-6,2.6863-6,6s2.6863,6,6,6,6-2.6863,6-6-2.6863-6-6-6ZM21.5859,23l-2.5859-2.5854v-4.4143h2v3.5857l2,2-1.4141,1.4141ZM8,9h3v2.0001h2v-2.0001h6v2.0001h2v-2.0001h3v4h2v-4c0-1.1-.9-2-2-2h-3v-2h-2v2h-6v-2h-2v2h-3c-1.1,0-2,.9-2,2v14c0,1.1.9,2,2,2h4v-2h-4v-14ZM4,24h-2v4c0,1.1.9,2,2,2h4v-2h-4v-4ZM28,28h-4v2h4c1.1,0,2-.9,2-2v-4h-2v4ZM4,4h4v-2h-4c-1.1,0-2,.9-2,2v4h2v-4ZM28,2h-4v2h4v4h2v-4c0-1.1-.9-2-2-2Z"/></svg>
-            <span id="weeklyHeading" role="heading" aria-level="2" data-i18n="home.weekly">Weekly Limit</span>
-          </div>
-          <div class="quota-headline">
-            <span class="quota-value-group">
-              <span class="quota-percent" id="weeklyPercent">--</span>
-              <span class="quota-suffix" id="weeklyQuotaSuffix"></span>
-            </span>
-          </div>
-          <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
-          <div class="quota-meta">
-            <span id="weeklyReset" class="reset-line">--</span>
-          </div>
-        </section>
-
-        <section class="card quota-panel quota-panel--extra" id="extraUsageCard" aria-labelledby="extraUsageHeading" hidden>
-          <div class="card-eyebrow">
-            <!-- Carbon: Wallet -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,6H6A2,2,0,0,0,4,8V24a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V8A2,2,0,0,0,26,6Zm0,2v3H6V8ZM6,24V13H26V24Z"/><path d="M21 18H24V20H21z"/></svg>
-            <span id="extraUsageHeading" role="heading" aria-level="2" data-i18n="home.extraUsage">Extra usage</span>
-          </div>
-          <div class="quota-headline quota-headline--extra">
+        <section class="card quota-panel--extra" id="extraUsageCard" aria-labelledby="extraUsageHeading" hidden>
+          <div class="extra-usage-data">
+            <span id="extraUsageHeading" class="extra-usage-label" role="heading" aria-level="2" data-i18n="home.extraUsage">Extra usage</span>
             <span class="quota-credits">
               <span class="quota-credits-used" id="extraUsedCredits">--</span>
               <span class="quota-credits-sep" aria-hidden="true">/</span>
               <span class="quota-credits-limit" id="extraMonthlyLimit">--</span>
             </span>
           </div>
+          <!-- Share of the monthly limit spent, coloured like the session meter. -->
+          <svg class="extra-gauge" id="extraGauge" viewBox="0 0 32 32" aria-hidden="true">
+            <circle class="extra-gauge-track" cx="16" cy="16" r="14.4" pathLength="100"/>
+            <circle class="extra-gauge-glow" cx="16" cy="16" r="14.4" pathLength="100"/>
+            <circle class="extra-gauge-fill" cx="16" cy="16" r="14.4" pathLength="100"/>
+          </svg>
         </section>
 
         <section class="grid">
@@ -435,8 +444,8 @@
       <p id="errorText" class="error" role="alert" aria-live="assertive" aria-atomic="true"></p>
       <button id="reauthButton" class="reauth-button" hidden></button>
 
-      <!-- Codex / Antigravity: one card per quota group, built from
-           #quotaGroupTemplate. The heading names the provider shown. -->
+      <!-- Codex / Antigravity: one card per quota group, each holding a group
+           from #overviewSectionTemplate. The heading names the provider shown. -->
       <section id="providerView" class="view" aria-labelledby="providerHeading" hidden>
         <div id="providerGroups" class="provider-groups"></div>
         <section id="providerCostGrid" class="grid" hidden>
@@ -470,35 +479,6 @@
           <span data-status-text></span>
         </p>
       </section>
-
-      <template id="quotaGroupTemplate">
-        <section class="card quota-panel quota-group">
-          <span class="card-eyebrow" role="heading" aria-level="2" data-group-title></span>
-          <div class="quota-row" data-window="session">
-            <span class="quota-row-label" data-label></span>
-            <div class="quota-row-head">
-              <span class="quota-value-group">
-                <span class="quota-percent" data-percent>--</span>
-                <span class="quota-suffix" data-suffix></span>
-              </span>
-              <div class="quota-pace" data-pace data-status="no_data" tabindex="0">--</div>
-            </div>
-            <div class="meter" data-meter aria-hidden="true"></div>
-            <span class="reset-line" data-reset>--</span>
-          </div>
-          <div class="quota-row" data-window="weekly">
-            <div class="quota-row-head">
-              <span class="quota-row-label" data-label></span>
-              <span class="quota-value-group">
-                <span class="quota-percent" data-percent>--</span>
-                <span class="quota-suffix" data-suffix></span>
-              </span>
-            </div>
-            <div class="meter" data-meter aria-hidden="true"></div>
-            <span class="reset-line" data-reset>--</span>
-          </div>
-        </section>
-      </template>
 
       <section id="settingsView" class="view settings-stack" aria-labelledby="settingsTitle" hidden>
         <div class="account-card">

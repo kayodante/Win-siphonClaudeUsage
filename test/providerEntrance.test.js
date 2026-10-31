@@ -26,7 +26,7 @@ function setup({ reduced = false } = {}) {
   const view = () => ({ hidden: true, dataset: {}, style: {}, getBoundingClientRect: () => ({ width: 352 }), querySelectorAll() { return this.readings; }, readings: [reading(11), reading(2, true)] });
   const elements = {
     onboardView: view(), overviewView: view(), mainView: view(), providerView: view(), settingsView: view(),
-    backButton: {}, settingsTitle: {}, providerHeading: {}, errorText: {}, reauthButton: {}
+    backButton: {}, settingsTitle: {}, providerHeading: {}, refreshButton: {}, errorText: {}, reauthButton: {}
   };
   const context = vm.createContext({
     elements, document: { body: { dataset: {}, offsetWidth: 352 }, hidden: false }, resolveView, formatPercent,

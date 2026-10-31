@@ -33,8 +33,8 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Features
 
-* **Overview** | The initial dashboard brings Claude, Codex and Antigravity quotas together in compact cards, with weekly mini-meters. Installed providers retain their individual tabs. Settings stays highlighted while open, and the panel header can hide or show the sidebar. Hover a provider card for its source reading time
-* **Provider navigation** | Dedicated pages keep the provider name in the page header, while Antigravity cards retain their model-family labels. Closed-source notices use an amber warning. Quota/count-up entrances play on app opening, tray restore and return from Settings; switching between provider tabs does not replay them. Reduced motion stays static
+* **Overview** | The initial dashboard brings Claude, Codex and Antigravity quotas together in compact cards, with weekly mini-meters. Installed providers retain their individual tabs. Settings stays highlighted while open, and the panel header can hide or show the sidebar. Click a provider card to open its tab. Hover its title for the source reading time, which also appears on the card once the reading is an hour old
+* **Provider navigation** | Dedicated pages keep the provider name in the page header, while Antigravity cards retain their model-family labels. Closed-source notices use an amber warning. Quota/count-up entrances play on app opening, tray restore and return from Settings; switching between provider tabs does not replay them. A changed reading counts from its old value, and views slide along the sidebar order. Reduced motion keeps only short fades. Windows contrast themes keep the meters readable
 
 * **Session quota** | Progress bar for your current 5-hour session with a reset countdown
 * **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint

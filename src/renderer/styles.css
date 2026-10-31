@@ -306,6 +306,7 @@ h3 {
 /* The content well: solid page black, carved into the shell at its top-left
    corner only, so it reads as one folder opened from the rail. */
 .panel {
+  position: relative; /* anchors the pinned .app-footer */
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -328,7 +329,9 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: 0 var(--space-3) var(--space-3);
+  /* Bottom inset clears the pinned 40px footer, so the last card can scroll
+     fully above it. */
+  padding: 0 var(--space-3) calc(var(--space-11) + var(--space-3));
 }
 
 .panel-header {
@@ -366,10 +369,21 @@ h3 {
   color: var(--subtle-foreground);
 }
 
-.panel-header .settings-title {
+/* Ghost 28px refresh at the header's trailing edge; hidden in Settings. */
+.panel-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   margin-left: auto;
+}
+
+/* Same voice and side as the dashboard title: "where am I" looks the same in
+   every view. */
+.panel-header .settings-title {
   padding: 0;
-  color: var(--foreground);
+  font-size: var(--text-md);
+  color: var(--subtle-foreground);
 }
 
 .panel-header .back-btn {
@@ -575,7 +589,8 @@ body[data-view="onboard"] .topbar .brand {
 
 .rail-provider:focus-visible,
 .rail-btn:focus-visible,
-.panel-toggle:focus-visible {
+.panel-toggle:focus-visible,
+.panel-refresh:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: var(--space-0);
 }
@@ -628,9 +643,16 @@ body[data-view="onboard"] .topbar .brand {
    APP FOOTER
 ═══════════════════════════════════════════════════════════ */
 
+/* Pinned over the bottom of the panel: content scrolls under it and fades into
+   the page black (transparent → black at 70% of its 40px). It holds no
+   controls, so pointer events pass through to the cards beneath. */
 .app-footer {
-  flex-shrink: 0;
-  padding: var(--space-5);
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: var(--space-5) var(--space-7);
+  background: linear-gradient(to bottom, transparent, var(--bg-page) 70%);
+  pointer-events: none;
 }
 
 body[data-view="onboard"] .app-footer {
@@ -647,17 +669,6 @@ body[data-view="onboard"] .app-footer {
   font-size: var(--text-sm);
   letter-spacing: -0.02em;
   line-height: 16px;
-}
-
-/* The stamp is centred, so the leftover space on each side becomes a rule —
-   two flex children of equal grow, which keeps it centred whatever the clock
-   reads in any language. */
-.footer-updated-row::before,
-.footer-updated-row::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-subtle);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1080,18 +1091,6 @@ body[data-view="onboard"] .app-footer {
   fill: currentColor;
 }
 
-.card-eyebrow-row {
-  width: 100%;
-  justify-content: space-between;
-  gap: var(--space-5);
-}
-
-.card-eyebrow-left {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
 
 /* Narrow windows truncate eyebrow titles instead of wrapping them. */
 .card-eyebrow [role="heading"] {
@@ -1099,25 +1098,6 @@ body[data-view="onboard"] .app-footer {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.quota-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-none);
-  padding: var(--space-7);
-}
-
-.quota-panel > .meter {
-  margin-top: var(--space-1);
-}
-
-.quota-headline {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-5);
-  margin-top: var(--space-6);
 }
 
 .quota-percent {
@@ -1154,104 +1134,103 @@ body[data-view="onboard"] .app-footer {
   display: none;
 }
 
-/* Extra-usage card: compact quota-panel variant for purchased credits.
+/* Extra-usage card: purchased credits beside a ring of the share spent.
    Auto-hidden (via [hidden]) on accounts without the feature. */
 .quota-panel--extra {
-  padding-top: var(--space-6);
-  padding-bottom: var(--space-7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-7);
 }
 
-.quota-headline--extra {
-  margin-top: var(--space-6);
+.extra-usage-data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.extra-usage-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--subtle-foreground);
 }
 
 .quota-credits {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--space-0);
   font-family: var(--font-pixel);
   font-variant-numeric: tabular-nums;
-  line-height: 0.9;
+  line-height: 0.6;
 }
 
 .quota-credits-used {
-  font-size: var(--text-2xl);
+  font-size: var(--text-md);
   color: var(--foreground);
 }
 
 .quota-credits-sep,
 .quota-credits-limit {
-  font-size: var(--text-xl);
-  color: var(--subtle-foreground);
-}
-
-.quota-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
   font-size: var(--text-sm);
   color: var(--subtle-foreground);
-  margin-top: var(--space-8);
 }
 
-.quota-meta .reset-line {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
+/* 32px ring (80% inner radius) drawn from 12 o'clock, clockwise. Level
+   colours and the blurred halo under the filled arc match `.meter`. */
+.extra-gauge {
+  --gauge: var(--level-ok);
+  --gauge-soft: var(--level-ok-soft);
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: visible;
+  transform: rotate(-90deg);
 }
 
-/* Codex / Antigravity: one card per quota group, session and weekly as two
-   compact rows. Same card, meter and Pixel readout as Claude's panels, one
-   type step down so a two-group provider still fits without scrolling. */
+.extra-gauge[data-level="warn"] {
+  --gauge: var(--level-warn);
+  --gauge-soft: var(--level-warn-soft);
+}
+
+.extra-gauge[data-level="high"] {
+  --gauge: var(--level-high);
+  --gauge-soft: var(--level-high-soft);
+}
+
+.extra-gauge[data-level="critical"] {
+  --gauge: var(--level-critical);
+  --gauge-soft: var(--level-critical-soft);
+}
+
+.extra-gauge circle {
+  fill: none;
+  stroke-width: 3.2;
+}
+
+.extra-gauge-track {
+  stroke: var(--gauge-soft);
+}
+
+.extra-gauge-fill,
+.extra-gauge-glow {
+  stroke: var(--gauge);
+  stroke-dasharray: var(--gauge-fill, 0) 100;
+  transition: stroke-dasharray 250ms var(--ease-out-quart);
+}
+
+.extra-gauge-glow {
+  opacity: 0.5;
+  filter: blur(8px);
+}
+
+/* Codex / Antigravity: one quota card per group. */
 .provider-groups {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-
-.quota-group {
-  gap: var(--space-7);
-}
-
-.quota-group > .card-eyebrow {
-  margin-bottom: calc(-1 * var(--space-3));
-}
-
-.quota-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.quota-row-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-5);
-}
-
-.quota-row-label {
-  font-size: var(--text-sm);
-  color: var(--subtle-foreground);
-}
-
-.quota-row .quota-percent {
-  font-size: var(--text-2xl);
-}
-
-.quota-row .reset-line {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--subtle-foreground);
 }
 
 .provider-status {
@@ -1277,6 +1256,21 @@ body[data-view="onboard"] .app-footer {
   text-align: left;
 }
 
+:is(.provider-status, .overview-status)[data-tone="warning"],
+:is(.provider-status, .overview-status)[data-tone="error"] {
+  transition: opacity var(--duration-slow) var(--ease-out),
+    transform var(--duration-slow) var(--ease-out);
+}
+
+/* A source note fades in from 4px above when it appears; it leaves at once. */
+@starting-style {
+  :is(.provider-status, .overview-status)[data-tone="warning"],
+  :is(.provider-status, .overview-status)[data-tone="error"] {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-1)));
+  }
+}
+
 :is(.provider-status, .overview-status)[data-tone="warning"] {
   color: var(--warning);
   background: var(--warning-soft);
@@ -1298,114 +1292,141 @@ body[data-view="onboard"] .app-footer {
   display: none;
 }
 
+/* ─── Quota cards: Overview and every provider page ───
+   One card: 16px inset, provider title 18px above the first row (8px under
+   the title + the 10px card gap). Groups and rows sit 12px apart; a hairline
+   splits a group's main session from its weekly row, and groups from each
+   other. */
 .overview-card,
 .overview-sections,
 .overview-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
 }
 
 .overview-card {
+  gap: var(--space-4);
   padding: var(--space-7);
+}
+
+.overview-sections,
+.overview-section {
+  gap: var(--space-5);
 }
 
 .overview-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-bottom: var(--space-1);
-  font-size: var(--text-base);
+  padding-bottom: var(--space-3);
+  font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   line-height: 1;
+  color: var(--foreground);
 }
 
 .overview-title [data-overview-icon],
 .overview-title svg {
   display: block;
-  width: var(--space-6);
-  height: var(--space-6);
+  width: var(--space-5);
+  height: var(--space-5);
   flex-shrink: 0;
   fill: currentColor;
 }
 
-.overview-card .quota-row {
+.overview-heading {
+  display: flex;
+  min-width: 0;
+}
+
+/* The title opens the provider's page. Reset to plain text: the card's hover
+   tint and the chevron carry the affordance. */
+.overview-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  line-height: inherit;
+}
+
+.overview-open:hover {
+  filter: none;
+}
+
+.overview-title .overview-chevron {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: var(--subtle-foreground);
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+.overview-open:focus-visible .overview-chevron {
+  opacity: 1;
+  transform: none;
+}
+
+/* Trailing edge: the stale-reading time, then Claude's peak badge. */
+.overview-title-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.overview-reading {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-1);
-}
-
-.overview-card .quota-row-head {
-  align-items: center;
-}
-
-.overview-card .quota-value-group {
-  gap: 0;
-  line-height: 1;
-}
-
-.overview-card .quota-percent {
-  font-size: var(--text-xl);
-  line-height: 1;
-}
-
-.overview-card .quota-suffix {
-  font-size: var(--text-md);
-}
-
-.overview-card .reset-line,
-.overview-card .quota-row-label {
   font-size: var(--text-xs);
-  line-height: 12px;
+  font-weight: var(--weight-normal);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--subtle-foreground);
 }
 
-.overview-card .quota-pace {
-  min-height: 14px;
-  font-size: var(--text-xs);
-  padding: var(--space-0) var(--space-2);
-  line-height: 10px;
+.overview-title .overview-reading svg {
+  width: var(--space-4);
+  height: var(--space-4);
 }
 
-.overview-card .overview-compact {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.overview-card[data-provider] {
+  cursor: pointer;
+  transition: background-color var(--duration-normal) var(--ease),
+    transform var(--duration-press) var(--ease-press);
 }
 
-.overview-compact .quota-row-head {
-  gap: var(--space-2);
-  justify-content: flex-start;
+@media (hover: hover) and (pointer: fine) {
+  .overview-card[data-provider]:hover {
+    background: color-mix(in oklch, var(--card) 70%, var(--card-elevated));
+  }
+
+  .overview-card[data-provider]:hover .overview-chevron {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.overview-card .overview-compact .quota-percent {
-  font-size: var(--text-sm);
+/* A large surface takes a smaller press than a button; pressing one of the
+   card's own controls does not press the card. */
+.overview-card[data-provider]:active:not(:has(.quota-pace:active, .cost-info-btn:active)) {
+  transform: scale(0.99);
 }
 
-.overview-compact .meter {
-  flex-shrink: 0;
-  width: 80px;
-  height: var(--space-2);
-}
-
-.overview-compact .meter-segment {
-  height: var(--space-2);
-}
-
-.overview-compact .meter::before {
-  display: none;
-}
-
-.overview-compact .quota-suffix {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
+.overview-section:not(.overview-section--compact) > [data-window="weekly"],
 .overview-section--compact {
   border-top: 1px solid var(--border-subtle);
-  padding-top: calc(var(--space-5) - 1px);
-  gap: var(--space-1);
+  padding-top: var(--space-5);
 }
 
 .overview-section--compact:first-child {
@@ -1414,10 +1435,140 @@ body[data-view="onboard"] .app-footer {
 }
 
 .overview-group-title {
-  margin-bottom: var(--space-3);
   font-size: var(--text-sm);
-  line-height: 12px;
+  line-height: 1;
+  color: var(--foreground);
+}
+
+/* On a provider page the group title heads its own card, so it takes the
+   card-title weight and spacing. */
+.provider-groups .overview-group-title {
+  padding-bottom: var(--space-2);
+  font-weight: var(--weight-medium);
+}
+
+/* A quota row is a flat grid, so the same markup lays out as the large
+   session row (label, value + pace, 40-segment meter, reset line) or as the
+   compact two-line row (.overview-compact: label + reset, value + dots). */
+.quota-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label label badge"
+    "value value pace"
+    "meter meter meter"
+    "reset reset reset";
+  align-items: center;
+  gap: var(--space-3) var(--space-1);
+}
+
+.overview-compact {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, max-content);
+  grid-template-areas:
+    "label label reset"
+    "value meter meter";
+}
+
+.quota-row-label {
+  grid-area: label;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  line-height: 1;
   color: var(--subtle-foreground);
+}
+
+.quota-row > .peak-badge {
+  grid-area: badge;
+  justify-self: end;
+}
+
+/* The 16px badge overhangs the 10–12px line it sits on instead of growing it,
+   so peak hours starting or ending never shift the card. */
+.overview-title .peak-badge,
+.quota-row > .peak-badge {
+  margin-block: calc(-1 * var(--space-0));
+}
+
+.quota-row > .peak-badge {
+  margin-block: -3px;
+}
+
+.quota-row > .quota-value-group {
+  grid-area: value;
+  gap: 0;
+}
+
+.quota-row > .quota-pace {
+  grid-area: pace;
+  justify-self: end;
+  min-height: 14px;
+  padding: var(--space-0) var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 10px;
+}
+
+.quota-row > .meter {
+  grid-area: meter;
+}
+
+.quota-row > .reset-line {
+  grid-area: reset;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--subtle-foreground);
+}
+
+.overview-compact > .reset-line {
+  justify-self: end;
+}
+
+.quota-row .quota-percent {
+  font-size: var(--text-2xl);
+  line-height: 0.6;
+}
+
+.quota-row .quota-suffix {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--subtle-foreground);
+}
+
+.overview-compact .quota-percent {
+  display: inline-block;
+  /* Wide enough for "100%", so every dot run in a card starts at the same x
+     and does not resize when the value gains a digit. */
+  min-width: 4ch;
+  font-size: var(--text-sm);
+  /* Small type takes no negative tracking, or the glyphs' dots run together. */
+  letter-spacing: 0;
+}
+
+/* Compact meters are a full-width run of 4px dots. */
+.overview-compact .meter,
+.overview-compact .meter-segment {
+  height: var(--space-1);
+}
+
+body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* "Left" mode: the number is what remains but the dots fill with what was
+   used, so the suffix stays visible to say which. */
+.overview-compact .quota-suffix {
+  margin-inline-start: var(--space-1);
 }
 
 .overview-status {
@@ -1477,13 +1628,6 @@ body[data-view="onboard"] .app-footer {
   color: var(--destructive);
 }
 
-.quota-pace-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-  flex-shrink: 0;
-}
 
 .peak-badge {
   display: inline-flex;
@@ -1507,6 +1651,8 @@ body[data-view="onboard"] .app-footer {
 .peak-badge .cost-info-btn {
   width: var(--space-8);
   height: var(--space-8);
+  /* 20px hit area inside the 16px badge. */
+  margin-block: calc(-1 * var(--space-0));
 }
 
 .peak-badge .cost-info-btn svg {
@@ -1553,7 +1699,7 @@ body[data-view="onboard"] .app-footer {
   font-size: var(--text-xl);
   font-weight: var(--weight-normal);
   line-height: var(--leading-none);
-  letter-spacing: -0.06em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--accent-light);
 }
@@ -1592,12 +1738,12 @@ body[data-refreshing="true"] .card::after {
 
 .cost-symbol {
   font-size: 20px;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.02em;
 }
 
 .cost-amount {
   font-size: 20px;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.02em;
 }
 
 .cost-estimate-row {
@@ -1664,7 +1810,8 @@ body[data-refreshing="true"] .card::after {
   white-space: pre-line; /* home.peakHoursTooltip carries a literal \n */
   opacity: 0;
   transform: scale(0.98);
-  transform-origin: bottom center;
+  /* x is the trigger's centre, written by positionTooltip(). */
+  transform-origin: var(--tooltip-origin-x, 50%) bottom;
   pointer-events: none;
   /* Hide rule (the default): no delay, so leaving a trigger closes the
      bubble immediately. */
@@ -1672,7 +1819,7 @@ body[data-refreshing="true"] .card::after {
 }
 
 .tooltip[data-placement="bottom"] {
-  transform-origin: top center;
+  transform-origin: var(--tooltip-origin-x, 50%) top;
 }
 
 .tooltip[data-show="true"] {
@@ -1968,8 +2115,8 @@ body[data-refreshing="true"] .card::after {
 
 /* Enter/leave transition only — kept separate from the layout rule above so
    #extraUsageCard (.quota-panel--extra) can share this exact treatment
-   without inheriting the banners' row layout, which would fight its own
-   .card/.quota-panel column layout. Reused, not duplicated: this is the same
+   without inheriting the banners' layout, which would fight its own
+   card layout. Reused, not duplicated: this is the same
    rule the four banners use, just with the selector list extended. */
 .usage-alert-banner,
 .offline-banner,
@@ -3101,6 +3248,17 @@ button:focus-visible {
   transition: none;
 }
 
+/* Unlit segments sit slightly inset (Figma `progress-bar` component, 60:863). */
+.meter > .meter-segment:not(.active) {
+  box-shadow: inset 0 0 1px 1px oklch(0% 0 0 / 0.2);
+}
+
+/* level=zero: no segment lit, so the track drops the level tint and goes
+   neutral grey. */
+.meter[data-level="zero"] .meter-segment {
+  background: var(--border-strong);
+}
+
 .meter[data-level="warn"] {
   --seg-l: 88%;
   --seg-c: 0.163;
@@ -3341,43 +3499,28 @@ textarea:focus {
   }
 }
 
-@keyframes meterRevealActive {
-  0%   { opacity: 0; transform: scaleY(0.35); }
-  68%  { opacity: 1; transform: scaleY(1.14); }
-  100% { opacity: 1; transform: scaleY(1); }
-}
-
 body[data-entering] {
   animation: windowEnter var(--duration-enter) var(--ease-out) both;
 }
 
+/* Rows reveal in reading order: each visible row (`--row`, written by
+   indexQuotaRows) starts 35ms after the one above, capped at six rows. The
+   count-up in renderer.js uses the same offset. */
+.quota-row {
+  --row-delay: calc(min(var(--row, 0), 6) * 35ms);
+}
 .view[data-entering] .quota-percent {
-  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 310ms both;
+  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(310ms + var(--row-delay, 0ms));
 }
 .view[data-entering] .quota-pace {
-  animation: subtleFadeUp 160ms var(--ease-out) 240ms both;
+  animation: subtleFadeUp 160ms var(--ease-out) both;
+  animation-delay: calc(240ms + var(--row-delay, 0ms));
 }
 .view[data-entering] .meter-segment {
   transform-origin: bottom;
   animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 6ms + 230ms);
-}
-.view[data-entering] .meter-segment.active {
-  animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 6ms + 230ms);
-}
-
-.view[data-entering] [data-window="weekly"] .quota-percent {
-  animation: numberReveal 200ms cubic-bezier(0.22, 1, 0.36, 1) 380ms both;
-}
-.view[data-entering] [data-window="weekly"] .meter-segment {
-  transform-origin: bottom;
-  animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 6ms + 295ms);
-}
-.view[data-entering] [data-window="weekly"] .meter-segment.active {
-  animation: meterRevealActive 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 6ms + 295ms);
+  animation-delay: calc(var(--i, 0) * 6ms + 230ms + var(--row-delay, 0ms));
 }
 
 .view[data-entering] .stat-value {
@@ -3393,16 +3536,6 @@ body[data-entering] {
   animation: subtleFadeUp 160ms var(--ease-out) 380ms both;
 }
 
-@keyframes dataUpdate {
-  0%   { opacity: 0.4;  filter: brightness(1.5); }
-  55%  { opacity: 1;    filter: brightness(1.07); }
-  100% { opacity: 1;    filter: brightness(1); }
-}
-
-.data-updated {
-  animation: dataUpdate 200ms var(--ease-out-quart) both;
-}
-
 /* ── Refresh icon spin ──────────────────────────────────── */
 
 @keyframes iconSpin {
@@ -3416,19 +3549,6 @@ body[data-entering] {
 body[data-refreshing="true"] #refreshButton svg {
   animation: iconSpin var(--duration-spin) linear infinite;
   transform-origin: center;
-}
-
-/* ── Notif-badge toggle pop ─────────────────────────────── */
-
-@keyframes notifPop {
-  0%   { transform: scale(1); }
-  38%  { transform: scale(0.89); }
-  68%  { transform: scale(1.07); }
-  100% { transform: scale(1); }
-}
-
-.notif-badge.notif-pop {
-  animation: notifPop 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Session reset reveal ───────────────────────────────── */
@@ -3478,30 +3598,39 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    /* Renderer timers read these two values. Zero keeps view and tab state
-       changes immediate without relying on a near-zero global animation. */
-    --duration-view-fade: 0ms;
-    --duration-tab-fade: 0ms;
+  /* Reduced motion removes travel and scale, not feedback: views, tabs,
+     tooltips, banners and source notes keep a short opacity crossfade (the
+     renderer writes a 0px shift for views and tabs). */
+  .view,
+  .settings-tab-panel,
+  .tooltip,
+  .tooltip[data-show="true"],
+  .usage-alert-banner,
+  .offline-banner,
+  .update-banner,
+  .download-banner,
+  .quota-panel--extra,
+  .usage-alert-banner[data-leaving],
+  .offline-banner[data-leaving],
+  .update-banner[data-leaving],
+  .download-banner[data-leaving],
+  .quota-panel--extra[data-leaving],
+  :is(.provider-status, .overview-status)[data-tone] {
+    transform: none;
+    transition-property: opacity;
   }
 
-  .view,
   .quota-percent,
   .card::after,
   .cost-info-btn,
-  .tooltip,
-  .tooltip[data-show="true"],
   .notif-badge,
   .notif-icon-wrap svg,
   .onboard-url-copy,
   .onboard-url-copy svg,
   .account-email-toggle svg,
   .settings-github-link,
-  .usage-alert-banner,
-  .offline-banner,
-  .update-banner,
-  .download-banner,
-  .quota-panel--extra,
+  .overview-card,
+  .overview-chevron,
   .usage-alert-dismiss,
   .offline-banner-dismiss,
   .update-banner-dismiss,
@@ -3523,17 +3652,14 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   textarea,
   .settings-tab,
   .settings-tab-pill,
-  .settings-tab-panel,
   .settings-tabs-card[data-resizing],
   .settings-style-card {
     transition: none;
   }
 
   body[data-entering],
-  body[data-entering] .view[data-entering] :is(.quota-percent, .quota-pace, .meter-segment, .meter-segment.active, .stat-value, .cost-tokens),
-  .data-updated,
+  body[data-entering] .view[data-entering] :is(.quota-percent, .quota-pace, .meter-segment, .stat-value, .cost-tokens),
   body[data-refreshing="true"] #refreshButton svg,
-  .notif-badge.notif-pop,
   #sessionPercent[data-just-reset],
   .quota-percent[data-just-reset],
   .floating-body[data-expanded="true"] .floating-metric,
@@ -3562,7 +3688,8 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   .settings-test-btn:active,
   .settings-style-card:active,
   .floating-percent-button:active,
-  .floating-expand-btn:active {
+  .floating-expand-btn:active,
+  .overview-card[data-provider]:active:not(:has(.quota-pace:active, .cost-info-btn:active)) {
     transform: none;
   }
 
@@ -3668,7 +3795,8 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  transition: opacity var(--duration-tab-fade) var(--ease-out);
+  transition: opacity var(--duration-tab-fade) var(--ease-out),
+    transform var(--duration-tab-fade) var(--ease-out);
 }
 
 .settings-tabs-card {
@@ -3873,4 +4001,185 @@ body[data-style="mini"] .floating-widget {
   width: var(--space-5);
   height: var(--space-5);
   flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RAIL COLLAPSE (View Transition)
+═══════════════════════════════════════════════════════════ */
+
+/* The sidebar toggle runs inside document.startViewTransition (renderer.js),
+   which animates snapshots — transform and opacity only, never layout. The
+   rail leaves and returns along its own left edge; the panel's snapshot keeps
+   its natural size, anchored left, while its box slides to the new x. */
+.rail {
+  view-transition-name: rail;
+}
+
+.panel {
+  view-transition-name: panel;
+}
+
+::view-transition-group(*) {
+  animation-duration: var(--duration-normal);
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(panel),
+::view-transition-new(panel) {
+  width: auto;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+
+::view-transition-old(rail) {
+  animation: railLeave var(--duration-normal) var(--ease-out) both;
+}
+
+::view-transition-new(rail) {
+  animation: railEnter var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes railLeave {
+  to { opacity: 0; transform: translateX(calc(-1 * var(--space-5))); }
+}
+
+@keyframes railEnter {
+  from { opacity: 0; transform: translateX(calc(-1 * var(--space-5))); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLL EDGE
+═══════════════════════════════════════════════════════════ */
+
+/* The top twin of the pinned footer's fade: once the panel scrolls, content
+   dissolves under the header instead of being cut at a hard line. Driven by
+   the scroll position itself (scroll-driven animation), so it costs no JS and
+   is absent at rest. */
+@property --scroll-edge {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scrollEdge {
+  to { --scroll-edge: var(--space-7); }
+}
+
+@supports (animation-timeline: scroll()) {
+  .shell-scroll {
+    mask-image: linear-gradient(to bottom, transparent, #000 var(--scroll-edge));
+    animation: scrollEdge auto linear both;
+    animation-timeline: scroll(self);
+    animation-range: 0 var(--space-9);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WINDOWS CONTRAST THEMES
+═══════════════════════════════════════════════════════════ */
+
+/* Forced colours repaint backgrounds with the theme's Canvas and drop every
+   box-shadow, which would erase the meter (drawn only by segment fills) and
+   every --inner-light edge. Edges become real borders; data and selection opt
+   out of the forcing and take the theme's own system colours. */
+@media (forced-colors: active) {
+  .card,
+  .settings-card,
+  .account-card,
+  .account-inner,
+  .onboard-auth-card,
+  .settings-tabs,
+  .tooltip,
+  .panel,
+  .shell,
+  .floating-widget,
+  .usage-alert-banner,
+  .offline-banner,
+  .update-banner,
+  .download-banner {
+    border: 1px solid CanvasText;
+  }
+
+  /* !important: the level-scale selectors above reach (0,4,0). */
+  :is(.meter, .floating-meter-bar) .meter-segment {
+    forced-color-adjust: none;
+    background: GrayText !important;
+  }
+
+  :is(.meter, .floating-meter-bar) .meter-segment.active {
+    background: Highlight !important;
+  }
+
+  .meter::before,
+  .extra-gauge-glow {
+    display: none;
+  }
+
+  .extra-gauge {
+    forced-color-adjust: none;
+  }
+
+  .extra-gauge-track {
+    stroke: GrayText;
+  }
+
+  .extra-gauge-fill {
+    stroke: Highlight;
+  }
+
+  .switch-track,
+  .switch-thumb,
+  .settings-tab-pill,
+  .settings-tab--active,
+  .rail-provider[data-alert]::after {
+    forced-color-adjust: none;
+  }
+
+  .switch-track {
+    background: Canvas;
+    outline: 1px solid CanvasText;
+  }
+
+  .switch-thumb {
+    background: CanvasText;
+  }
+
+  .switch input:checked + .switch-track {
+    background: Highlight;
+  }
+
+  .switch input:checked + .switch-track .switch-thumb {
+    background: HighlightText;
+  }
+
+  .settings-tab-pill,
+  .rail-provider[data-alert]::after {
+    background: Highlight;
+  }
+
+  .settings-tab--active {
+    color: HighlightText;
+  }
+
+  .rail-provider[aria-current="page"],
+  .rail-account-actions .rail-btn[aria-current="page"],
+  .settings-style-card[data-active="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: calc(-1 * var(--space-0));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REDUCED TRANSPARENCY
+═══════════════════════════════════════════════════════════ */
+
+/* Windows "Transparency effects" off: the frames stop letting the desktop
+   through. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --shell-bg: oklch(0% 0 0);
+    --floating-bg: oklch(0% 0 0);
+    --floating-mini-bg: oklch(0% 0 0);
+  }
 }

@@ -58,7 +58,6 @@ const elements = {
   providerMonthCost: document.querySelector('#providerMonthCost'),
   providerMonthTokens: document.querySelector('#providerMonthTokens'),
   providerStatus: document.querySelector('#providerStatus'),
-  quotaGroupTemplate: document.querySelector('#quotaGroupTemplate'),
   railProviders: document.querySelector('.rail-providers'),
   providerClaudeButton: document.querySelector('#providerClaudeButton'),
   providerCodexButton: document.querySelector('#providerCodexButton'),
@@ -79,6 +78,7 @@ const elements = {
   extraUsageCard: document.querySelector('#extraUsageCard'),
   extraUsedCredits: document.querySelector('#extraUsedCredits'),
   extraMonthlyLimit: document.querySelector('#extraMonthlyLimit'),
+  extraGauge: document.querySelector('#extraGauge'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
   notificationIconOn: document.querySelector('#notificationIconOn'),
@@ -169,7 +169,7 @@ let requestedProvider = 'overview';
 // this file, and a `let` read before its line throws.
 const crossfadeTo = createViewSwitcher(
   [elements.onboardView, elements.overviewView, elements.mainView, elements.providerView, elements.settingsView],
-  { fadeMs: () => cssMs('--duration-view-fade', 150) }
+  { fadeMs: () => cssMs('--duration-view-fade', 150), shiftPx: () => (reducedMotion() ? 0 : 6) }
 );
 let renderedView = null;
 let renderedProvider = null;
@@ -178,6 +178,8 @@ const overviewCards = new Map();
 const groupCards = new Map();
 const ENTER_SEQUENCE_MS = 900;
 const ENTER_DEDUPE_MS = 250;
+// An Overview card shows its source time once the reading is this old.
+const STALE_READING_MS = 60 * 60 * 1000;
 let enterSequenceTimer = null;
 let windowEntranceFrame = null;
 let lastEntranceAt = -Infinity;
@@ -191,7 +193,6 @@ let _tabTransitioning = false;
 let _tabTransitionTimer = null;
 const prevChannelPercents = new Map();
 let prevRenderedSessionPct = null;
-let prevRenderedWeeklyPct = null;
 let updateUrl = null;
 let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
 let lastDownloadAnnouncementBucket = -1;
@@ -278,21 +279,13 @@ function showBanner(el) {
 
 function hideBanner(el) {
   if (el.hidden || el.hasAttribute('data-leaving')) return;
-  if (reducedMotion()) { el.hidden = true; return; }
+  // Reduced motion keeps the exit's opacity fade (styles.css drops the travel).
   el.setAttribute('data-leaving', '');
   clearTimeout(bannerLeaveTimers.get(el));
   bannerLeaveTimers.set(el, setTimeout(() => {
     el.hidden = true;
     el.removeAttribute('data-leaving');
   }, cssMs('--duration-banner-leave', 160)));
-}
-
-function flashUpdate(el) {
-  if (reducedMotion()) return;
-  el.classList.remove('data-updated');
-  void el.offsetWidth;
-  el.classList.add('data-updated');
-  el.addEventListener('animationend', () => el.classList.remove('data-updated'), { once: true });
 }
 
 function setDownloadUI(state, percent) {
@@ -378,7 +371,7 @@ function triggerResetFlash(el = elements.sessionPercent) {
 // Empty submit and a rejected auth_submit both land here. `.is-error` (the
 // border + the routed message) and `.is-shaking` are kept orthogonal so a
 // second failed attempt can replay the shake without flickering the border
-// treatment off and back on — same reflow dance as flashUpdate/triggerResetFlash.
+// treatment off and back on — same reflow dance as triggerResetFlash.
 function showCodeInputError(message) {
   const el = elements.onboardCodeInput;
   el.classList.add('is-error');
@@ -450,6 +443,9 @@ function positionTooltip(anchor) {
   const flipped = top < margin;
   if (flipped) top = rect.bottom + margin; // no room above: flip below
   tip.dataset.placement = flipped ? 'bottom' : 'top';
+  // Grow from the trigger, not from the bubble's own centre, when the clamp
+  // above has pushed the bubble sideways.
+  tip.style.setProperty('--tooltip-origin-x', `${rect.left + rect.width / 2 - left}px`);
   tip.style.left = `${left}px`;
   tip.style.top = `${top}px`;
 }
@@ -533,8 +529,14 @@ elements.settingsTabs.addEventListener('keydown', event => {
 });
 elements.backButton.addEventListener('click', () => showView('main'));
 elements.railToggleButton.addEventListener('click', () => {
-  elements.rail.hidden = !elements.rail.hidden;
-  renderNavigation(currentState);
+  const toggle = () => {
+    elements.rail.hidden = !elements.rail.hidden;
+    renderNavigation(currentState);
+  };
+  // A View Transition animates snapshots (transform/opacity), so the rail can
+  // slide out and back along the same edge without animating layout.
+  if (document.startViewTransition && !reducedMotion()) document.startViewTransition(toggle);
+  else toggle();
 });
 // Picking a provider always lands on its dashboard, Settings included.
 for (const [provider, button] of [
@@ -934,17 +936,12 @@ window.siphon.onUpdateError(({ message } = {}) => {
 
 elements.notificationState.addEventListener('click', async () => {
   const enabled = currentState?.preferences?.notifications?.sessionReset ?? true;
+  // Flip on the click, like the switches do, and put it back if saving fails.
+  renderNotificationPill(!enabled);
   try {
     await window.siphon.setPreference('notifications.sessionReset', !enabled);
-    if (!reducedMotion()) {
-      elements.notificationState.classList.remove('notif-pop');
-      void elements.notificationState.offsetWidth;
-      elements.notificationState.classList.add('notif-pop');
-      elements.notificationState.addEventListener('animationend', () => {
-        elements.notificationState.classList.remove('notif-pop');
-      }, { once: true });
-    }
   } catch (error) {
+    renderNotificationPill(enabled);
     handleToggleError('Failed to toggle notifications:', error, null, 'error.saveNotification');
   }
 });
@@ -1002,22 +999,30 @@ function setPercentValue(element, value) {
 
 function updateReading(element, target, setValue) {
   const value = target == null ? '' : String(target);
-  const unchanged = element.dataset.entryValue === value;
+  const previous = element.dataset.entryValue;
+  const unchanged = previous === value;
   element.dataset.entryValue = value;
   if (unchanged && animatingElements.has(element)) return;
+  // A new reading travels from the one on screen, like a needle, instead of
+  // being swapped in. Unknown readings and the entrance count-up keep their
+  // own paths.
+  if (!unchanged && previous && value && !animatingElements.has(element) && !document.body.dataset.entering) {
+    animateCountUp(element, target, setValue, { duration: 400, from: Number(previous) });
+    return;
+  }
   cancelCountUp(element);
   setValue(element, target);
 }
 
-function animateCountUp(element, target, setValue, { duration = 650, delay = 0 } = {}) {
+function animateCountUp(element, target, setValue, { duration = 650, delay = 0, from = 0 } = {}) {
   if (target == null || Number.isNaN(target) || reducedMotion()) { setValue(element, target); return; }
   cancelCountUp(element);
-  setValue(element, 0);
+  setValue(element, from);
   const t0 = performance.now() + delay;
   function tick(now) {
     if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
     const p = Math.min((now - t0) / duration, 1);
-    setValue(element, cubicEaseOut(p) * target);
+    setValue(element, from + cubicEaseOut(p) * (target - from));
     if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
     else animatingElements.delete(element);
   }
@@ -1081,10 +1086,14 @@ function render(state) {
   const weeklyPercent = clampPercent(weekly?.percent ?? 0);
 
   handleThresholdSounds(state);
+  // Compact rows show the used/left suffix only in "left" mode, where the
+  // number and the (always used) meter would otherwise disagree unlabelled.
+  document.body.dataset.quotaMode = state.preferences?.display?.quotaMode ?? 'used';
 
   renderOverview(state, lang);
   renderProviderView(state, lang);
   renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
+  indexQuotaRows(elements.mainView);
   renderActiveView();
 
   elements.signOutButton.hidden = !state.isSignedIn;
@@ -1200,23 +1209,27 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
   renderPace(elements.sessionPace, sessionPace, lang);
-  const inPeakHours = isPeakHour(now);
-  elements.peakHoursBadge.hidden = !inPeakHours;
-  if (inPeakHours) {
-    const { start, end } = peakHoursLocalRange(now);
-    const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
-    // dataset.tooltip, not .title — see the custom tooltip wired up above,
-    // which is what actually renders this copy.
-    elements.peakHoursInfo.dataset.tooltip = titleText;
-    elements.peakHoursInfo.setAttribute('aria-label', titleText);
-    // This render loop runs every refresh tick; if the tooltip is already
-    // open on this trigger, keep its visible text in sync rather than
-    // waiting for the next hover/focus to pick up the new copy.
-    if (tooltipTrigger === elements.peakHoursInfo) elements.tooltip.textContent = titleText;
-  }
+  renderPeakBadge(elements.peakHoursBadge, elements.peakHoursInfo, now, lang);
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
+}
+
+// Claude's peak-hours badge: on the Claude page and on its Overview card.
+function renderPeakBadge(badge, info, now, lang) {
+  const inPeakHours = isPeakHour(now);
+  badge.hidden = !inPeakHours;
+  if (!inPeakHours) return;
+  const { start, end } = peakHoursLocalRange(now);
+  const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
+  // dataset.tooltip, not .title — see the custom tooltip wired up above,
+  // which is what actually renders this copy.
+  info.dataset.tooltip = titleText;
+  info.setAttribute('aria-label', titleText);
+  // This render loop runs every refresh tick; if the tooltip is already
+  // open on this trigger, keep its visible text in sync rather than
+  // waiting for the next hover/focus to pick up the new copy.
+  if (tooltipTrigger === info) elements.tooltip.textContent = titleText;
 }
 
 function updateStatsAndPills({ state, notificationsEnabled, lang }) {
@@ -1232,16 +1245,10 @@ function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyP
   updateReading(elements.sessionPercent, session ? displaySession : null, setPercentValue);
   if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
     triggerResetFlash();
-  } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
-    flashUpdate(elements.sessionPercent);
   }
   prevRenderedSessionPct = sessionPercent;
 
   updateReading(elements.weeklyPercent, weekly ? displayWeekly : null, setPercentValue);
-  if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
-    flashUpdate(elements.weeklyPercent);
-  }
-  prevRenderedWeeklyPct = weeklyPercent;
 
   updateReading(elements.todayCost, state.todayStats?.cost, setCostValue);
   updateReading(elements.monthCost, state.monthStats?.cost, setCostValue);
@@ -1448,8 +1455,6 @@ function renderQuotaRow(row, label, window, kind, ctx) {
   if (measured) {
     if (prevPct !== null && kind === 'session' && prevPct >= 95 && percent <= 5) {
       triggerResetFlash(value);
-    } else if (prevPct !== null && prevPct !== percent) {
-      flashUpdate(value);
     }
     value.dataset.prevPercent = String(percent);
   } else {
@@ -1468,8 +1473,61 @@ function renderQuotaRow(row, label, window, kind, ctx) {
   }
   renderMeter(row.querySelector('[data-meter]'), percent);
   const reset = buildProviderResetLine(window, kind, ctx);
-  row.querySelector('[data-reset]').textContent = reset;
-  row.title = reset;
+  const resetLine = row.querySelector('[data-reset]');
+  resetLine.textContent = reset;
+  // On the reset line only: a `title` on the row would also cover the pace
+  // badge and stack the OS tooltip on top of the designed one.
+  resetLine.title = reset;
+}
+
+// Visible rows in reading order. The entrance staggers each row by its index
+// (CSS `--row`, and the count-up delay reads `data-row`).
+function indexQuotaRows(container) {
+  [...container.querySelectorAll('.quota-row')].filter(row => !row.hidden).forEach((row, index) => {
+    row.dataset.row = String(index);
+    row.style.setProperty('--row', index);
+  });
+}
+
+// Antigravity groups read Gemini first, then Argon, then Claude and GPT,
+// whatever order the language server reports them in.
+const SECTION_ORDER = ['gemini', 'argon', 'thirdParty'];
+
+function orderSections(sections) {
+  const rank = id => (SECTION_ORDER.includes(id) ? SECTION_ORDER.indexOf(id) : SECTION_ORDER.length);
+  return [...sections].sort((a, b) => rank(a.id) - rank(b.id));
+}
+
+// The provider's main group gets the large session row; the others (and every
+// Antigravity group but Gemini) show two compact rows under a group title.
+function isCompactSection(provider, sectionId, index) {
+  return provider === 'antigravity' ? sectionId !== 'gemini' : index > 0;
+}
+
+function createQuotaGroup(sectionId) {
+  const group = elements.overviewSectionTemplate.content.firstElementChild.cloneNode(true);
+  group.dataset.section = sectionId;
+  wireTooltip(group.querySelector('[data-pace]'));
+  return group;
+}
+
+// One quota group (session + weekly rows), shared by the Overview cards and
+// the Codex / Antigravity pages. Reset lines are visible on every row, so a
+// rolled-over or unknown window explains itself there.
+function renderQuotaGroup(group, section, compact, ctx) {
+  const { lang } = ctx;
+  group.classList.toggle('overview-section--compact', compact);
+  const heading = group.querySelector('[data-group-title]');
+  heading.hidden = !compact;
+  heading.textContent = groupTitle(section.id, lang);
+  const rowCtx = { ...ctx, blocked: Boolean(section.blocked), weeklySpent: (section.weekly?.percent ?? 0) >= 100 };
+  const [session, weekly] = group.querySelectorAll('.quota-row');
+  session.classList.toggle('overview-compact', compact);
+  session.querySelector('[data-pace]').hidden = compact;
+  renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
+  renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
+  group.querySelector('[data-section-status]').textContent =
+    !section.session && !section.weekly ? t('provider.window.unknown', lang) : '';
 }
 
 function renderOverview(state, lang) {
@@ -1489,39 +1547,31 @@ function renderOverview(state, lang) {
       card.setAttribute('aria-describedby', reading.id);
       const button = { claude: elements.providerClaudeButton, codex: elements.providerCodexButton, antigravity: elements.providerAntigravityButton }[id];
       card.querySelector('[data-overview-icon]').appendChild(button.querySelector('svg').cloneNode(true));
+      // The card is a shortcut to the provider's page: the title button, or a
+      // click on the card itself that is not on one of its own controls.
+      card.addEventListener('click', event => {
+        if (event.target.closest('button:not([data-overview-open]), [tabindex]')) return;
+        const hadFocus = card.contains(document.activeElement);
+        button.click();
+        if (hadFocus) elements.providerHeading.focus({ preventScroll: true });
+      });
+      const peak = card.querySelector('[data-overview-peak]');
+      wireTooltip(peak.querySelector('[data-peak-info]'), peak);
       overviewCards.set(id, card);
+    }
+    // Peak hours are Anthropic's, so only the Claude card carries the badge.
+    const badge = card.querySelector('[data-overview-peak]');
+    if (id === 'claude') {
+      badge.querySelector('[data-peak-label]').textContent = t('home.peakHours', lang);
+      renderPeakBadge(badge, badge.querySelector('[data-peak-info]'), ctx.now, lang);
+    } else {
+      badge.hidden = true;
     }
     const container = card.querySelector('[data-overview-sections]');
     const shown = [...container.children];
-    const groups = sections.map((section, index) => {
-      let group = shown.find(node => node.dataset.section === section.id);
-      if (!group) {
-        group = elements.overviewSectionTemplate.content.firstElementChild.cloneNode(true);
-        group.dataset.section = section.id;
-        wireTooltip(group.querySelector('[data-pace]'));
-      }
-      const compact = id === 'antigravity' ? section.id !== 'gemini' : index > 0;
-      group.classList.toggle('overview-section--compact', compact);
-      const heading = group.querySelector('[data-group-title]');
-      heading.hidden = !compact;
-      heading.textContent = groupTitle(section.id, lang);
-      const rowCtx = { ...ctx, blocked: Boolean(section.blocked), weeklySpent: (section.weekly?.percent ?? 0) >= 100 };
-      const [session, weekly] = group.querySelectorAll('.quota-row');
-      session.classList.toggle('overview-compact', compact);
-      session.querySelector('[data-label]').classList.toggle('notif-label', !compact);
-      session.querySelector('[data-meter]').dataset.segments = compact ? '20' : '40';
-      session.querySelector('[data-pace]').hidden = compact;
-      session.querySelector('[data-reset]').classList.toggle('notif-label', compact);
-      renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
-      renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
-      const notes = [];
-      for (const [kind, window] of [['session', section.session], ['weekly', section.weekly]]) {
-        if (window && (compact || kind === 'weekly') && (window.rolledOver || window.percent == null || (kind === 'session' && section.blocked))) {
-          notes.push(buildProviderResetLine(window, kind, rowCtx));
-        }
-      }
-      if (!section.session && !section.weekly) notes.push(t('provider.window.unknown', lang));
-      group.querySelector('[data-section-status]').textContent = [...new Set(notes)].join(' · ');
+    const groups = orderSections(sections).map((section, index) => {
+      const group = shown.find(node => node.dataset.section === section.id) ?? createQuotaGroup(section.id);
+      renderQuotaGroup(group, section, isCompactSection(id, section.id, index), ctx);
       return group;
     });
     if (groups.length !== shown.length || groups.some((group, i) => group !== shown[i])) container.replaceChildren(...groups);
@@ -1529,12 +1579,17 @@ function renderOverview(state, lang) {
     renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
     const time = providerReadingTime(state[id], lang);
     const reading = time ? tFormat('provider.lastReading', lang, { time }) : '';
-    card.title = reading;
+    card.querySelector('[data-overview-open]').title = reading;
     card.querySelector('[data-overview-reading]').textContent = reading;
+    const stale = card.querySelector('[data-overview-stale]');
+    stale.hidden = !time || ctx.now - new Date(state[id].updatedAt) < STALE_READING_MS;
+    stale.title = reading;
+    stale.querySelector('[data-stale-text]').textContent = stale.hidden ? '' : time;
     return card;
   });
   const shown = [...elements.overviewCards.children];
   if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) elements.overviewCards.replaceChildren(...cards);
+  indexQuotaRows(elements.overviewCards);
 }
 
 function renderProviderView(state, lang) {
@@ -1543,33 +1598,28 @@ function renderProviderView(state, lang) {
   if (provider === 'claude' || !quota) return;
   if (elements.providerHeading) elements.providerHeading.textContent = PROVIDER_NAMES[provider];
   const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
-  const cards = quota.sections.map(section => {
+  // One card per group. The main group has no title (the panel header names
+  // the provider); the others are titled by their group heading.
+  const cards = orderSections(quota.sections).map((section, index) => {
     let card = groupCards.get(section.id);
     if (!card) {
-      card = elements.quotaGroupTemplate.content.firstElementChild.cloneNode(true);
-      const paceEl = card.querySelector('[data-pace]');
-      if (paceEl) wireTooltip(paceEl);
+      card = document.createElement('section');
+      card.className = 'card overview-card';
+      card.append(createQuotaGroup(section.id));
       groupCards.set(section.id, card);
     }
+    renderQuotaGroup(card.firstElementChild, section, isCompactSection(provider, section.id, index), ctx);
     const title = card.querySelector('[data-group-title]');
-    title.textContent = groupTitle(section.id, lang);
-    title.hidden = section.id === provider;
     title.id = `quota-${provider}-${section.id}-heading`;
+    title.setAttribute('aria-level', '2');
     card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
-    const [session, weekly] = card.querySelectorAll('.quota-row');
-    const rowCtx = {
-      ...ctx,
-      blocked: Boolean(section.blocked),
-      weeklySpent: (section.weekly?.percent ?? 0) >= 100
-    };
-    renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
-    renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
     return card;
   });
   const shown = [...elements.providerGroups.children];
   if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) {
     elements.providerGroups.replaceChildren(...cards);
   }
+  indexQuotaRows(elements.providerGroups);
   const hasStats = Boolean(quota.todayStats || quota.monthStats);
   if (elements.providerCostGrid) {
     elements.providerCostGrid.hidden = !hasStats;
@@ -1681,12 +1731,17 @@ function renderExtraUsage(extra) {
   showBanner(elements.extraUsageCard);
   elements.extraUsedCredits.textContent = formatCurrency(extra.usedCredits);
   elements.extraMonthlyLimit.textContent = formatCurrency(extra.monthlyLimit);
+  // The ring takes the session meter's level colours for the share spent.
+  const spent = extra.monthlyLimit > 0 ? clampPercent((extra.usedCredits / extra.monthlyLimit) * 100) : 0;
+  elements.extraGauge.dataset.level = levelForPercent(spent);
+  elements.extraGauge.style.setProperty('--gauge-fill', spent);
 }
 
 function renderMeter(meter, percent) {
   const total = Number(meter.dataset.segments ?? 40);
-  const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * total);
+  // Nothing lit reads as an empty, neutral track rather than a faint green one.
+  const level = filled === 0 ? 'zero' : levelForPercent(percent);
   if (meter.dataset.level === level && meter.dataset.filled === String(filled) && meter.children.length === total) return;
   meter.dataset.level = level;
   meter.dataset.filled = String(filled);
@@ -1728,27 +1783,36 @@ function switchSettingsTab(name, { focus = false } = {}) {
     if (focus) tabs[name].focus();
     return;
   }
+  // Container-Follows-Content Rule (DESIGN.md §5): capture the card's height
+  // before the outgoing panel is parked out of flow — mid-swap this is the
+  // height the tween has reached, so an interrupted swap continues from it.
+  const startHeight = card.getBoundingClientRect().height;
+  const clearPanel = panel => {
+    panel.style.position = '';
+    panel.style.width = '';
+    panel.style.pointerEvents = '';
+    panel.style.opacity = '';
+    panel.style.transform = '';
+  };
   if (_tabTransitioning) {
+    // The panel still arriving becomes the one leaving, from wherever its fade
+    // had reached; only a third panel (already on its way out) is dropped.
     clearTimeout(_tabTransitionTimer);
     for (const [panelName, panel] of Object.entries(panels)) {
-      panel.hidden = panelName !== currentSettingsTab;
-      panel.style.position = '';
-      panel.style.width = '';
-      panel.style.pointerEvents = '';
-      panel.style.opacity = '';
+      if (panelName === currentSettingsTab || panelName === name) continue;
+      panel.hidden = true;
+      clearPanel(panel);
     }
-    card.style.height = '';
     delete card.dataset.resizing;
+    card.style.height = '';
     _tabTransitioning = false;
   }
   _tabTransitioning = true;
   const FADE_MS = cssMs('--duration-tab-fade', 110);
   const outgoing = panels[currentSettingsTab];
   const incoming = panels[name];
-  // Container-Follows-Content Rule (DESIGN.md §5): capture the card's height
-  // before the outgoing panel is parked out of flow, while it still reflects
-  // both panels' natural layout.
-  const startHeight = card.getBoundingClientRect().height;
+  // Panels travel the way the pill does; opacity only under reduced motion.
+  const shift = (reducedMotion() ? 0 : 6) * Math.sign(tabIndexes[name] - tabIndexes[currentSettingsTab]);
   tabs[currentSettingsTab].classList.remove('settings-tab--active');
   tabs[name].classList.add('settings-tab--active');
   tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
@@ -1767,9 +1831,14 @@ function switchSettingsTab(name, { focus = false } = {}) {
   outgoing.style.width = `${width}px`;
   outgoing.style.pointerEvents = 'none';
   outgoing.style.opacity = '0';
+  outgoing.style.transform = `translateX(${-shift}px)`;
 
   incoming.hidden = false;
+  incoming.style.position = '';
+  incoming.style.width = '';
+  incoming.style.pointerEvents = '';
   incoming.style.opacity = '0';
+  incoming.style.transform = `translateX(${shift}px)`;
 
   // Container-Follows-Content Rule: now that the outgoing panel is out of
   // flow and the incoming one is in it, the card's natural height is the
@@ -1789,16 +1858,17 @@ function switchSettingsTab(name, { focus = false } = {}) {
   card.style.height = `${targetHeight}px`;
 
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => { incoming.style.opacity = '1'; });
+    requestAnimationFrame(() => {
+      if (currentSettingsTab !== name) return;
+      incoming.style.opacity = '1';
+      incoming.style.transform = '';
+    });
   });
 
   _tabTransitionTimer = setTimeout(() => {
     outgoing.hidden = true;
-    outgoing.style.position = '';
-    outgoing.style.width = '';
-    outgoing.style.pointerEvents = '';
-    outgoing.style.opacity = '';
-    incoming.style.opacity = '';
+    clearPanel(outgoing);
+    clearPanel(incoming);
     card.style.height = '';
     delete card.dataset.resizing;
     _tabTransitioning = false;
@@ -1862,7 +1932,8 @@ function renderActiveView() {
   const previousView = renderedView;
   const viewChanged = activeView !== previousView;
   const provider = activeProvider();
-  if (viewChanged || provider !== renderedProvider) stopEntranceSequence();
+  const previousProvider = renderedProvider;
+  if (viewChanged || provider !== previousProvider) stopEntranceSequence();
   if (activeView !== 'main') lastEntranceAt = -Infinity;
   renderedView = activeView;
   renderedProvider = provider;
@@ -1872,7 +1943,16 @@ function renderActiveView() {
   elements.backButton.hidden = !settings;
   elements.settingsTitle.hidden = !settings;
   elements.providerHeading.hidden = settings;
+  elements.refreshButton.hidden = settings;
   elements.providerHeading.textContent = provider === 'overview' ? t('navigation.overview', currentLanguage()) : PROVIDER_NAMES[provider];
+  // The header names the destination; it fades in with the view instead of
+  // swapping a frame ahead of it (150ms, --duration-view-fade).
+  if (viewChanged || provider !== previousProvider) {
+    (settings ? elements.settingsTitle : elements.providerHeading).animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+  }
+  // Rail order, Settings last: going down travels up, coming back reverses it.
+  const rank = (view, id) => (view === 'settings' ? 4 : ['overview', 'claude', 'codex', 'antigravity'].indexOf(id));
+  const direction = rank(activeView, provider) < rank(previousView, previousProvider) ? -1 : 1;
   const showClaudeErrors = activeView === 'main' && (provider === 'overview' || provider === 'claude');
   elements.errorText.hidden = !showClaudeErrors;
   elements.reauthButton.hidden = !showClaudeErrors || !currentState?.needsReauth;
@@ -1880,6 +1960,7 @@ function renderActiveView() {
   const mainPanel = dashboardForProvider(provider);
   const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
   crossfadeTo(viewMap[activeView], {
+    direction,
     onVisible: () => {
       if (activeView === 'settings' && currentState) renderSettings(currentState);
       if (activeView === 'main' && previousView !== 'main') playEntranceSequence();
@@ -1975,9 +2056,11 @@ function playEntranceSequence() {
     for (const element of view.querySelectorAll('[data-entry-value]')) {
       if (element.dataset.entryValue === '') continue;
       const cost = element.classList.contains('stat-value');
+      // Same row stagger as the CSS reveal (35ms per row, capped at six).
+      const row = Math.min(Number(element.closest('.quota-row')?.dataset?.row) || 0, 6);
       animateCountUp(element, Number(element.dataset.entryValue), cost ? setCostValue : setPercentValue, {
         duration: cost ? 600 : 650,
-        delay: cost ? 440 : element.closest('[data-window="weekly"]') ? 380 : 310
+        delay: cost ? 440 : 310 + row * 35
       });
     }
   }
