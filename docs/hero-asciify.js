@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- retained on purpose but not loaded by the landing page (see CLAUDE.md)
 const HERO_SELECTOR = '[data-asciify-hero]';
 const CANVAS_SELECTOR = '[data-asciify-output]';
 const CELL_SIZE = 10;

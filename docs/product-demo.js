@@ -158,7 +158,7 @@ export function initMobileMenu(menu) {
   };
 }
 
-export const COPY_FEEDBACK_MS = 2200;
+const COPY_FEEDBACK_MS = 2200;
 
 export function initCopyButtons(documentRef, { feedbackMs = COPY_FEEDBACK_MS } = {}) {
   const buttons = [...documentRef.querySelectorAll('[data-copy-target]')];
