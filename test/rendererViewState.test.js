@@ -6,6 +6,7 @@ import {
   alertLevel,
   detectThresholdCrossings,
   extractChannelPercents,
+  isResetDrop,
   measuredPercent,
   providerSessionPeak,
   resolveProvider,
@@ -195,4 +196,12 @@ test('every settings control key exists in the renderer elements map', () => {
   for (const key of Object.keys(settingsControlState({}, { isPackaged: true }))) {
     assert.match(renderer, new RegExp(`\\b${key}: document\\.querySelector\\(`), key);
   }
+});
+
+test('isResetDrop flashes only on a drop from at least 95% to at most 5%', () => {
+  assert.equal(isResetDrop(95, 5), true);
+  assert.equal(isResetDrop(100, 0), true);
+  assert.equal(isResetDrop(94, 0), false);
+  assert.equal(isResetDrop(99, 6), false);
+  assert.equal(isResetDrop(null, 0), false);
 });

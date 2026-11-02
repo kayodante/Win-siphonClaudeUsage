@@ -31,6 +31,11 @@ export function measuredPercent(window) {
   return window && window.percent != null && !window.rolledOver ? clampPercent(window.percent) : null;
 }
 
+// A session quota that fell from nearly full to nearly empty has just reset.
+export function isResetDrop(previous, current) {
+  return previous != null && previous >= 95 && current <= 5;
+}
+
 // Highest session percent of a provider (Claude has one window; the others
 // have sections). A section without a session window contributes its weekly
 // one; a rolled-over session does not fall back to weekly.

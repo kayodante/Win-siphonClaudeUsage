@@ -17,7 +17,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { alertLevel, detectThresholdCrossings, extractChannelPercents, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState } from './viewState.js';
+import { alertLevel, detectThresholdCrossings, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState } from './viewState.js';
 
 let i18nCache = null;
 
@@ -1208,9 +1208,7 @@ function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyP
   const displaySession = quotaDisplayValue(sessionPercent, mode);
   const displayWeekly = quotaDisplayValue(weeklyPercent, mode);
   updateReading(elements.sessionPercent, session ? displaySession : null, setPercentValue);
-  if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
-    triggerResetFlash();
-  }
+  if (isResetDrop(prevRenderedSessionPct, sessionPercent)) triggerResetFlash();
   prevRenderedSessionPct = sessionPercent;
 
   updateReading(elements.weeklyPercent, weekly ? displayWeekly : null, setPercentValue);
@@ -1379,25 +1377,37 @@ function renderProviderStatus(element, text, status) {
   element.querySelector('[data-status-text]').textContent = text;
 }
 
+// The percent reading, the session reset flash and the remembered previous
+// percent. An unmeasured window shows no number and forgets the previous one.
+function renderRowReading(value, percent, measured, kind, mode) {
+  const prevPct = value.dataset.prevPercent != null ? Number(value.dataset.prevPercent) : null;
+  updateReading(value, measured ? quotaDisplayValue(percent, mode) : null, setPercentValue);
+  if (!measured) {
+    delete value.dataset.prevPercent;
+    return;
+  }
+  if (kind === 'session' && isResetDrop(prevPct, percent)) triggerResetFlash(value);
+  value.dataset.prevPercent = String(percent);
+}
+
+// Replace a container's children only when the order or identity differs, so
+// an unchanged list keeps its DOM (and running animations) untouched.
+function syncChildren(container, nodes) {
+  const shown = [...container.children];
+  if (nodes.length !== shown.length || nodes.some((node, i) => node !== shown[i])) container.replaceChildren(...nodes);
+}
+
 // `window` is a `providers::ProviderWindow`, or null when the source does not
 // offer that window at all — then the row is not shown.
 function renderQuotaRow(row, label, window, kind, ctx) {
   row.hidden = !window;
   if (!window) return;
-  const measured = window.percent != null && !window.rolledOver;
-  const percent = clampPercent(measured ? window.percent : 0);
+  const reading = measuredPercent(window);
+  const measured = reading != null;
+  const percent = reading ?? 0;
   row.querySelector('[data-label]').textContent = label;
   const value = row.querySelector('[data-percent]');
-  const prevPct = value.dataset.prevPercent != null ? Number(value.dataset.prevPercent) : null;
-  updateReading(value, measured ? quotaDisplayValue(percent, ctx.mode) : null, setPercentValue);
-  if (measured) {
-    if (prevPct !== null && kind === 'session' && prevPct >= 95 && percent <= 5) {
-      triggerResetFlash(value);
-    }
-    value.dataset.prevPercent = String(percent);
-  } else {
-    delete value.dataset.prevPercent;
-  }
+  renderRowReading(value, percent, measured, kind, ctx.mode);
   setQuotaColorDrift(value, percent);
   row.querySelector('[data-suffix]').textContent = measured ? t(`quota.suffix.${ctx.mode}`, ctx.lang) : '';
   const paceEl = row.querySelector('[data-pace]');
@@ -1512,7 +1522,7 @@ function renderOverview(state, lang) {
       renderQuotaGroup(group, section, isCompactSection(id, section.id, index), ctx);
       return group;
     });
-    if (groups.length !== shown.length || groups.some((group, i) => group !== shown[i])) container.replaceChildren(...groups);
+    syncChildren(container, groups);
     const status = id === 'claude' ? '' : providerStatusText(id, state[id], lang);
     renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
     const time = providerReadingTime(state[id], lang);
@@ -1525,51 +1535,48 @@ function renderOverview(state, lang) {
     stale.querySelector('[data-stale-text]').textContent = stale.hidden ? '' : time;
     return card;
   });
-  const shown = [...elements.overviewCards.children];
-  if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) elements.overviewCards.replaceChildren(...cards);
+  syncChildren(elements.overviewCards, cards);
   indexQuotaRows(elements.overviewCards);
+}
+
+// One card per group. The main group has no title (the panel header names
+// the provider); the others are titled by their group heading.
+function renderProviderGroupCard(provider, section, index, ctx) {
+  let card = groupCards.get(section.id);
+  if (!card) {
+    card = document.createElement('section');
+    card.className = 'card overview-card';
+    card.append(createQuotaGroup(section.id));
+    groupCards.set(section.id, card);
+  }
+  renderQuotaGroup(card.firstElementChild, section, isCompactSection(provider, section.id, index), ctx);
+  const title = card.querySelector('[data-group-title]');
+  title.id = `quota-${provider}-${section.id}-heading`;
+  title.setAttribute('aria-level', '2');
+  card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
+  return card;
+}
+
+function renderProviderStats(quota, lang) {
+  const hasStats = Boolean(quota.todayStats || quota.monthStats);
+  elements.providerCostGrid.hidden = !hasStats;
+  if (!hasStats) return;
+  updateReading(elements.providerTodayCost, quota.todayStats?.cost, setCostValue);
+  elements.providerTodayTokens.textContent = formatTokens(quota.todayStats?.totalTokens, lang) ?? '';
+  updateReading(elements.providerMonthCost, quota.monthStats?.cost, setCostValue);
+  elements.providerMonthTokens.textContent = formatTokens(quota.monthStats?.totalTokens, lang) ?? '';
 }
 
 function renderProviderView(state, lang) {
   const provider = activeProvider();
   const quota = state[provider];
   if (provider === 'claude' || !quota) return;
-  if (elements.providerHeading) elements.providerHeading.textContent = PROVIDER_NAMES[provider];
+  elements.providerHeading.textContent = PROVIDER_NAMES[provider];
   const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
-  // One card per group. The main group has no title (the panel header names
-  // the provider); the others are titled by their group heading.
-  const cards = orderSections(quota.sections).map((section, index) => {
-    let card = groupCards.get(section.id);
-    if (!card) {
-      card = document.createElement('section');
-      card.className = 'card overview-card';
-      card.append(createQuotaGroup(section.id));
-      groupCards.set(section.id, card);
-    }
-    renderQuotaGroup(card.firstElementChild, section, isCompactSection(provider, section.id, index), ctx);
-    const title = card.querySelector('[data-group-title]');
-    title.id = `quota-${provider}-${section.id}-heading`;
-    title.setAttribute('aria-level', '2');
-    card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
-    return card;
-  });
-  const shown = [...elements.providerGroups.children];
-  if (cards.length !== shown.length || cards.some((card, i) => card !== shown[i])) {
-    elements.providerGroups.replaceChildren(...cards);
-  }
+  const cards = orderSections(quota.sections).map((section, index) => renderProviderGroupCard(provider, section, index, ctx));
+  syncChildren(elements.providerGroups, cards);
   indexQuotaRows(elements.providerGroups);
-  const hasStats = Boolean(quota.todayStats || quota.monthStats);
-  if (elements.providerCostGrid) {
-    elements.providerCostGrid.hidden = !hasStats;
-    if (hasStats) {
-      updateReading(elements.providerTodayCost, quota.todayStats?.cost, setCostValue);
-      elements.providerTodayTokens.textContent =
-        formatTokens(quota.todayStats?.totalTokens, lang) ?? '';
-      updateReading(elements.providerMonthCost, quota.monthStats?.cost, setCostValue);
-      elements.providerMonthTokens.textContent =
-        formatTokens(quota.monthStats?.totalTokens, lang) ?? '';
-    }
-  }
+  renderProviderStats(quota, lang);
   renderProviderStatus(elements.providerStatus, providerStatusText(provider, quota, lang), quota.status);
 }
 
