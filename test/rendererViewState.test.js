@@ -3,8 +3,11 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
+  alertLevel,
   detectThresholdCrossings,
   extractChannelPercents,
+  measuredPercent,
+  providerSessionPeak,
   resolveProvider,
   resolveView
 } from '../src/renderer/viewState.js';
@@ -130,4 +133,33 @@ test('detectThresholdCrossings reports alerts per channel crossing', () => {
   const res4 = detectThresholdCrossings(null, current, { expireSound: true, limitSound: true });
   assert.equal(res4.playFull, false);
   assert.equal(res4.playLimit, false);
+});
+
+test('providerSessionPeak keeps Claude, skips rolled-over sessions, uses weekly only without a session', () => {
+  assert.deepEqual(providerSessionPeak({ quota: { session: { percent: 45.2 } } }, 'claude'), { percent: 45, sectionId: null });
+  assert.deepEqual(providerSessionPeak({}, 'claude'), { percent: 0, sectionId: null });
+  assert.deepEqual(providerSessionPeak({}, 'codex'), { percent: 0, sectionId: null });
+  const antigravity = { sections: [
+    { id: 'gemini', session: { percent: 40 } },
+    { id: 'thirdParty', session: { percent: null, rolledOver: true }, weekly: { percent: 99 } },
+    { id: 'argon', weekly: { percent: 80 } }
+  ] };
+  assert.deepEqual(providerSessionPeak({ antigravity }, 'antigravity'), { percent: 80, sectionId: 'argon' });
+  const tie = { sections: [{ id: 'a', session: { percent: 0 } }, { id: 'b', session: { percent: 0 } }] };
+  assert.deepEqual(providerSessionPeak({ codex: tie }, 'codex'), { percent: 0, sectionId: 'a' });
+});
+
+test('alertLevel uses the 70% and 90% banner thresholds', () => {
+  assert.equal(alertLevel(69), null);
+  assert.equal(alertLevel(70), 'high');
+  assert.equal(alertLevel(89), 'high');
+  assert.equal(alertLevel(90), 'critical');
+});
+
+test('measuredPercent treats unknown and rolled-over windows as unmeasured', () => {
+  assert.equal(measuredPercent(null), null);
+  assert.equal(measuredPercent({ percent: null }), null);
+  assert.equal(measuredPercent({ percent: 50, rolledOver: true }), null);
+  assert.equal(measuredPercent({ percent: 0 }), 0);
+  assert.equal(measuredPercent({ percent: 120 }), 100);
 });

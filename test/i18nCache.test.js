@@ -114,6 +114,8 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const resolveNavigation = () => null;
     const overviewProviders = () => [];
     const extractChannelPercents = () => new Map();
+    const providerSessionPeak = () => ({ percent: 0, sectionId: null });
+    const alertLevel = () => null;
     const detectThresholdCrossings = () => ({ playFull: false, playLimit: false });
   `;
 

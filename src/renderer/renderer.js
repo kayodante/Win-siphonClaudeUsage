@@ -17,7 +17,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { detectThresholdCrossings, extractChannelPercents, overviewProviders, resolveNavigation, resolveProvider, resolveView } from './viewState.js';
+import { alertLevel, detectThresholdCrossings, extractChannelPercents, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView } from './viewState.js';
 
 let i18nCache = null;
 
@@ -1132,38 +1132,8 @@ function render(state) {
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
 
   renderSettingsControls(state, lang);
-  renderBannersAndErrors(state, sessionPercent, lang);
+  renderBannersAndErrors(state, lang);
   renderSettings(state, lang);
-}
-
-function providerSessionPeak(state, provider) {
-  if (provider === 'claude') {
-    const pct = clampPercent(state?.quota?.session?.percent ?? 0);
-    return { percent: pct, sectionId: null };
-  }
-  let bestPercent = 0;
-  let bestSectionId = null;
-  for (const section of state?.[provider]?.sections ?? []) {
-    const win = section?.session;
-    if (win && win.percent != null && !win.rolledOver) {
-      const pct = clampPercent(win.percent);
-      if (pct > bestPercent || bestSectionId === null) {
-        bestPercent = pct;
-        bestSectionId = section.id;
-      }
-    } else if (!win) {
-      // Sections without a session window (e.g. Gemini 4 Argon) contribute their weekly quota
-      const weeklyWin = section?.weekly;
-      if (weeklyWin && weeklyWin.percent != null && !weeklyWin.rolledOver) {
-        const pct = clampPercent(weeklyWin.percent);
-        if (pct > bestPercent || bestSectionId === null) {
-          bestPercent = pct;
-          bestSectionId = section.id;
-        }
-      }
-    }
-  }
-  return { percent: bestPercent, sectionId: bestSectionId };
 }
 
 function handleThresholdSounds(state) {
@@ -1191,13 +1161,9 @@ function handleThresholdSounds(state) {
 
   // Reset dismissed state per provider when percent drops back below threshold
   for (const provider of ['claude', 'codex', 'antigravity']) {
-    const { percent } = providerSessionPeak(state, provider);
-    if (percent < 70) {
-      highUsageDismissed.delete(provider);
-      criticalDismissed.delete(provider);
-    } else if (percent < 90) {
-      criticalDismissed.delete(provider);
-    }
+    const level = alertLevel(providerSessionPeak(state, provider).percent);
+    if (level !== 'critical') criticalDismissed.delete(provider);
+    if (!level) highUsageDismissed.delete(provider);
   }
 }
 
@@ -1324,27 +1290,33 @@ function renderSettingsControls(state, lang) {
   elements.settingsUpdatesAutoDownloadToggle.disabled = !autoCheck;
 }
 
-function renderBannersAndErrors(state, _sessionPercent, lang) {
+function toggleBanner(el, show) {
+  if (show) showBanner(el);
+  else hideBanner(el);
+}
+
+function renderUsageBanners(state, lang) {
   const active = activeProvider();
-  const { percent: activePct, sectionId } = providerSessionPeak(state, active);
+  const { percent, sectionId } = providerSessionPeak(state, active);
   const titlePrefix = active === 'antigravity' && sectionId ? `${groupTitle(sectionId, lang)} · ` : '';
   if (titlePrefix) {
-    if (elements.highUsageBannerTitle) {
-      elements.highUsageBannerTitle.textContent = `${titlePrefix}${t('alert.highUsage.title', lang)}`;
-    }
-    if (elements.criticalBannerTitle) {
-      elements.criticalBannerTitle.textContent = `${titlePrefix}${t('alert.critical.title', lang)}`;
+    for (const [el, key] of [
+      [elements.highUsageBannerTitle, 'alert.highUsage.title'],
+      [elements.criticalBannerTitle, 'alert.critical.title']
+    ]) {
+      if (el) el.textContent = `${titlePrefix}${t(key, lang)}`;
     }
   }
+  const level = alertLevel(percent);
+  toggleBanner(elements.criticalBanner, level === 'critical' && !criticalDismissed.has(active));
+  toggleBanner(elements.highUsageBanner, level === 'high' && !highUsageDismissed.has(active));
+}
 
-  if (activePct >= 90 && !criticalDismissed.has(active)) showBanner(elements.criticalBanner);
-  else hideBanner(elements.criticalBanner);
-  if (activePct >= 70 && activePct < 90 && !highUsageDismissed.has(active)) showBanner(elements.highUsageBanner);
-  else hideBanner(elements.highUsageBanner);
-
+function renderBannersAndErrors(state, lang) {
+  renderUsageBanners(state, lang);
   if (!state.isOffline) offlineDismissed = false;
-  if (state.isOffline && !offlineDismissed) showBanner(elements.offlineBanner);
-  else hideBanner(elements.offlineBanner);
+  toggleBanner(elements.offlineBanner, state.isOffline && !offlineDismissed);
+  const active = activeProvider();
   elements.reauthButton.hidden = !state.needsReauth || resolveView(state, requestedView) !== 'main' || !['overview', 'claude'].includes(active);
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   setErrorText([
@@ -1404,9 +1376,8 @@ function renderNavigation(state) {
       delete button.dataset.alert;
     } else {
       button.removeAttribute('aria-current');
-      const { percent } = providerSessionPeak(state, provider);
-      if (percent >= 90) button.dataset.alert = 'critical';
-      else if (percent >= 70) button.dataset.alert = 'high';
+      const level = alertLevel(providerSessionPeak(state, provider).percent);
+      if (level) button.dataset.alert = level;
       else delete button.dataset.alert;
     }
   }
