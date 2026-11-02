@@ -119,6 +119,9 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const measuredPercent = () => null;
     const isResetDrop = () => false;
     const settingsControlState = () => ({});
+    const showsClaudeErrors = () => false;
+    const viewDirection = () => 1;
+    const entranceCountUpTiming = () => ({ duration: 0, delay: 0 });
     const detectThresholdCrossings = () => ({ playFull: false, playLimit: false });
   `;
 

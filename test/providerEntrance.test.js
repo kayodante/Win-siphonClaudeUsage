@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
-import { resolveView } from '../src/renderer/viewState.js';
+import { entranceCountUpTiming, resolveView, showsClaudeErrors, viewDirection } from '../src/renderer/viewState.js';
 import { formatPercent } from '../src/shared/format.js';
 import { createViewSwitcher } from '../src/renderer/viewTransition.js';
 
 const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
 
 function setup({ reduced = false } = {}) {
-  const functions = ['renderActiveView', 'dashboardForProvider', 'playEntranceSequence', 'stopEntranceSequence', 'queueWindowEntrance', 'animateCountUp', 'cancelCountUp', 'setPercentValue', 'updateReading'];
+  const functions = ['renderViewHeader', 'renderActiveView', 'dashboardForProvider', 'startEntranceCountUps', 'playEntranceSequence', 'stopEntranceSequence', 'queueWindowEntrance', 'animateCountUp', 'cancelCountUp', 'setPercentValue', 'updateReading'];
   const code = functions.map(name => {
     const match = renderer.match(new RegExp(`function ${name}\\([^]*?\\n\\}`, 'm'));
     assert.ok(match, `missing ${name}`);
@@ -29,7 +29,7 @@ function setup({ reduced = false } = {}) {
     backButton: {}, settingsTitle: {}, providerHeading: {}, refreshButton: {}, errorText: {}, reauthButton: {}
   };
   const context = vm.createContext({
-    elements, document: { body: { dataset: {}, offsetWidth: 352 }, hidden: false }, resolveView, formatPercent,
+    elements, document: { body: { dataset: {}, offsetWidth: 352 }, hidden: false }, resolveView, viewDirection, showsClaudeErrors, entranceCountUpTiming, formatPercent,
     performance: { now: () => now }, reducedMotion: () => reduced,
     requestAnimationFrame: callback => { frames.set(++id, callback); return id; },
     cancelAnimationFrame: key => frames.delete(key),

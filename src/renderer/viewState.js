@@ -134,3 +134,22 @@ export function settingsControlState(preferences, { isPackaged }) {
     settingsUpdatesAutoDownloadToggle: { checked: pref('updates.autoDownload', false), disabled: !autoCheck }
   };
 }
+
+export function showsClaudeErrors(view, provider) {
+  return view === 'main' && (provider === 'overview' || provider === 'claude');
+}
+
+// Rail order, Settings last: going down travels up, coming back reverses it.
+const RAIL_ORDER = ['overview', 'claude', 'codex', 'antigravity'];
+const viewRank = (view, provider) => (view === 'settings' ? 4 : RAIL_ORDER.indexOf(provider));
+
+export function viewDirection(view, provider, previousView, previousProvider) {
+  return viewRank(view, provider) < viewRank(previousView, previousProvider) ? -1 : 1;
+}
+
+// Same row stagger as the CSS reveal (35ms per row, capped at six).
+export function entranceCountUpTiming(cost, row) {
+  return cost
+    ? { duration: 600, delay: 440 }
+    : { duration: 650, delay: 310 + Math.min(Number(row) || 0, 6) * 35 };
+}

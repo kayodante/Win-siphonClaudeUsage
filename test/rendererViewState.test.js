@@ -5,13 +5,16 @@ import test from 'node:test';
 import {
   alertLevel,
   detectThresholdCrossings,
+  entranceCountUpTiming,
   extractChannelPercents,
   isResetDrop,
   measuredPercent,
   providerSessionPeak,
   resolveProvider,
   resolveView,
-  settingsControlState
+  settingsControlState,
+  showsClaudeErrors,
+  viewDirection
 } from '../src/renderer/viewState.js';
 
 test('signed out state always resolves to onboarding', () => {
@@ -204,4 +207,26 @@ test('isResetDrop flashes only on a drop from at least 95% to at most 5%', () =>
   assert.equal(isResetDrop(94, 0), false);
   assert.equal(isResetDrop(99, 6), false);
   assert.equal(isResetDrop(null, 0), false);
+});
+
+test('viewDirection follows rail order with Settings last', () => {
+  assert.equal(viewDirection('main', 'claude', 'main', 'overview'), 1);
+  assert.equal(viewDirection('main', 'overview', 'main', 'claude'), -1);
+  assert.equal(viewDirection('settings', 'codex', 'main', 'antigravity'), 1);
+  assert.equal(viewDirection('main', 'antigravity', 'settings', 'antigravity'), -1);
+  assert.equal(viewDirection('main', 'overview', null, null), 1);
+});
+
+test('showsClaudeErrors only on the Overview and Claude dashboards', () => {
+  assert.equal(showsClaudeErrors('main', 'overview'), true);
+  assert.equal(showsClaudeErrors('main', 'claude'), true);
+  assert.equal(showsClaudeErrors('main', 'codex'), false);
+  assert.equal(showsClaudeErrors('settings', 'claude'), false);
+});
+
+test('entranceCountUpTiming staggers rows 35ms apart, capped at six', () => {
+  assert.deepEqual(entranceCountUpTiming(true, 3), { duration: 600, delay: 440 });
+  assert.deepEqual(entranceCountUpTiming(false, undefined), { duration: 650, delay: 310 });
+  assert.deepEqual(entranceCountUpTiming(false, '2'), { duration: 650, delay: 380 });
+  assert.deepEqual(entranceCountUpTiming(false, 10), { duration: 650, delay: 520 });
 });

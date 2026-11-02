@@ -17,7 +17,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { alertLevel, detectThresholdCrossings, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState } from './viewState.js';
+import { alertLevel, detectThresholdCrossings, entranceCountUpTiming, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState, showsClaudeErrors, viewDirection } from './viewState.js';
 
 let i18nCache = null;
 
@@ -1283,7 +1283,7 @@ function renderBannersAndErrors(state, lang) {
   if (!state.isOffline) offlineDismissed = false;
   toggleBanner(elements.offlineBanner, state.isOffline && !offlineDismissed);
   const active = activeProvider();
-  elements.reauthButton.hidden = !state.needsReauth || resolveView(state, requestedView) !== 'main' || !['overview', 'claude'].includes(active);
+  elements.reauthButton.hidden = !state.needsReauth || !showsClaudeErrors(resolveView(state, requestedView), active);
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   setErrorText([
     state.localError ? t(state.localError, lang) : null,
@@ -1872,19 +1872,7 @@ function dashboardForProvider(provider) {
   return provider === 'overview' ? elements.overviewView : provider === 'claude' ? elements.mainView : elements.providerView;
 }
 
-function renderActiveView() {
-  const activeView = resolveView(currentState, requestedView);
-  const previousView = renderedView;
-  const viewChanged = activeView !== previousView;
-  const provider = activeProvider();
-  const previousProvider = renderedProvider;
-  if (viewChanged || provider !== previousProvider) stopEntranceSequence();
-  if (activeView !== 'main') lastEntranceAt = -Infinity;
-  renderedView = activeView;
-  renderedProvider = provider;
-  document.body.dataset.view = activeView;
-  renderNavigation(currentState);
-  const settings = activeView === 'settings';
+function renderViewHeader(settings, provider, changed) {
   elements.backButton.hidden = !settings;
   elements.settingsTitle.hidden = !settings;
   elements.providerHeading.hidden = settings;
@@ -1892,15 +1880,29 @@ function renderActiveView() {
   elements.providerHeading.textContent = provider === 'overview' ? t('navigation.overview', currentLanguage()) : PROVIDER_NAMES[provider];
   // The header names the destination; it fades in with the view instead of
   // swapping a frame ahead of it (150ms, --duration-view-fade).
-  if (viewChanged || provider !== previousProvider) {
+  if (changed) {
     (settings ? elements.settingsTitle : elements.providerHeading).animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
   }
-  // Rail order, Settings last: going down travels up, coming back reverses it.
-  const rank = (view, id) => (view === 'settings' ? 4 : ['overview', 'claude', 'codex', 'antigravity'].indexOf(id));
-  const direction = rank(activeView, provider) < rank(previousView, previousProvider) ? -1 : 1;
-  const showClaudeErrors = activeView === 'main' && (provider === 'overview' || provider === 'claude');
-  elements.errorText.hidden = !showClaudeErrors;
-  elements.reauthButton.hidden = !showClaudeErrors || !currentState?.needsReauth;
+}
+
+function renderActiveView() {
+  const activeView = resolveView(currentState, requestedView);
+  const previousView = renderedView;
+  const viewChanged = activeView !== previousView;
+  const provider = activeProvider();
+  const previousProvider = renderedProvider;
+  const changed = viewChanged || provider !== previousProvider;
+  if (changed) stopEntranceSequence();
+  if (activeView !== 'main') lastEntranceAt = -Infinity;
+  renderedView = activeView;
+  renderedProvider = provider;
+  document.body.dataset.view = activeView;
+  renderNavigation(currentState);
+  renderViewHeader(activeView === 'settings', provider, changed);
+  const direction = viewDirection(activeView, provider, previousView, previousProvider);
+  const claudeErrors = showsClaudeErrors(activeView, provider);
+  elements.errorText.hidden = !claudeErrors;
+  elements.reauthButton.hidden = !claudeErrors || !currentState?.needsReauth;
 
   const mainPanel = dashboardForProvider(provider);
   const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
@@ -1987,6 +1989,15 @@ function stopEntranceSequence() {
   }
 }
 
+function startEntranceCountUps(view) {
+  for (const element of view.querySelectorAll('[data-entry-value]')) {
+    if (element.dataset.entryValue === '') continue;
+    const cost = element.classList.contains('stat-value');
+    const timing = entranceCountUpTiming(cost, element.closest('.quota-row')?.dataset?.row);
+    animateCountUp(element, Number(element.dataset.entryValue), cost ? setCostValue : setPercentValue, timing);
+  }
+}
+
 function playEntranceSequence() {
   if (!currentState || document.hidden || reducedMotion()) return;
   const view = resolveView(currentState, requestedView) === 'main' ? dashboardForProvider(activeProvider()) : null;
@@ -1998,16 +2009,7 @@ function playEntranceSequence() {
   document.body.dataset.entering = '1';
   if (view) {
     view.dataset.entering = '1';
-    for (const element of view.querySelectorAll('[data-entry-value]')) {
-      if (element.dataset.entryValue === '') continue;
-      const cost = element.classList.contains('stat-value');
-      // Same row stagger as the CSS reveal (35ms per row, capped at six).
-      const row = Math.min(Number(element.closest('.quota-row')?.dataset?.row) || 0, 6);
-      animateCountUp(element, Number(element.dataset.entryValue), cost ? setCostValue : setPercentValue, {
-        duration: cost ? 600 : 650,
-        delay: cost ? 440 : 310 + row * 35
-      });
-    }
+    startEntranceCountUps(view);
   }
   enterSequenceTimer = setTimeout(() => {
     if (view) delete view.dataset.entering;
