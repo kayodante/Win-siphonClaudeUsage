@@ -1096,6 +1096,14 @@ function render(state) {
   renderActiveView();
 
   elements.signOutButton.hidden = !state.isSignedIn;
+  renderOnboarding(state, lang);
+
+  renderSettingsControls(state);
+  renderBannersAndErrors(state, lang);
+  renderSettings(state, lang);
+}
+
+function renderOnboarding(state, lang) {
   const awaitingCode = Boolean(state.awaitingCode);
   const awaitingBrowser = Boolean(state.awaitingBrowser);
   elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
@@ -1130,10 +1138,6 @@ function render(state) {
   // The old notice claims the redirect failed. While still waiting it has not
   // failed yet, so the hatch supplies its own line and this one stays hidden.
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
-
-  renderSettingsControls(state);
-  renderBannersAndErrors(state, lang);
-  renderSettings(state, lang);
 }
 
 function handleThresholdSounds(state) {
