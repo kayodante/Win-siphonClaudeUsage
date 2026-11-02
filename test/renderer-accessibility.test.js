@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { settingsControlState } from '../src/renderer/viewState.js';
+
 const html = readFileSync(new URL('../src/renderer/index.html', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
 
@@ -73,8 +75,8 @@ test('widget style chooser exposes one selected radio and supports arrow navigat
   assert.match(elementWithId('settingsStylePicker'), /role="radiogroup"[^>]+aria-labelledby="settingsWidgetStyleHeading"/);
   assert.match(elementWithId('settingsStyleClassic'), /role="radio"[^>]+aria-checked="true"[^>]+tabindex="0"/);
   assert.match(elementWithId('settingsStyleMini'), /role="radio"[^>]+aria-checked="false"[^>]+tabindex="-1"/);
-  assert.match(renderer, /settingsStyleClassic\.setAttribute\('aria-checked'/);
-  assert.match(renderer, /settingsStyleMini\.setAttribute\('aria-checked'/);
+  assert.match(renderer, /function renderStylePicker\(/);
+  assert.match(renderer, /setAttribute\('aria-checked', String\(/);
   assert.match(renderer, /event\.key === 'ArrowRight' \|\| event\.key === 'ArrowDown'/);
   assert.match(renderer, /options\[nextIndex\]\.click\(\);/);
 });
@@ -162,8 +164,10 @@ test('Pill weekly switch uses a visible translated label and is limited to the P
   assert.match(elementWithId('settingsPillWeeklyOption'), /hidden/);
   assert.match(elementWithId('settingsPillWeeklyLabel'), /data-i18n="settings\.widget\.showWeekly"/);
   assert.match(elementWithId('settingsPillWeeklyToggle'), /type="checkbox"[^>]*aria-labelledby="settingsPillWeeklyLabel"/);
-  assert.match(renderer, /settingsPillWeeklyOption\.hidden = floatingStyle !== 'mini'/);
-  assert.match(renderer, /settingsPillWeeklyToggle\.checked = state\.preferences\?\.floating\?\.showWeekly \?\? true/);
+  const pillState = style => settingsControlState({ floating: { style } }, { isPackaged: true });
+  assert.equal(pillState('classic').settingsPillWeeklyOption.hidden, true);
+  assert.equal(pillState('mini').settingsPillWeeklyOption.hidden, false);
+  assert.equal(pillState('mini').settingsPillWeeklyToggle.checked, true);
   assert.match(renderer, /setPreference\('floating\.showWeekly', event\.target\.checked\)/);
 });
 

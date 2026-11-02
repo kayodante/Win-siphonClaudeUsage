@@ -17,7 +17,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { alertLevel, detectThresholdCrossings, extractChannelPercents, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView } from './viewState.js';
+import { alertLevel, detectThresholdCrossings, extractChannelPercents, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState } from './viewState.js';
 
 let i18nCache = null;
 
@@ -1131,7 +1131,7 @@ function render(state) {
   // failed yet, so the hatch supplies its own line and this one stays hidden.
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
 
-  renderSettingsControls(state, lang);
+  renderSettingsControls(state);
   renderBannersAndErrors(state, lang);
   renderSettings(state, lang);
 }
@@ -1240,54 +1240,22 @@ function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPerc
   updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode });
 }
 
-function renderSettingsControls(state, lang) {
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
-  const soundEnabled = state.preferences?.notifications?.sound ?? false;
-  const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
-  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
-  const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
-  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
-  const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
-  const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
-  const floatingStyle = state.preferences?.floating?.style ?? 'classic';
+function renderStylePicker(style) {
+  for (const [el, name] of [[elements.settingsStyleClassic, 'classic'], [elements.settingsStyleMini, 'mini']]) {
+    el.dataset.active = String(style === name);
+    el.setAttribute('aria-checked', String(style === name));
+    el.tabIndex = style === name ? 0 : -1;
+  }
+}
 
-  elements.settingsLanguage.value = lang;
-  elements.settingsNotificationsToggle.checked = notificationsEnabled;
-  elements.settingsSoundToggle.checked = soundEnabled;
-  elements.settingsSoundVolume.value = String(soundVolume);
-  elements.settingsSoundVolume.disabled = !soundEnabled;
-  updateSliderFill(elements.settingsSoundVolume);
-  elements.settingsExpireSoundToggle.checked = expireSoundEnabled;
-  elements.settingsExpireSoundVolume.value = String(expireSoundVolume);
-  elements.settingsExpireSoundVolume.disabled = !expireSoundEnabled;
-  updateSliderFill(elements.settingsExpireSoundVolume);
-  elements.settingsLimitSoundToggle.checked = limitSoundEnabled;
-  elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
-  elements.settingsLimitSoundVolume.disabled = !limitSoundEnabled;
-  updateSliderFill(elements.settingsLimitSoundVolume);
-  elements.settingsExpireAlertToggle.checked = state.preferences?.notifications?.expireAlert ?? false;
-  elements.settingsLimitAlertToggle.checked = state.preferences?.notifications?.limitAlert ?? false;
-  elements.settingsRefreshInterval.value = String(state.preferences?.refresh?.intervalSeconds ?? 30);
-  elements.settingsQuotaMode.value = state.preferences?.display?.quotaMode ?? 'used';
-  elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
-  elements.settingsPillWeeklyOption.hidden = floatingStyle !== 'mini';
-  elements.settingsPillWeeklyToggle.checked = state.preferences?.floating?.showWeekly ?? true;
-  elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
-  elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
-  elements.settingsStyleClassic.setAttribute('aria-checked', String(floatingStyle === 'classic'));
-  elements.settingsStyleMini.setAttribute('aria-checked', String(floatingStyle === 'mini'));
-  elements.settingsStyleClassic.tabIndex = floatingStyle === 'classic' ? 0 : -1;
-  elements.settingsStyleMini.tabIndex = floatingStyle === 'mini' ? 0 : -1;
-  elements.settingsStartupToggle.checked = startupOpenAtLogin;
-  elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
-  elements.settingsStartupShowWindowToggle.checked = state.preferences?.startup?.showWindowOnLogin ?? false;
-  elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
-  elements.settingsLaunchWithClaudeCodeToggle.checked = state.preferences?.integration?.launchWithClaudeCode ?? false;
-  elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
-  const autoCheck = state.preferences?.updates?.autoCheck ?? true;
-  elements.settingsUpdatesAutoCheckToggle.checked = autoCheck;
-  elements.settingsUpdatesAutoDownloadToggle.checked = state.preferences?.updates?.autoDownload ?? false;
-  elements.settingsUpdatesAutoDownloadToggle.disabled = !autoCheck;
+function renderSettingsControls(state) {
+  for (const [key, props] of Object.entries(settingsControlState(state.preferences, appInfo))) {
+    Object.assign(elements[key], props);
+  }
+  for (const slider of [elements.settingsSoundVolume, elements.settingsExpireSoundVolume, elements.settingsLimitSoundVolume]) {
+    updateSliderFill(slider);
+  }
+  renderStylePicker(state.preferences?.floating?.style ?? 'classic');
 }
 
 function toggleBanner(el, show) {

@@ -92,3 +92,40 @@ export function detectThresholdCrossings(prevMap, currentMap, { expireSound = fa
 
   return { playFull, playLimit };
 }
+
+function preference(preferences, path, fallback) {
+  let value = preferences;
+  for (const key of path.split('.')) value = value?.[key];
+  return value ?? fallback;
+}
+
+// Derives the settings form's control state from preferences. Keys are names in
+// the renderer's `elements` map; defaults match the preferences schema.
+export function settingsControlState(preferences, { isPackaged }) {
+  const pref = (path, fallback) => preference(preferences, path, fallback);
+  const sound = (key) => pref(`notifications.${key}`, false);
+  const volume = (key) => String(pref(`notifications.${key}`, 1.0));
+  const openAtLogin = pref('startup.openAtLogin', false);
+  const autoCheck = pref('updates.autoCheck', true);
+  return {
+    settingsNotificationsToggle: { checked: pref('notifications.sessionReset', true) },
+    settingsSoundToggle: { checked: sound('sound') },
+    settingsSoundVolume: { value: volume('soundVolume'), disabled: !sound('sound') },
+    settingsExpireSoundToggle: { checked: sound('expireSound') },
+    settingsExpireSoundVolume: { value: volume('expireSoundVolume'), disabled: !sound('expireSound') },
+    settingsLimitSoundToggle: { checked: sound('limitSound') },
+    settingsLimitSoundVolume: { value: volume('limitSoundVolume'), disabled: !sound('limitSound') },
+    settingsExpireAlertToggle: { checked: pref('notifications.expireAlert', false) },
+    settingsLimitAlertToggle: { checked: pref('notifications.limitAlert', false) },
+    settingsRefreshInterval: { value: String(pref('refresh.intervalSeconds', 30)) },
+    settingsQuotaMode: { value: pref('display.quotaMode', 'used') },
+    settingsFloatingToggle: { checked: pref('floating.enabled', false) },
+    settingsPillWeeklyOption: { hidden: pref('floating.style', 'classic') !== 'mini' },
+    settingsPillWeeklyToggle: { checked: pref('floating.showWeekly', true) },
+    settingsStartupToggle: { checked: openAtLogin, disabled: !isPackaged },
+    settingsStartupShowWindowToggle: { checked: pref('startup.showWindowOnLogin', false), disabled: !isPackaged || !openAtLogin },
+    settingsLaunchWithClaudeCodeToggle: { checked: pref('integration.launchWithClaudeCode', false), disabled: !isPackaged },
+    settingsUpdatesAutoCheckToggle: { checked: autoCheck },
+    settingsUpdatesAutoDownloadToggle: { checked: pref('updates.autoDownload', false), disabled: !autoCheck }
+  };
+}

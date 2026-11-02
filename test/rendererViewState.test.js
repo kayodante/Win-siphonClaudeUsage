@@ -9,7 +9,8 @@ import {
   measuredPercent,
   providerSessionPeak,
   resolveProvider,
-  resolveView
+  resolveView,
+  settingsControlState
 } from '../src/renderer/viewState.js';
 
 test('signed out state always resolves to onboarding', () => {
@@ -162,4 +163,36 @@ test('measuredPercent treats unknown and rolled-over windows as unmeasured', () 
   assert.equal(measuredPercent({ percent: 50, rolledOver: true }), null);
   assert.equal(measuredPercent({ percent: 0 }), 0);
   assert.equal(measuredPercent({ percent: 120 }), 100);
+});
+
+test('settingsControlState renders defaults when preferences are missing', () => {
+  const s = settingsControlState(undefined, { isPackaged: false });
+  assert.deepEqual(s.settingsNotificationsToggle, { checked: true });
+  assert.deepEqual(s.settingsSoundVolume, { value: '1', disabled: true });
+  assert.deepEqual(s.settingsRefreshInterval, { value: '30' });
+  assert.deepEqual(s.settingsPillWeeklyOption, { hidden: true });
+  assert.deepEqual(s.settingsPillWeeklyToggle, { checked: true });
+  assert.deepEqual(s.settingsStartupShowWindowToggle, { checked: false, disabled: true });
+  assert.deepEqual(s.settingsUpdatesAutoDownloadToggle, { checked: false, disabled: false });
+});
+
+test('settingsControlState keeps explicit false and zero instead of defaults', () => {
+  const s = settingsControlState({
+    notifications: { sessionReset: false, sound: true, soundVolume: 0 },
+    updates: { autoCheck: false }, floating: { style: 'mini', showWeekly: false },
+    startup: { openAtLogin: true }
+  }, { isPackaged: true });
+  assert.deepEqual(s.settingsNotificationsToggle, { checked: false });
+  assert.deepEqual(s.settingsSoundVolume, { value: '0', disabled: false });
+  assert.deepEqual(s.settingsUpdatesAutoDownloadToggle, { checked: false, disabled: true });
+  assert.deepEqual(s.settingsPillWeeklyOption, { hidden: false });
+  assert.deepEqual(s.settingsPillWeeklyToggle, { checked: false });
+  assert.deepEqual(s.settingsStartupShowWindowToggle, { checked: false, disabled: false });
+});
+
+test('every settings control key exists in the renderer elements map', () => {
+  const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
+  for (const key of Object.keys(settingsControlState({}, { isPackaged: true }))) {
+    assert.match(renderer, new RegExp(`\\b${key}: document\\.querySelector\\(`), key);
+  }
 });
