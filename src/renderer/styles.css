@@ -1,4 +1,3 @@
-/* fallow-ignore-file unused-file -- linked via <link> in index.html/floating.html, not a JS import */
 /* ═══════════════════════════════════════════════════════════
    FONTS
 ═══════════════════════════════════════════════════════════ */
@@ -108,7 +107,7 @@
   --font-pixel: "Bitcount Single", "Geist Pixel", "Geist Mono", ui-monospace, monospace;
 
   /* ── Typography: Scale ── */
-  --text-xs:   10px;
+  --text-xs:   11px;
   --text-sm:   12px;
   --text-base: 13px;
   --text-md:   14px;
@@ -126,6 +125,13 @@
   --leading-none:   1;
   --leading-snug:   1.4;
   --leading-normal: 1.5;
+
+  /* ── Typography: Tracking ── */
+  --tracking-tighter: -0.03em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.02em;
+  --tracking-caps:    0.05em;
 
   /* ── Spacing ── */
   --space-none:  0px;
@@ -401,7 +407,7 @@ body[data-view="onboard"] .rail {
 
 body[data-view="onboard"] .panel {
   background: transparent;
-  border-radius: 0;
+  border-radius: var(--radius-none);
   box-shadow: none;
 }
 
@@ -667,7 +673,7 @@ body[data-view="onboard"] .app-footer {
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
   line-height: 16px;
 }
 
@@ -846,7 +852,7 @@ body[data-view="onboard"] .app-footer {
   overflow-y: auto;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  line-height: 1.4;
+  line-height: var(--leading-snug);
   color: var(--accent);
   overflow-wrap: anywhere;
 }
@@ -930,7 +936,7 @@ body[data-view="onboard"] .app-footer {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   color: var(--subtle-foreground);
 }
 
@@ -1080,7 +1086,7 @@ body[data-view="onboard"] .app-footer {
   gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--subtle-foreground);
 }
@@ -1105,7 +1111,7 @@ body[data-view="onboard"] .app-footer {
   font-size: var(--text-3xl);
   font-weight: var(--weight-normal);
   line-height: 0.9;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
   color: var(--accent-light);
   font-variant-numeric: tabular-nums;
   /* 900ms, matching `.meter`'s --seg-* drift: the number and the bar report the
@@ -1154,7 +1160,7 @@ body[data-view="onboard"] .app-footer {
 .extra-usage-label {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--subtle-foreground);
 }
 
@@ -1252,7 +1258,7 @@ body[data-view="onboard"] .app-footer {
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
-  line-height: 1.4;
+  line-height: var(--leading-snug);
   text-align: left;
 }
 
@@ -1321,7 +1327,7 @@ body[data-view="onboard"] .app-footer {
   padding-bottom: var(--space-3);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--foreground);
 }
 
@@ -1353,7 +1359,7 @@ body[data-view="onboard"] .app-footer {
   color: inherit;
   font-size: inherit;
   font-weight: inherit;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   line-height: inherit;
 }
 
@@ -1436,7 +1442,7 @@ body[data-view="onboard"] .app-footer {
 
 .overview-group-title {
   font-size: var(--text-sm);
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--foreground);
 }
 
@@ -1476,7 +1482,7 @@ body[data-view="onboard"] .app-footer {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-xs);
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--subtle-foreground);
 }
 
@@ -1507,7 +1513,7 @@ body[data-view="onboard"] .app-footer {
   min-height: 14px;
   padding: var(--space-0) var(--space-2);
   font-size: var(--text-xs);
-  line-height: 10px;
+  line-height: var(--leading-none);
 }
 
 .quota-row > .meter {
@@ -1520,7 +1526,7 @@ body[data-view="onboard"] .app-footer {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-xs);
-  line-height: 1;
+  line-height: var(--leading-none);
   font-variant-numeric: tabular-nums;
   color: var(--subtle-foreground);
 }
@@ -1537,7 +1543,7 @@ body[data-view="onboard"] .app-footer {
 .quota-row .quota-suffix {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--subtle-foreground);
 }
 
@@ -1548,7 +1554,7 @@ body[data-view="onboard"] .app-footer {
   min-width: 4ch;
   font-size: var(--text-sm);
   /* Small type takes no negative tracking, or the glyphs' dots run together. */
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
 }
 
 /* Compact meters are a full-width run of 4px dots. */
@@ -1573,7 +1579,7 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
 
 .overview-status {
   font-size: var(--text-xs);
-  line-height: 1.4;
+  line-height: var(--leading-snug);
   color: var(--subtle-foreground);
 }
 
@@ -1594,7 +1600,7 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   color: var(--subtle-foreground);
   background: var(--card-elevated);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   white-space: nowrap;
   flex-shrink: 0;
   cursor: help;
@@ -1699,7 +1705,7 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   font-size: var(--text-xl);
   font-weight: var(--weight-normal);
   line-height: var(--leading-none);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
   color: var(--accent-light);
 }
@@ -1738,12 +1744,12 @@ body[data-refreshing="true"] .card::after {
 
 .cost-symbol {
   font-size: 20px;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .cost-amount {
   font-size: 20px;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .cost-estimate-row {
@@ -2196,7 +2202,7 @@ body[data-refreshing="true"] .card::after {
 .update-banner-title {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .usage-alert-body,
@@ -2408,7 +2414,7 @@ body[data-refreshing="true"] .card::after {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease),
@@ -2463,7 +2469,7 @@ body[data-refreshing="true"] .card::after {
   font-family: var(--font-pixel);
   font-size: var(--text-3xl);
   line-height: var(--leading-none);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-tighter);
   color: var(--foreground);
   text-align: center;
 }
@@ -2617,7 +2623,7 @@ body[data-refreshing="true"] .card::after {
   color: var(--subtle-foreground);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -2737,7 +2743,7 @@ body[data-refreshing="true"] .card::after {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   line-height: var(--space-5);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   text-transform: uppercase;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2789,7 +2795,7 @@ body[data-refreshing="true"] .card::after {
   padding: 0;
   display: inline-flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-0);
   background: transparent;
   color: var(--foreground);
   cursor: pointer;
@@ -2813,7 +2819,7 @@ body[data-refreshing="true"] .card::after {
   font-family: var(--font-pixel);
   font-size: var(--text-2xl);
   line-height: var(--leading-none);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   font-variant-numeric: tabular-nums;
   color: var(--foreground);
 }
@@ -2992,7 +2998,7 @@ button {
   color: var(--accent-foreground);
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.005em;
+  letter-spacing: var(--tracking-normal);
   cursor: pointer;
   transition: filter var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
@@ -3215,7 +3221,7 @@ button:focus-visible {
   inset-block: 0;
   inset-inline-start: 0;
   width: max(0px, calc((100% + 1px) * var(--filled, 0) / var(--segments, 40) - 1px));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: oklch(var(--seg-l) var(--seg-c) var(--seg-h));
   opacity: 0.5;
   filter: blur(8px);
@@ -3227,7 +3233,7 @@ button:focus-visible {
   position: relative; /* paints above ::before without a z-index fight */
   flex: 1;
   height: var(--space-4);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--level-ok-soft);
   transition: background-color 250ms var(--ease-out-quart);
 }
@@ -3519,7 +3525,7 @@ body[data-entering] {
 }
 .view[data-entering] .meter-segment {
   transform-origin: bottom;
-  animation: meterReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: meterReveal var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 6ms + 230ms + var(--row-delay, 0ms));
 }
 
@@ -3838,7 +3844,7 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
   font-size: var(--text-sm);
   font-family: var(--font-sans);
   font-weight: var(--weight-medium);
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--subtle-foreground);
 }
@@ -3894,8 +3900,8 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
 .settings-style-preview--classic {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-none);
   width: 100%;
@@ -3903,7 +3909,7 @@ body:not([data-entering]) .quota-row[data-window="session"] .meter[data-level="c
 
 .settings-style-preview--mini {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0);
   padding: var(--space-2);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
