@@ -16,26 +16,48 @@ is added above it.
 - An Overview dashboard with compact Claude, Codex and Antigravity quota cards,
   20-segment weekly meters, and provider-source timestamps on hover and for
   screen readers. Missing, rolled-over and blocked readings retain their meaning.
+  Clicking anywhere on an Overview card (or its title button) navigates to that
+  provider's tab.
+- Bitcount Single bundled variable pixel font (`--font-pixel`), replacing
+  Geist Pixel for data readouts (percentages, cost numbers, account name) in
+  both the desktop app and the landing page.
+- Codex Today and This Month usage cards with token totals and estimated USD
+  cost, aggregating `token_count` events from local rollout files with custom
+  `codexPath` and WSL directory support.
+- Gemini 4 Argon quota section in Antigravity parsing and UI display.
+- Clicking any notification toast reopens the main window on the triggering
+  provider's tab (`provider-select`).
+- Notification sounds (session reset, 100% full, and 70%/90% threshold alerts)
+  now play for all provider channels when enabled.
+- Fluid UI animations: view crossfades travel 6px along the sidebar rail order
+  (reversed on Back) and retarget mid-fade without snapping; the sidebar toggle
+  animates with a View Transition; changed readings count from the old value
+  (400ms); scroll-driven top edge fade masks content under the panel header.
 
 - Codex and Antigravity tabs on the side rail, each with its own 5-hour
   session and weekly limits, shown once the app is installed. Codex is read
   from the session logs Codex writes on this PC (no sign-in, no network), so
   it reflects your last Codex turn here. Antigravity is read from the running
-  app and shows the Gemini and Claude-and-GPT limits separately; while it is
-  closed, the last reading stays with an "Open Antigravity to update" note.
-  A window whose reset time has passed says it is waiting for a new reading
+  app and shows the Gemini, Claude-and-GPT, and Gemini 4 Argon limits separately;
+  while it is closed, the last reading stays with an "Open Antigravity to update"
+  note. A window whose reset time has passed says it is waiting for a new reading
   instead of showing a guessed 0%, a reading from another day names the day,
   and a window the source does not offer is not shown. When Antigravity holds
   back the Claude-and-GPT models behind a spent weekly limit, the card says
   "Blocked by the weekly limit" and no session-reset toast promises otherwise.
 - Codex and Antigravity get the same 70/90/100% and session-reset toasts as
   Claude, named after the provider ("Codex · Critical usage"). The tray icon,
-  floating widget, in-app banners and sounds stay on Claude.
+  floating widget and in-app banners stay on Claude.
 - The session pace badge explains its state on hover or keyboard focus, and
   "May run out" names the time the session is projected to hit 100%.
 
 ### Changed
 
+- Tokenized typography letter-spacing (`--tracking-tighter`, `--tracking-tight`,
+  `--tracking-normal`, `--tracking-wide`, `--tracking-caps`) and normalized
+  `--text-xs` to 11px across `styles.css`.
+- Selected rail provider buttons tint with the interactive accent, and the Quit
+  button gains a destructive hover state.
 - Filled sidebar buttons stack the shared border tokens for default, hover and
   active backgrounds; the active fill stays unchanged on hover.
 - Dedicated provider cards no longer repeat the page's provider name;
