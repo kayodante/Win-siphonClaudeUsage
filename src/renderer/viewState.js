@@ -78,24 +78,17 @@ export function extractChannelPercents(state) {
   return channels;
 }
 
+function crossedThreshold(prevPct, currentPct, threshold) {
+  return prevPct != null && prevPct < threshold && currentPct >= threshold;
+}
+
 export function detectThresholdCrossings(prevMap, currentMap, { expireSound = false, limitSound = false } = {}) {
-  let playFull = false;
-  let playLimit = false;
-
-  if (prevMap && currentMap) {
-    for (const [key, currentPct] of currentMap.entries()) {
-      const prevPct = prevMap.get(key);
-      if (prevPct != null) {
-        if (expireSound && prevPct < 100 && currentPct >= 100) {
-          playFull = true;
-        } else if (limitSound && ((prevPct < 90 && currentPct >= 90) || (prevPct < 70 && currentPct >= 70))) {
-          playLimit = true;
-        }
-      }
-    }
-  }
-
-  return { playFull, playLimit };
+  if (!prevMap || !currentMap) return { playFull: false, playLimit: false };
+  const crossed = threshold => [...currentMap].some(([key, pct]) => crossedThreshold(prevMap.get(key), pct, threshold));
+  return {
+    playFull: Boolean(expireSound && crossed(100)),
+    playLimit: Boolean(limitSound && (crossed(90) || crossed(70)))
+  };
 }
 
 function preference(preferences, path, fallback) {

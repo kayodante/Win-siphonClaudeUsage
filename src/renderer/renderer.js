@@ -287,32 +287,32 @@ function hideBanner(el) {
   }, cssMs('--duration-banner-leave', 160)));
 }
 
+function announceDownloadProgress(progress, previousState, lang) {
+  // The one-line banner announces the start itself, so bucket 0 would be a
+  // duplicate; progress buckets pick up at 25%.
+  if (previousState !== 'downloading') lastDownloadAnnouncementBucket = 0;
+  const bucket = Math.floor(progress / 25) * 25;
+  if (bucket > lastDownloadAnnouncementBucket) {
+    lastDownloadAnnouncementBucket = bucket;
+    announce(elements.politeAnnouncer, `${t('update.title', lang)} ${bucket}%`);
+  }
+}
+
 function setDownloadUI(state, percent) {
   const btn = elements.updateBannerDownload;
   const dismiss = elements.updateBannerDismiss;
-  const lang = currentState?.preferences?.language ?? 'en';
+  const lang = currentLanguage();
   const previousState = downloadState;
   downloadState = state;
   btn.dataset.state = state;
   if (state === 'downloading') {
-    const progress = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    const progress = clampPercent(percent);
     btn.textContent = `${progress}%`;
     btn.disabled = true;
     dismiss.hidden = true;
-    // The one-line banner announces the start itself, so bucket 0 would be a
-    // duplicate; progress buckets pick up at 25%.
-    if (previousState !== 'downloading') lastDownloadAnnouncementBucket = 0;
-    const bucket = Math.floor(progress / 25) * 25;
-    if (bucket > lastDownloadAnnouncementBucket) {
-      lastDownloadAnnouncementBucket = bucket;
-      announce(elements.politeAnnouncer, `${t('update.title', lang)} ${bucket}%`);
-    }
-  } else if (state === 'ready') {
-    btn.textContent = t('update.restart', lang);
-    btn.disabled = false;
-    dismiss.hidden = false;
+    announceDownloadProgress(progress, previousState, lang);
   } else {
-    btn.textContent = t('update.download', lang);
+    btn.textContent = t(state === 'ready' ? 'update.restart' : 'update.download', lang);
     btn.disabled = false;
     dismiss.hidden = false;
   }
@@ -1077,6 +1077,10 @@ function startAuthWait(lang) {
   }
 }
 
+function currentQuotaMode(state = currentState) {
+  return state?.preferences?.display?.quotaMode ?? 'used';
+}
+
 function render(state) {
   currentState = state;
   const lang = currentLanguage();
@@ -1085,19 +1089,15 @@ function render(state) {
   if (!state.isSignedIn) {
     requestedView = 'main';
   }
-  const session = hydrateSlot(state.quota?.session);
-  const weekly = hydrateSlot(state.quota?.weeklyAll);
-  const sessionPercent = clampPercent(session?.percent ?? 0);
-  const weeklyPercent = clampPercent(weekly?.percent ?? 0);
 
   handleThresholdSounds(state);
   // Compact rows show the used/left suffix only in "left" mode, where the
   // number and the (always used) meter would otherwise disagree unlabelled.
-  document.body.dataset.quotaMode = state.preferences?.display?.quotaMode ?? 'used';
+  document.body.dataset.quotaMode = currentQuotaMode(state);
 
   renderOverview(state, lang);
   renderProviderView(state, lang);
-  renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
+  renderQuotaSection(state, lang);
   indexQuotaRows(elements.mainView);
   renderActiveView();
 
@@ -1146,6 +1146,14 @@ function renderOnboarding(state, lang) {
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
 }
 
+function resetClearedBannerDismissals(state) {
+  for (const provider of ['claude', 'codex', 'antigravity']) {
+    const level = alertLevel(providerSessionPeak(state, provider).percent);
+    if (level !== 'critical') criticalDismissed.delete(provider);
+    if (!level) highUsageDismissed.delete(provider);
+  }
+}
+
 function handleThresholdSounds(state) {
   const expireSound = state.preferences?.notifications?.expireSound ?? false;
   const limitSound = state.preferences?.notifications?.limitSound ?? false;
@@ -1162,19 +1170,12 @@ function handleThresholdSounds(state) {
     playLimitSound();
   }
 
-  for (const key of prevChannelPercents.keys()) {
-    if (!currentChannels.has(key)) prevChannelPercents.delete(key);
-  }
-  for (const [key, pct] of currentChannels.entries()) {
+  prevChannelPercents.clear();
+  for (const [key, pct] of currentChannels) {
     prevChannelPercents.set(key, pct);
   }
 
-  // Reset dismissed state per provider when percent drops back below threshold
-  for (const provider of ['claude', 'codex', 'antigravity']) {
-    const level = alertLevel(providerSessionPeak(state, provider).percent);
-    if (level !== 'critical') criticalDismissed.delete(provider);
-    if (!level) highUsageDismissed.delete(provider);
-  }
+  resetClearedBannerDismissals(state);
 }
 
 function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang }) {
@@ -1207,8 +1208,8 @@ function renderPeakBadge(badge, info, now, lang) {
   if (tooltipTrigger === info) elements.tooltip.textContent = titleText;
 }
 
-function updateStatsAndPills({ state, notificationsEnabled, lang }) {
-  renderNotificationPill(notificationsEnabled, lang);
+function updateStatsAndPills(state, lang) {
+  renderNotificationPill(state.preferences?.notifications?.sessionReset ?? true, lang);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens, lang) ?? '';
   elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens, lang) ?? '';
   updateLastUpdatedLine();
@@ -1227,23 +1228,26 @@ function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyP
   updateReading(elements.monthCost, state.monthStats?.cost, setCostValue);
 }
 
-function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
+function renderQuotaSection(state, lang) {
+  const session = hydrateSlot(state.quota?.session);
+  const weekly = hydrateSlot(state.quota?.weeklyAll);
+  const sessionPercent = clampPercent(session?.percent);
+  const weeklyPercent = clampPercent(weekly?.percent);
   const now = new Date();
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const sessionPace = buildUsagePace({
     slot: session,
     now,
     windowMs: SESSION_WINDOW_MS
   });
 
-  const mode = state.preferences?.display?.quotaMode ?? 'used';
+  const mode = currentQuotaMode(state);
   const suffixText = t(`quota.suffix.${mode}`, lang);
   elements.sessionQuotaSuffix.textContent = session ? suffixText : '';
   elements.weeklyQuotaSuffix.textContent = weekly ? suffixText : '';
 
   updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
   renderExtraUsage(state.quota?.extraUsage);
-  updateStatsAndPills({ state, notificationsEnabled, lang });
+  updateStatsAndPills(state, lang);
 
   updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode });
 }
@@ -1488,63 +1492,74 @@ function renderQuotaGroup(group, section, compact, ctx) {
     !section.session && !section.weekly ? t('provider.window.unknown', lang) : '';
 }
 
+function getOverviewCard(id) {
+  const existing = overviewCards.get(id);
+  if (existing) return existing;
+  const card = elements.overviewCardTemplate.content.firstElementChild.cloneNode(true);
+  card.dataset.provider = id;
+  const title = card.querySelector('[data-overview-title]');
+  title.id = `overview-${id}-heading`;
+  title.textContent = PROVIDER_NAMES[id];
+  card.setAttribute('aria-labelledby', title.id);
+  const reading = card.querySelector('[data-overview-reading]');
+  reading.id = `overview-${id}-reading`;
+  card.setAttribute('aria-describedby', reading.id);
+  const button = { claude: elements.providerClaudeButton, codex: elements.providerCodexButton, antigravity: elements.providerAntigravityButton }[id];
+  card.querySelector('[data-overview-icon]').appendChild(button.querySelector('svg').cloneNode(true));
+  // The card is a shortcut to the provider's page: the title button, or a
+  // click on the card itself that is not on one of its own controls.
+  card.addEventListener('click', event => {
+    if (event.target.closest('button:not([data-overview-open]), [tabindex]')) return;
+    const hadFocus = card.contains(document.activeElement);
+    button.click();
+    if (hadFocus) elements.providerHeading.focus({ preventScroll: true });
+  });
+  const peak = card.querySelector('[data-overview-peak]');
+  wireTooltip(peak.querySelector('[data-peak-info]'), peak);
+  overviewCards.set(id, card);
+  return card;
+}
+
+function renderOverviewReading(card, quota, ctx) {
+  const time = providerReadingTime(quota, ctx.lang);
+  const reading = time ? tFormat('provider.lastReading', ctx.lang, { time }) : '';
+  card.querySelector('[data-overview-open]').title = reading;
+  card.querySelector('[data-overview-reading]').textContent = reading;
+  const stale = card.querySelector('[data-overview-stale]');
+  stale.hidden = !time || ctx.now - new Date(quota.updatedAt) < STALE_READING_MS;
+  stale.title = reading;
+  stale.querySelector('[data-stale-text]').textContent = stale.hidden ? '' : time;
+}
+
+function renderOverviewCard({ id, sections }, state, ctx) {
+  const { lang } = ctx;
+  const card = getOverviewCard(id);
+  // Peak hours are Anthropic's, so only the Claude card carries the badge.
+  const badge = card.querySelector('[data-overview-peak]');
+  if (id === 'claude') {
+    badge.querySelector('[data-peak-label]').textContent = t('home.peakHours', lang);
+    renderPeakBadge(badge, badge.querySelector('[data-peak-info]'), ctx.now, lang);
+  } else {
+    badge.hidden = true;
+  }
+  const container = card.querySelector('[data-overview-sections]');
+  const shown = [...container.children];
+  const groups = orderSections(sections).map((section, index) => {
+    const group = shown.find(node => node.dataset.section === section.id) ?? createQuotaGroup(section.id);
+    renderQuotaGroup(group, section, isCompactSection(id, section.id, index), ctx);
+    return group;
+  });
+  syncChildren(container, groups);
+  const status = id === 'claude' ? '' : providerStatusText(id, state[id], lang);
+  renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
+  renderOverviewReading(card, state[id], ctx);
+  return card;
+}
+
 function renderOverview(state, lang) {
   if (!state.isSignedIn) return;
-  const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
-  const cards = overviewProviders(state).map(({ id, sections }) => {
-    let card = overviewCards.get(id);
-    if (!card) {
-      card = elements.overviewCardTemplate.content.firstElementChild.cloneNode(true);
-      card.dataset.provider = id;
-      const title = card.querySelector('[data-overview-title]');
-      title.id = `overview-${id}-heading`;
-      title.textContent = PROVIDER_NAMES[id];
-      card.setAttribute('aria-labelledby', title.id);
-      const reading = card.querySelector('[data-overview-reading]');
-      reading.id = `overview-${id}-reading`;
-      card.setAttribute('aria-describedby', reading.id);
-      const button = { claude: elements.providerClaudeButton, codex: elements.providerCodexButton, antigravity: elements.providerAntigravityButton }[id];
-      card.querySelector('[data-overview-icon]').appendChild(button.querySelector('svg').cloneNode(true));
-      // The card is a shortcut to the provider's page: the title button, or a
-      // click on the card itself that is not on one of its own controls.
-      card.addEventListener('click', event => {
-        if (event.target.closest('button:not([data-overview-open]), [tabindex]')) return;
-        const hadFocus = card.contains(document.activeElement);
-        button.click();
-        if (hadFocus) elements.providerHeading.focus({ preventScroll: true });
-      });
-      const peak = card.querySelector('[data-overview-peak]');
-      wireTooltip(peak.querySelector('[data-peak-info]'), peak);
-      overviewCards.set(id, card);
-    }
-    // Peak hours are Anthropic's, so only the Claude card carries the badge.
-    const badge = card.querySelector('[data-overview-peak]');
-    if (id === 'claude') {
-      badge.querySelector('[data-peak-label]').textContent = t('home.peakHours', lang);
-      renderPeakBadge(badge, badge.querySelector('[data-peak-info]'), ctx.now, lang);
-    } else {
-      badge.hidden = true;
-    }
-    const container = card.querySelector('[data-overview-sections]');
-    const shown = [...container.children];
-    const groups = orderSections(sections).map((section, index) => {
-      const group = shown.find(node => node.dataset.section === section.id) ?? createQuotaGroup(section.id);
-      renderQuotaGroup(group, section, isCompactSection(id, section.id, index), ctx);
-      return group;
-    });
-    syncChildren(container, groups);
-    const status = id === 'claude' ? '' : providerStatusText(id, state[id], lang);
-    renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
-    const time = providerReadingTime(state[id], lang);
-    const reading = time ? tFormat('provider.lastReading', lang, { time }) : '';
-    card.querySelector('[data-overview-open]').title = reading;
-    card.querySelector('[data-overview-reading]').textContent = reading;
-    const stale = card.querySelector('[data-overview-stale]');
-    stale.hidden = !time || ctx.now - new Date(state[id].updatedAt) < STALE_READING_MS;
-    stale.title = reading;
-    stale.querySelector('[data-stale-text]').textContent = stale.hidden ? '' : time;
-    return card;
-  });
+  const ctx = { now: new Date(), lang, mode: currentQuotaMode(state) };
+  const cards = overviewProviders(state).map(entry => renderOverviewCard(entry, state, ctx));
   syncChildren(elements.overviewCards, cards);
   indexQuotaRows(elements.overviewCards);
 }
@@ -1692,6 +1707,18 @@ function renderExtraUsage(extra) {
   elements.extraGauge.style.setProperty('--gauge-fill', spent);
 }
 
+function buildMeterSegments(meter, total, filled) {
+  meter.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < total; i++) {
+    const seg = document.createElement('div');
+    seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
+    seg.style.setProperty('--i', i);
+    fragment.appendChild(seg);
+  }
+  meter.appendChild(fragment);
+}
+
 function renderMeter(meter, percent) {
   const total = Number(meter.dataset.segments ?? 40);
   const filled = Math.round((percent / 100) * total);
@@ -1703,15 +1730,7 @@ function renderMeter(meter, percent) {
   meter.style.setProperty('--filled', filled); // width of the glow behind the filled run
   meter.style.setProperty('--segments', total);
   if (meter.children.length !== total) {
-    meter.replaceChildren();
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < total; i++) {
-      const seg = document.createElement('div');
-      seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
-      seg.style.setProperty('--i', i);
-      fragment.appendChild(seg);
-    }
-    meter.appendChild(fragment);
+    buildMeterSegments(meter, total, filled);
     return;
   }
   for (let i = 0; i < total; i++) {
@@ -1719,6 +1738,28 @@ function renderMeter(meter, percent) {
   }
 }
 
+function clearSettingsPanelStyle(panel) {
+  panel.style.position = '';
+  panel.style.width = '';
+  panel.style.pointerEvents = '';
+  panel.style.opacity = '';
+  panel.style.transform = '';
+}
+
+function interruptSettingsTabTransition(panels, card, name) {
+  if (!_tabTransitioning) return;
+  // The panel still arriving becomes the one leaving, from wherever its fade
+  // had reached; only a third panel (already on its way out) is dropped.
+  clearTimeout(_tabTransitionTimer);
+  for (const [panelName, panel] of Object.entries(panels)) {
+    if (panelName === currentSettingsTab || panelName === name) continue;
+    panel.hidden = true;
+    clearSettingsPanelStyle(panel);
+  }
+  delete card.dataset.resizing;
+  card.style.height = '';
+  _tabTransitioning = false;
+}
 
 function switchSettingsTab(name, { focus = false } = {}) {
   const panels = {
@@ -1742,26 +1783,7 @@ function switchSettingsTab(name, { focus = false } = {}) {
   // before the outgoing panel is parked out of flow — mid-swap this is the
   // height the tween has reached, so an interrupted swap continues from it.
   const startHeight = card.getBoundingClientRect().height;
-  const clearPanel = panel => {
-    panel.style.position = '';
-    panel.style.width = '';
-    panel.style.pointerEvents = '';
-    panel.style.opacity = '';
-    panel.style.transform = '';
-  };
-  if (_tabTransitioning) {
-    // The panel still arriving becomes the one leaving, from wherever its fade
-    // had reached; only a third panel (already on its way out) is dropped.
-    clearTimeout(_tabTransitionTimer);
-    for (const [panelName, panel] of Object.entries(panels)) {
-      if (panelName === currentSettingsTab || panelName === name) continue;
-      panel.hidden = true;
-      clearPanel(panel);
-    }
-    delete card.dataset.resizing;
-    card.style.height = '';
-    _tabTransitioning = false;
-  }
+  interruptSettingsTabTransition(panels, card, name);
   _tabTransitioning = true;
   const FADE_MS = cssMs('--duration-tab-fade', 110);
   const outgoing = panels[currentSettingsTab];
@@ -1789,9 +1811,7 @@ function switchSettingsTab(name, { focus = false } = {}) {
   outgoing.style.transform = `translateX(${-shift}px)`;
 
   incoming.hidden = false;
-  incoming.style.position = '';
-  incoming.style.width = '';
-  incoming.style.pointerEvents = '';
+  clearSettingsPanelStyle(incoming);
   incoming.style.opacity = '0';
   incoming.style.transform = `translateX(${shift}px)`;
 
@@ -1822,8 +1842,8 @@ function switchSettingsTab(name, { focus = false } = {}) {
 
   _tabTransitionTimer = setTimeout(() => {
     outgoing.hidden = true;
-    clearPanel(outgoing);
-    clearPanel(incoming);
+    clearSettingsPanelStyle(outgoing);
+    clearSettingsPanelStyle(incoming);
     card.style.height = '';
     delete card.dataset.resizing;
     _tabTransitioning = false;
