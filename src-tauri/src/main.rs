@@ -244,7 +244,12 @@ fn main() {
                         let _ = window.app_handle().emit_to("main", "window-shown", ());
                     }
                     let scale = window.scale_factor().unwrap_or(1.0);
-                    let size = size.to_logical::<f64>(scale);
+                    let mut size = size.to_logical::<f64>(scale);
+                    // A collapsed rail narrows the window by RAIL_W, but the rail
+                    // always boots expanded — save the width it will need then.
+                    if windows_ctl::rail_collapsed() {
+                        size.width += windows_ctl::RAIL_W;
+                    }
                     // Same door the DPI-shrunk size used to sneak in through:
                     // a mismatched scale factor between the monitor the window
                     // was born on and the one `restore_main_position` resolved
@@ -298,6 +303,7 @@ fn main() {
             commands::floating_set_expanded,
             commands::app_info,
             commands::window_minimize,
+            commands::window_set_rail_collapsed,
             commands::window_close,
             commands::app_quit,
             commands::shell_open_external,

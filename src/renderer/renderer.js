@@ -527,15 +527,21 @@ elements.settingsTabs.addEventListener('keydown', event => {
   switchSettingsTab(tabs[nextIndex][0], { focus: true });
 });
 elements.backButton.addEventListener('click', () => showView('main'));
-elements.railToggleButton.addEventListener('click', () => {
-  const toggle = () => {
-    elements.rail.hidden = !elements.rail.hidden;
-    renderNavigation(currentState);
-  };
-  // A View Transition animates snapshots (transform/opacity), so the rail can
-  // slide out and back along the same edge without animating layout.
-  if (document.startViewTransition && !reducedMotion()) document.startViewTransition(toggle);
-  else toggle();
+elements.railToggleButton.addEventListener('click', () => setRailCollapsed(!elements.rail.hidden));
+
+// The window gives up (or takes back) the rail's width with its right edge
+// fixed, so the panel stays put on screen and only the rail comes and goes.
+// The DOM change and the native resize go out in the same tick to keep them
+// on the same frame.
+function setRailCollapsed(collapsed) {
+  if (elements.rail.hidden === collapsed) return;
+  elements.rail.hidden = collapsed;
+  renderNavigation(currentState);
+  window.siphon.setRailCollapsed(collapsed)?.catch?.(() => {});
+  if (!collapsed && !reducedMotion()) elements.rail.dataset.entering = '';
+}
+elements.rail.addEventListener('animationend', event => {
+  if (event.target === elements.rail) delete elements.rail.dataset.entering;
 });
 // Picking a provider always lands on its dashboard, Settings included.
 for (const [provider, button] of [
@@ -1901,6 +1907,9 @@ function renderActiveView() {
   renderedView = activeView;
   renderedProvider = provider;
   document.body.dataset.view = activeView;
+  // Onboarding has no rail at all; give the window its full width back so the
+  // sign-in copy is not squeezed into the collapsed size.
+  if (activeView === 'onboard') setRailCollapsed(false);
   renderNavigation(currentState);
   renderViewHeader(activeView === 'settings', provider, changed);
   const direction = viewDirection(activeView, provider, previousView, previousProvider);

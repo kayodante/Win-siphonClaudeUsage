@@ -45,6 +45,7 @@
     setFloatingExpanded: expanded => invoke('floating_set_expanded', { expanded }),
     getAppInfo: () => invoke('app_info'),
     minimize: () => invoke('window_minimize'),
+    setRailCollapsed: collapsed => invoke('window_set_rail_collapsed', { collapsed }),
     closeWindow: () => invoke('window_close'),
     quit: () => invoke('app_quit'),
     openExternal: url => invoke('shell_open_external', { url }),

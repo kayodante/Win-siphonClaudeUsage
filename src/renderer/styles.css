@@ -4010,44 +4010,16 @@ body[data-style="mini"] .floating-widget {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RAIL COLLAPSE (View Transition)
+   RAIL COLLAPSE
 ═══════════════════════════════════════════════════════════ */
 
-/* The sidebar toggle runs inside document.startViewTransition (renderer.js),
-   which animates snapshots — transform and opacity only, never layout. The
-   rail leaves and returns along its own left edge; the panel's snapshot keeps
-   its natural size, anchored left, while its box slides to the new x. */
-.rail {
-  view-transition-name: rail;
-}
-
-.panel {
-  view-transition-name: panel;
-}
-
-::view-transition-group(*) {
-  animation-duration: var(--duration-normal);
-  animation-timing-function: var(--ease-out);
-}
-
-::view-transition-old(panel),
-::view-transition-new(panel) {
-  width: auto;
-  height: 100%;
-  object-fit: none;
-  object-position: left top;
-}
-
-::view-transition-old(rail) {
-  animation: railLeave var(--duration-normal) var(--ease-out) both;
-}
-
-::view-transition-new(rail) {
+/* Hiding the sidebar narrows the window itself, right edge fixed
+   (windows_ctl::set_rail_collapsed), so the panel never moves on screen and
+   needs no animation. Showing it back fades the rail in along its own left
+   edge, in the space the window just grew into; renderer.js sets
+   data-entering only outside reduced motion. */
+.rail[data-entering] {
   animation: railEnter var(--duration-normal) var(--ease-out) both;
-}
-
-@keyframes railLeave {
-  to { opacity: 0; transform: translateX(calc(-1 * var(--space-5))); }
 }
 
 @keyframes railEnter {

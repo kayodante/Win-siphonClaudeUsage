@@ -207,6 +207,19 @@ test('the main window min width matches the Rust restore floor', () => {
   assert.equal(Number(rust.match(/pub const MIN_H: f64 = ([\d.]+);/)[1]), main.minHeight);
 });
 
+test('hiding the sidebar narrows the window by exactly the rail width', () => {
+  const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/renderer/styles.css', import.meta.url), 'utf8');
+  const bridge = readFileSync(new URL('../src/renderer/siphonBridge.js', import.meta.url), 'utf8');
+  const railWidth = Number(css.match(/\n\.rail \{[^}]*?\bwidth: (\d+)px;/)[1]);
+  assert.equal(Number(rust.match(/pub const RAIL_W: f64 = ([\d.]+);/)[1]), railWidth);
+  assert.match(bridge, /setRailCollapsed: collapsed => invoke\('window_set_rail_collapsed', \{ collapsed \}\)/);
+  assert.match(renderer, /railToggleButton\.addEventListener\('click', \(\) => setRailCollapsed\(!elements\.rail\.hidden\)\)/);
+  assert.match(renderer, /window\.siphon\.setRailCollapsed\(collapsed\)/);
+  // Onboarding has no rail; it must never be squeezed into the collapsed width.
+  assert.match(renderer, /if \(activeView === 'onboard'\) setRailCollapsed\(false\);/);
+});
+
 test('quota suffixes are read, so "used" and "left" do not sound the same', () => {
   const suffixes = html.match(/<span class="quota-suffix"[^>]*>/g);
   assert.equal(suffixes.length, 4, 'Claude page and the shared quota group, session + weekly');

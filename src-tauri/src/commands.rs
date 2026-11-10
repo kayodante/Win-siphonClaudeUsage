@@ -234,6 +234,13 @@ pub fn window_minimize(app: AppHandle) {
     }
 }
 
+/// Hide/show sidebar: the window gives up (or takes back) the rail's width,
+/// right edge fixed. See `windows_ctl::set_rail_collapsed`.
+#[tauri::command]
+pub fn window_set_rail_collapsed(app: AppHandle, collapsed: bool) {
+    crate::windows_ctl::set_rail_collapsed(&app, collapsed);
+}
+
 #[tauri::command]
 pub fn window_close(app: AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
