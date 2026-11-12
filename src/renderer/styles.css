@@ -65,7 +65,7 @@
 
   /* ── Colors: Accent ── */
   --accent:            oklch(84.1% 0.238 128.85);
-  --accent-light:      oklch(100 0 0);
+  --accent-light:      oklch(100% 0 0);
   --accent-soft:       oklch(84.1% 0.238 128.85 / 0.14);
   --accent-foreground: oklch(15% 0.01 270);
   --ring:              oklch(84.1% 0.238 128.85);
@@ -131,7 +131,7 @@
   --tracking-tight:   -0.02em;
   --tracking-normal:  0;
   --tracking-wide:    0.02em;
-  --tracking-caps:    0.05em;
+  --tracking-caps:    0.08em;
 
   /* ── Spacing ── */
   --space-none:  0px;
@@ -513,7 +513,7 @@ body[data-view="onboard"] .topbar .brand {
   gap: var(--space-8);
   flex-shrink: 0;
   width: 62px;
-  padding: var(--space-8) var(--space-5) var(--space-9);
+  padding: var(--space-8) var(--space-5) var(--space-7);
 }
 
 .rail-providers {
@@ -669,10 +669,10 @@ body[data-view="onboard"] .app-footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   letter-spacing: var(--tracking-tight);
   line-height: 16px;
 }
@@ -1084,8 +1084,10 @@ body[data-view="onboard"] .app-footer {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   font-weight: var(--weight-medium);
+  line-height: var(--leading-none);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--subtle-foreground);
@@ -1110,7 +1112,10 @@ body[data-view="onboard"] .app-footer {
   font-family: var(--font-pixel);
   font-size: var(--text-3xl);
   font-weight: var(--weight-normal);
-  line-height: 0.9;
+  /* Trim the box to cap height and baseline, like Figma's leading trim, so
+     pixel numbers align by their glyphs instead of by line-height fudges. */
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
   letter-spacing: var(--tracking-tight);
   color: var(--accent-light);
   font-variant-numeric: tabular-nums;
@@ -1158,9 +1163,12 @@ body[data-view="onboard"] .app-footer {
 }
 
 .extra-usage-label {
-  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
   color: var(--subtle-foreground);
 }
 
@@ -1170,7 +1178,13 @@ body[data-view="onboard"] .app-footer {
   gap: var(--space-0);
   font-family: var(--font-pixel);
   font-variant-numeric: tabular-nums;
-  line-height: 0.6;
+  line-height: 1;
+}
+
+/* Flex items: each span carries the cap trim, so the row is as tall as the
+   glyphs and the label sits 8px above them. */
+.quota-credits > * {
+  text-box: trim-both cap alphabetic;
 }
 
 .quota-credits-used {
@@ -1178,9 +1192,10 @@ body[data-view="onboard"] .app-footer {
   color: var(--foreground);
 }
 
+/* Same size as the spent value: colour, not size, separates label from value. */
 .quota-credits-sep,
 .quota-credits-limit {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--subtle-foreground);
 }
 
@@ -1299,10 +1314,9 @@ body[data-view="onboard"] .app-footer {
 }
 
 /* ─── Quota cards: Overview and every provider page ───
-   One card: 16px inset, provider title 18px above the first row (8px under
-   the title + the 10px card gap). Groups and rows sit 12px apart; a hairline
-   splits a group's main session from its weekly row, and groups from each
-   other. */
+   One card: 16px inset, the card title 24px above the first row. Groups sit
+   24px apart, a group's title and rows 16px apart; space, not hairlines,
+   separates them (Figma 960:20979). */
 .overview-card,
 .overview-sections,
 .overview-section {
@@ -1315,17 +1329,23 @@ body[data-view="onboard"] .app-footer {
   padding: var(--space-7);
 }
 
-.overview-sections,
+/* Groups sit 24px apart; inside a group, the title and each row sit 16px
+   apart (Figma 960:20979). */
+.overview-sections {
+  gap: var(--space-9);
+}
+
 .overview-section {
-  gap: var(--space-5);
+  gap: var(--space-7);
 }
 
 .overview-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-bottom: var(--space-3);
-  font-size: var(--text-sm);
+  /* 14px + the 10px card gap: the title sits 24px above the first row. */
+  padding-bottom: var(--space-6);
+  font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
   color: var(--foreground);
@@ -1429,33 +1449,24 @@ body[data-view="onboard"] .app-footer {
   transform: scale(0.99);
 }
 
-.overview-section:not(.overview-section--compact) > [data-window="weekly"],
-.overview-section--compact {
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--space-5);
-}
-
-.overview-section--compact:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
 .overview-group-title {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   line-height: var(--leading-none);
   color: var(--foreground);
 }
 
 /* On a provider page the group title heads its own card, so it takes the
-   card-title weight and spacing. */
-.provider-groups .overview-group-title {
-  padding-bottom: var(--space-2);
-  font-weight: var(--weight-medium);
+   card title's 24px lead (8px + the 16px row gap). The Overview cards share
+   `.provider-groups`, so this is scoped by id: there the title stays 16px
+   above its rows. */
+#providerGroups .overview-group-title {
+  padding-bottom: var(--space-3);
 }
 
 /* A quota row is a flat grid, so the same markup lays out as the large
    session row (label, value + pace, 40-segment meter, reset line) or as the
-   compact two-line row (.overview-compact: label + reset, value + dots). */
+   compact three-line row (.overview-compact: label, value + dots, reset). */
 .quota-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1471,47 +1482,55 @@ body[data-view="onboard"] .app-footer {
 .overview-compact {
   grid-template-columns: auto minmax(0, 1fr) minmax(0, max-content);
   grid-template-areas:
-    "label label reset"
-    "value meter meter";
+    "label label label"
+    "value meter meter"
+    "reset reset reset";
+  row-gap: var(--space-3);
 }
 
+/* margin: the label leads its reading by 12px (8px row gap + 4px); value,
+   meter and reset stay 8px apart as one block. */
 .quota-row-label {
   grid-area: label;
+  margin-bottom: var(--space-1);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: var(--leading-none);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
   color: var(--subtle-foreground);
+}
+
+/* The 16px badge overhangs the line it sits on instead of growing it, so peak
+   hours starting or ending never shift the card. */
+.overview-title .peak-badge {
+  margin-block: calc(-1 * var(--space-0));
 }
 
 .quota-row > .peak-badge {
   grid-area: badge;
   justify-self: end;
-}
-
-/* The 16px badge overhangs the 10–12px line it sits on instead of growing it,
-   so peak hours starting or ending never shift the card. */
-.overview-title .peak-badge,
-.quota-row > .peak-badge {
-  margin-block: calc(-1 * var(--space-0));
-}
-
-.quota-row > .peak-badge {
   margin-block: -3px;
 }
 
+/* Bottom-aligned, as in Figma: the trimmed number ends on its baseline, and
+   the suffix and pace word sit their boxes on that same line. */
 .quota-row > .quota-value-group {
   grid-area: value;
+  align-items: flex-end;
   gap: 0;
 }
 
 .quota-row > .quota-pace {
   grid-area: pace;
   justify-self: end;
-  min-height: 14px;
-  padding: var(--space-0) var(--space-2);
+  align-self: end;
+  min-height: 0;
+  padding: 0;
   font-size: var(--text-xs);
   line-height: var(--leading-none);
 }
@@ -1525,19 +1544,22 @@ body[data-view="onboard"] .app-footer {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: var(--leading-none);
   font-variant-numeric: tabular-nums;
   color: var(--subtle-foreground);
 }
 
-.overview-compact > .reset-line {
-  justify-self: end;
-}
-
 .quota-row .quota-percent {
   font-size: var(--text-2xl);
-  line-height: 0.6;
+}
+
+/* The one hero per screen: on a provider's own page its main session reading
+   is the thing to see first. Overview stays at 24px — there it is a list. */
+:is(#mainView, #providerView) .quota-row:not(.overview-compact) .quota-percent {
+  font-size: var(--text-4xl);
+  letter-spacing: var(--tracking-tighter);
 }
 
 .quota-row .quota-suffix {
@@ -1552,15 +1574,15 @@ body[data-view="onboard"] .app-footer {
   /* Wide enough for "100%", so every dot run in a card starts at the same x
      and does not resize when the value gains a digit. */
   min-width: 4ch;
-  font-size: var(--text-sm);
+  font-size: var(--text-xl);
   /* Small type takes no negative tracking, or the glyphs' dots run together. */
   letter-spacing: var(--tracking-normal);
 }
 
-/* Compact meters are a full-width run of 4px dots. */
+/* Compact meters are a full-width run of 6px-tall dots. */
 .overview-compact .meter,
 .overview-compact .meter-segment {
-  height: var(--space-1);
+  height: var(--space-2);
 }
 
 body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
@@ -1593,12 +1615,11 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   padding: var(--space-none) var(--space-2);
   min-height: var(--space-8);
   border-radius: var(--radius-xs);
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
   color: var(--subtle-foreground);
-  background: var(--card-elevated);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   white-space: nowrap;
@@ -1616,6 +1637,18 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
 
 .quota-pace[data-status="no_data"] {
   color: color-mix(in oklch, var(--subtle-foreground) 80%, var(--foreground));
+}
+
+/* Bracketed status text, no fill: the colour sits on the word, not behind it.
+   The brackets carry empty alt text so screen readers skip them. */
+.quota-pace::before,
+.peak-badge > span:first-child::before {
+  content: "[" / "";
+}
+
+.quota-pace::after,
+.peak-badge > span:first-child::after {
+  content: "]" / "";
 }
 
 .quota-pace[data-status="on_track"] {
@@ -1639,15 +1672,16 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-none) var(--space-none) var(--space-none) var(--space-2);
+  padding: 0;
   min-height: var(--space-7);
   border-radius: var(--radius-xs);
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-none);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
   color: var(--warning);
-  background: var(--warning-soft);
   width: fit-content;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1680,11 +1714,10 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   flex-direction: column;
   gap: 0;
   padding:  var(--space-7);
-  min-height: 120px;
 }
 
 .cost-card > .card-eyebrow {
-  margin-bottom: 0;
+  margin-bottom: var(--space-1);
 }
 
 .cost-card > .cost-estimate-row {
@@ -1696,15 +1729,18 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   margin-block: calc(-1 * var(--space-2));
 }
 
+/* A block, not a flex row: text-box trim works on the line box, so "--" and
+   the "$" + amount spans both end on the baseline. */
 .stat-value {
-  display: flex;
-  align-items: baseline;
+  display: block;
   margin-bottom: var(--space-2);
-  gap: 0;
   font-family: var(--font-pixel);
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: var(--weight-normal);
-  line-height: var(--leading-none);
+  /* Trim the box to cap height and baseline, like Figma's leading trim, so
+     pixel numbers align by their glyphs instead of by line-height fudges. */
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
   color: var(--accent-light);
@@ -1712,7 +1748,8 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
 
 /* The refresh glow lives on a pseudo-element so the pulse animates `opacity`
    (compositor) instead of `box-shadow` (a full repaint of every card, 900ms,
-   on loop). The shadow itself is painted once and never re-rasterized. */
+   on loop). The shadow itself is painted once and never re-rasterized. White
+   (--accent-light), not a level colour: a refresh says nothing about quota. */
 .card::after {
   content: "";
   position: absolute;
@@ -1721,8 +1758,8 @@ body:not([data-quota-mode="remaining"]) .overview-compact .quota-suffix {
   pointer-events: none;
   opacity: 0;
   box-shadow:
-    0 0 22px color-mix(in srgb, var(--level-ok) 18%, transparent),
-    inset 0 0 18px color-mix(in srgb, var(--level-ok) 8%, transparent);
+    0 0 22px color-mix(in srgb, var(--accent-light) 18%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--accent-light) 8%, transparent);
   transition: opacity var(--duration-slow) var(--ease-out);
 }
 
@@ -1742,13 +1779,13 @@ body[data-refreshing="true"] .card::after {
   }
 }
 
+/* The unit is metadata about the reading: smaller and quieter than the amount. */
 .cost-symbol {
-  font-size: 20px;
-  letter-spacing: var(--tracking-tight);
+  font-size: var(--text-md);
+  color: var(--subtle-foreground);
 }
 
 .cost-amount {
-  font-size: 20px;
   letter-spacing: var(--tracking-tight);
 }
 
@@ -1756,14 +1793,16 @@ body[data-refreshing="true"] .card::after {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--weight-normal);
+  line-height: var(--leading-none);
   color: var(--subtle-foreground);
 }
 
 .cost-tokens {
   display: block;
-  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   font-weight: var(--weight-normal);
   color: var(--subtle-foreground);
   line-height: var(--leading-none);
@@ -1856,11 +1895,12 @@ body[data-refreshing="true"] .card::after {
   flex-shrink: 0;
 }
 
+/* currentColor: in the footer the dots take the stamp's neutral grey. */
 .dmx-dot {
   width: var(--space-0);
   height: var(--space-0);
   border-radius: 50%;
-  background: var(--level-ok);
+  background: currentColor;
 }
 
 .dmx-inactive {
@@ -1900,13 +1940,26 @@ body[data-refreshing="true"] .card::after {
   100% { opacity: 0.16; }
 }
 
+/* Still and grey at rest; while a refresh runs the grid turns lime and pulses
+   alongside the cards' glow. */
+body[data-refreshing="true"] .dmx-wrap {
+  color: var(--accent);
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .dmx-dot[data-zone="c"] {
+  body[data-refreshing="true"] .dmx-dot[data-zone="c"] {
     animation: dmxPulseCenter 1400ms linear infinite;
   }
 
-  .dmx-dot[data-zone="i"] {
+  body[data-refreshing="true"] .dmx-dot[data-zone="i"] {
     animation: dmxPulseInner 1400ms linear infinite;
+  }
+}
+
+/* Reduced motion: no pulse, so a running refresh reads as the grid lit. */
+@media (prefers-reduced-motion: reduce) {
+  body[data-refreshing="true"] .dmx-dot[data-zone] {
+    opacity: 1;
   }
 }
 
@@ -2114,7 +2167,9 @@ body[data-refreshing="true"] .card::after {
   align-items: initial;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-6);
+  /* 16px sides, like the cards below, so banner and card content share an
+     edge; 12px top and bottom keeps the strip lighter than a card. */
+  padding: var(--space-5) var(--space-7);
   border-radius: var(--radius-lg);
   box-shadow: var(--inner-light);
 }
@@ -2297,7 +2352,8 @@ body[data-refreshing="true"] .card::after {
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-4);
   align-self: flex-start;
-  margin-top: var(--space-5);
+  /* 10px + the 2px text gap: 12px above the button, matching the padding below. */
+  margin-top: var(--space-4);
   cursor: pointer;
   box-shadow: var(--inner-light);
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
@@ -2325,7 +2381,7 @@ body[data-refreshing="true"] .card::after {
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--space-7);
   background: var(--success-soft);
   color: var(--success);
 }
@@ -2780,9 +2836,12 @@ body[data-refreshing="true"] .card::after {
   fill: currentColor;
 }
 
+/* Baseline, not flex-end: the pixel percent, its suffix and the reset time
+   have different descents, so bottom-aligned boxes left their text on three
+   different lines. */
 .floating-info {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: space-between;
   width: 100%;
   margin-top: var(--space-8);
@@ -2794,7 +2853,7 @@ body[data-refreshing="true"] .card::after {
   height: auto;
   padding: 0;
   display: inline-flex;
-  align-items: flex-end;
+  align-items: baseline;
   gap: var(--space-0);
   background: transparent;
   color: var(--foreground);
@@ -2808,7 +2867,6 @@ body[data-refreshing="true"] .card::after {
   filter: none;
 }
 
-/* Tight line box so the suffix glyph bottom-aligns with the big percent */
 .floating-percent-button .quota-suffix {
   line-height: var(--leading-none);
 }
@@ -3159,13 +3217,12 @@ button:focus-visible {
   transform: translateX(10px) scaleX(1.1875);
 }
 
-.switch input:checked + .switch-track {
-  background: var(--accent);
-}
-
+/* On keeps the grey track and turns the thumb lime: the accent marks the state
+   in one small dot instead of filling every switch on the page. (A light track
+   was tried; lime on 90% white is too close in lightness to read.) */
 .switch input:checked + .switch-track .switch-thumb {
   transform: translateX(13px);
-  background: var(--accent-foreground);
+  background: var(--accent);
 }
 
 .switch input:disabled + .switch-track {
@@ -3264,7 +3321,6 @@ button:focus-visible {
 .meter[data-level="zero"] .meter-segment {
   background: var(--border-strong);
 }
-
 .meter[data-level="warn"] {
   --seg-l: 88%;
   --seg-c: 0.163;
@@ -3321,7 +3377,6 @@ button:focus-visible {
 .floating-meter-bar[data-level="critical"] .meter-segment.active {
   background: var(--level-critical);
 }
-
 
 /* ═══════════════════════════════════════════════════════════
    VOLUME SLIDER
@@ -4078,7 +4133,6 @@ body[data-style="mini"] .floating-widget {
   .download-banner {
     border: 1px solid CanvasText;
   }
-
   /* !important: the level-scale selectors above reach (0,4,0). */
   :is(.meter, .floating-meter-bar) .meter-segment {
     forced-color-adjust: none;

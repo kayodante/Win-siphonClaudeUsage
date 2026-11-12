@@ -53,6 +53,17 @@ is added above it.
 
 ### Changed
 
+- Dashboard restyle toward the Nothing-inspired spec in Figma: quota, pace and
+  peak labels in Geist Mono uppercase with bracketed status text, a 56px hero
+  reading on provider pages, 18px compact percentages over 6px dot meters with
+  the reset line beneath, cost values at 24px with a smaller `$`, and a
+  three-size type budget. Spacing follows the Figma frames: 24px under card
+  titles and between groups, 16px between a group's rows, 12px from each label
+  to its reading. Pixel numbers use `text-box` cap trimming so value, suffix
+  and pace word share a baseline. The switch thumb turns lime when on; the
+  refresh glow is white and the footer dot grid pulses lime while refreshing.
+  Banners take the cards' 16px side inset, and the widget's reading aligns on
+  its baseline.
 - Tokenized typography letter-spacing (`--tracking-tighter`, `--tracking-tight`,
   `--tracking-normal`, `--tracking-wide`, `--tracking-caps`) and normalized
   `--text-xs` to 11px across `styles.css`.
