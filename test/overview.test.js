@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { overviewProviders, resolveNavigation, resolveProvider } from '../src/renderer/viewState.js';
+import { claudeScopedSections, overviewProviders, resolveNavigation, resolveProvider } from '../src/renderer/viewState.js';
 
 test('overview is available without installing another provider', () => {
   assert.equal(resolveProvider({}, 'overview'), 'overview');
@@ -30,6 +30,19 @@ test('overview retains source windows and all Antigravity groups without inventi
   assert.equal(providers[2].sections[2].session, undefined);
   assert.deepEqual(state, before);
   assert.deepEqual(overviewProviders({ codex: { sections: [] } })[1].sections, []);
+});
+
+test('a model-scoped weekly quota becomes a weekly-only Claude group titled by the model', () => {
+  const weeklyScoped = [{ name: 'Fable', percent: 66, resetsAt: '2026-11-17T03:00:00.169Z' }];
+  const [claude] = overviewProviders({ quota: { weeklyScoped } });
+  assert.deepEqual(claude.sections.map(s => s.id), ['claude', 'model-fable']);
+  assert.deepEqual(claude.sections[1], {
+    id: 'model-fable',
+    title: 'Fable',
+    session: null,
+    weekly: { percent: 66, resetsAt: '2026-11-17T03:00:00.169Z' }
+  });
+  assert.deepEqual(claudeScopedSections({ quota: { weeklyScoped: [{ name: 'Big Model 2', percent: 1, resetsAt: null }] } })[0].id, 'model-big-model-2');
 });
 
 test('Settings selection follows the visible view and Back restores the selected dashboard', () => {

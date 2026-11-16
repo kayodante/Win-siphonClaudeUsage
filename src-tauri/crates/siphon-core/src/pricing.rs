@@ -23,8 +23,27 @@ pub struct Tokens {
 /// `readout-pricing.json` is absent. Keys match `pricing_key` output.
 /// Verified against platform.claude.com/docs/en/about-claude/pricing (2026-09-22).
 /// `cache_write` is the 5-minute write (1.25x input); `cache_read` is 0.1x input
-/// on every model except Fable/Mythos 5.1 (0.025x) and Opus 5.5 (0.05x).
+/// on every model except Fable/Mythos 5.2 (0.025x), Fable/Mythos 5.1 (0.025x),
+/// Opus 5.5 (0.05x) and Sonnet 5.5 (0.05x).
 pub const BUNDLED_PRICING: &[(&str, Price)] = &[
+    (
+        "fable-5-2",
+        Price {
+            input: 8.0,
+            output: 40.0,
+            cache_read: 0.20,
+            cache_write: 10.00,
+        },
+    ),
+    (
+        "mythos-5-2",
+        Price {
+            input: 8.0,
+            output: 40.0,
+            cache_read: 0.20,
+            cache_write: 10.00,
+        },
+    ),
     (
         "fable-5-1",
         Price {
@@ -134,6 +153,15 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
         },
     ),
     (
+        "sonnet-5-5",
+        Price {
+            input: 2.0,
+            output: 10.0,
+            cache_read: 0.10,
+            cache_write: 2.50,
+        },
+    ),
+    (
         "sonnet-5",
         Price {
             input: 2.0,
@@ -167,6 +195,17 @@ pub const BUNDLED_PRICING: &[(&str, Price)] = &[
             output: 15.0,
             cache_read: 0.30,
             cache_write: 3.75,
+        },
+    ),
+    // ponytail: prompts over 100K tokens bill at $0.50 / $2.50; the table has no
+    // tiers, so those under-count. Add a tier field if Haiku long-context matters.
+    (
+        "haiku-5-5",
+        Price {
+            input: 0.10,
+            output: 0.50,
+            cache_read: 0.01,
+            cache_write: 0.125,
         },
     ),
     (
@@ -317,6 +356,10 @@ mod tests {
     #[test]
     fn current_models_all_priced() {
         for model in [
+            "claude-fable-5-2",
+            "claude-mythos-5-2",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
             "claude-fable-5-1",
             "claude-fable-5",
             "claude-opus-5-5",
@@ -327,6 +370,11 @@ mod tests {
         ] {
             assert!(find_price(None, model).is_some(), "no price for {model}");
         }
+
+        let fable52 = find_price(None, "claude-fable-5-2").unwrap();
+        assert_eq!(fable52.input, 8.0);
+        assert_eq!(fable52.output, 40.0);
+        assert_eq!(fable52.cache_read, 0.20);
 
         let fable = find_price(None, "claude-fable-5-1").unwrap();
         assert_eq!(fable.input, 10.0);

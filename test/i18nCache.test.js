@@ -123,6 +123,7 @@ test('applyTranslations caches DOM queries and updates text on subsequent render
     const viewDirection = () => 1;
     const entranceCountUpTiming = () => ({ duration: 0, delay: 0 });
     const detectThresholdCrossings = () => ({ playFull: false, playLimit: false });
+    const claudeScopedSections = () => [];
   `;
 
   const testExecution = `

@@ -13,6 +13,10 @@ is added above it.
 
 ### Added
 
+- Claude's model-scoped weekly quota (Fable's) is shown as its own "Fable"
+  group: compact on the Overview Claude card and as a card under the main one on
+  the Claude page. It is read from the usage endpoint's `limits[]` entries of
+  kind `weekly_scoped`; the tray icon, widget and alerts are unchanged.
 - An Overview dashboard with compact Claude, Codex and Antigravity quota cards,
   20-segment weekly meters, and provider-source timestamps on hover and for
   screen readers. Missing, rolled-over and blocked readings retain their meaning.
@@ -117,6 +121,9 @@ is added above it.
 
 ### Fixed
 
+- Claude Fable 5.2, Mythos 5.2, Sonnet 5.5 and Haiku 5.5 usage now counts
+  toward the Claude Code cost cards; those models were missing from the bundled
+  pricing table, so their tokens were costed at $0.
 - Antigravity discovery no longer requires `main.log`: Windows process identity
   and PID-owned loopback ports determine which endpoints may receive the token.
   Stale log ports are excluded, ownership is rediscovered before each request,

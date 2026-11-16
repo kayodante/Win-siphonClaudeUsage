@@ -151,6 +151,7 @@ They match Claude Code's own client.
 | `five_hour`          | `session`        | Session         |
 | `seven_day`          | `weeklyAll`      | Weekly Limit    |
 | `extra_usage`        | `extraUsage`     | Extra usage (conditional) |
+| `limits[]` (`weekly_scoped`) | `weeklyScoped` | Model name + Weekly Limit |
 
 Each becomes `{ percent: Number, resetsAt: Date | null }`.
 
@@ -158,6 +159,30 @@ Each becomes `{ percent: Number, resetsAt: Date | null }`.
 only come populated on Max plans (on Pro they arrive empty or absent). They
 were displayed early in the port, intentionally removed, and are ignored by
 the parser today.
+
+Model-scoped weekly quotas — Fable's, as of 2026-11 — do **not** arrive as a
+`seven_day_*` key. They come in the `limits` array, one entry per limit:
+
+```jsonc
+{
+  "limits": [
+    { "kind": "session",    "group": "session", "percent": 66, "resets_at": "…", "scope": null },
+    { "kind": "weekly_all", "group": "weekly",  "percent": 56, "resets_at": "…", "scope": null },
+    {
+      "kind": "weekly_scoped", "group": "weekly", "percent": 66, "resets_at": "…",
+      "scope": { "model": { "id": null, "display_name": "Fable" }, "surface": null }
+    }
+  ]
+}
+```
+
+`parse_weekly_scoped` keeps every `weekly_scoped` entry whose
+`scope.model.display_name` is set and that carries a `percent`, as
+`weeklyScoped: [{ name, percent, resetsAt }]`; surface-scoped entries are
+skipped. Each one renders as a weekly-only group titled with the model's name
+— compact on the Overview's Claude card, its own card under the main one on
+the Claude page. The tray icon, widget, banners and toasts still read only
+`five_hour` / `seven_day`.
 
 The endpoint may also return an `extra_usage` object describing purchased
 credits beyond the plan quota:

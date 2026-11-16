@@ -1254,6 +1254,11 @@ body[data-view="onboard"] .app-footer {
   gap: var(--space-1);
 }
 
+/* Claude's model-scoped list is usually empty; keep it out of the view's gap. */
+.provider-groups:empty {
+  display: none;
+}
+
 .provider-status {
   padding: var(--space-3) var(--space-5);
   font-size: var(--text-sm);
@@ -1460,7 +1465,7 @@ body[data-view="onboard"] .app-footer {
    card title's 24px lead (8px + the 16px row gap). The Overview cards share
    `.provider-groups`, so this is scoped by id: there the title stays 16px
    above its rows. */
-#providerGroups .overview-group-title {
+:is(#providerGroups, #claudeScopedGroups) .overview-group-title {
   padding-bottom: var(--space-3);
 }
 

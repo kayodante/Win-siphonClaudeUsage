@@ -17,7 +17,7 @@ import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
 import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
 import { createViewSwitcher } from './viewTransition.js';
-import { alertLevel, detectThresholdCrossings, entranceCountUpTiming, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState, showsClaudeErrors, viewDirection } from './viewState.js';
+import { alertLevel, claudeScopedSections, detectThresholdCrossings, entranceCountUpTiming, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState, showsClaudeErrors, viewDirection } from './viewState.js';
 
 let i18nCache = null;
 
@@ -51,6 +51,7 @@ const elements = {
   providerView: document.querySelector('#providerView'),
   providerHeading: document.querySelector('#providerHeading'),
   providerGroups: document.querySelector('#providerGroups'),
+  claudeScopedGroups: document.querySelector('#claudeScopedGroups'),
   providerCostGrid: document.querySelector('#providerCostGrid'),
   providerTodayCost: document.querySelector('#providerTodayCost'),
   providerTodayTokens: document.querySelector('#providerTodayTokens'),
@@ -1247,6 +1248,7 @@ function renderQuotaSection(state, lang) {
 
   updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
   renderExtraUsage(state.quota?.extraUsage);
+  renderClaudeScopedGroups(state, { now, lang, mode });
   updateStatsAndPills(state, lang);
 
   updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode });
@@ -1481,7 +1483,7 @@ function renderQuotaGroup(group, section, compact, ctx) {
   group.classList.toggle('overview-section--compact', compact);
   const heading = group.querySelector('[data-group-title]');
   heading.hidden = !compact;
-  heading.textContent = groupTitle(section.id, lang);
+  heading.textContent = section.title ?? groupTitle(section.id, lang);
   const rowCtx = { ...ctx, blocked: Boolean(section.blocked), weeklySpent: (section.weekly?.percent ?? 0) >= 100 };
   const [session, weekly] = group.querySelectorAll('.quota-row');
   session.classList.toggle('overview-compact', compact);
@@ -1580,6 +1582,13 @@ function renderProviderGroupCard(provider, section, index, ctx) {
   title.setAttribute('aria-level', '2');
   card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
   return card;
+}
+
+// Model-scoped weekly quotas (Fable) under Claude's main card, one titled
+// compact card each — the same cards the other providers' secondary groups use.
+function renderClaudeScopedGroups(state, ctx) {
+  const cards = claudeScopedSections(state).map((section, index) => renderProviderGroupCard('claude', section, index + 1, ctx));
+  syncChildren(elements.claudeScopedGroups, cards);
 }
 
 function renderProviderStats(quota, lang) {

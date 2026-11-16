@@ -19,9 +19,23 @@ export function resolveNavigation(state, requestedView, requestedProvider) {
   return view === 'onboard' ? null : view === 'settings' ? 'settings' : resolveProvider(state, requestedProvider);
 }
 
+// Claude's weekly quotas scoped to one model (Fable today), as weekly-only
+// groups titled by the model name the API sends.
+export function claudeScopedSections(state) {
+  return (state?.quota?.weeklyScoped ?? []).map(({ name, percent, resetsAt }) => ({
+    id: `model-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title: name,
+    session: null,
+    weekly: { percent, resetsAt }
+  }));
+}
+
 export function overviewProviders(state) {
   return [
-    { id: 'claude', sections: [{ id: 'claude', session: state?.quota?.session ?? null, weekly: state?.quota?.weeklyAll ?? null }] },
+    { id: 'claude', sections: [
+      { id: 'claude', session: state?.quota?.session ?? null, weekly: state?.quota?.weeklyAll ?? null },
+      ...claudeScopedSections(state)
+    ] },
     ...['codex', 'antigravity'].filter(id => state?.[id]).map(id => ({ id, sections: state[id].sections ?? [] }))
   ];
 }
