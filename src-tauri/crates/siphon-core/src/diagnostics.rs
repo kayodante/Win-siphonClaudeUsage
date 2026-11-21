@@ -19,19 +19,19 @@ fn patterns() -> &'static [(Regex, &'static str)] {
             ),
             (
                 Regex::new(
-                    r"(?i)([?&](?:access_token|refresh_token|code|code_verifier|state)=)[^&#\s]+",
+                    r"(?i)([?&](?:access_token|refresh_token|csrf_token|csrfToken|code|code_verifier|state)=)[^&#\s]+",
                 )
                 .unwrap(),
                 "query",
             ),
             (
-                Regex::new(r"(?i)\b(access_token|refresh_token|code|code_verifier|state)=([^&\s]+)")
+                Regex::new(r"(?i)\b(access_token|refresh_token|csrf_token|csrfToken|code|code_verifier|state)=([^&\s]+)")
                     .unwrap(),
                 "pair",
             ),
             (
                 Regex::new(
-                    r#"("(?:access_token|refresh_token|accessToken|refreshToken|code_verifier|code|state)"\s*:\s*)"[^"]*""#,
+                    r#"("(?:access_token|refresh_token|accessToken|refreshToken|csrf_token|csrfToken|code_verifier|code|state)"\s*:\s*)"[^"]*""#,
                 )
                 .unwrap(),
                 "json",
@@ -92,8 +92,11 @@ mod tests {
 
     #[test]
     fn redacts_json_tokens() {
-        let got = redact_string(r#"{"access_token":"zzz","plan":"pro"}"#);
-        assert_eq!(got, r#"{"access_token":"[REDACTED]","plan":"pro"}"#);
+        let got = redact_string(r#"{"access_token":"zzz","csrfToken":"uuid-123","plan":"pro"}"#);
+        assert_eq!(
+            got,
+            r#"{"access_token":"[REDACTED]","csrfToken":"[REDACTED]","plan":"pro"}"#
+        );
     }
 
     #[test]

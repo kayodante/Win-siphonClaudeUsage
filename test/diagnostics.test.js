@@ -37,6 +37,7 @@ test('redactSensitive masks sensitive object keys recursively', () => {
     Authorization: 'Bearer top-secret',
     accessToken: 'access-value',
     refreshToken: 'refresh-value',
+    csrfToken: 'csrf-value',
     nested: {
       code_verifier: 'verifier-value'
     }
@@ -45,8 +46,9 @@ test('redactSensitive masks sensitive object keys recursively', () => {
   assert.match(result, /"Authorization":"Bearer \[REDACTED\]"/);
   assert.match(result, /"accessToken":"\[REDACTED\]"/);
   assert.match(result, /"refreshToken":"\[REDACTED\]"/);
+  assert.match(result, /"csrfToken":"\[REDACTED\]"/);
   assert.match(result, /"code_verifier":"\[REDACTED\]"/);
-  assert.doesNotMatch(result, /top-secret|access-value|refresh-value|verifier-value/);
+  assert.doesNotMatch(result, /top-secret|access-value|refresh-value|csrf-value|verifier-value/);
 });
 
 test('safeErrorMessage returns a redacted message with fallback for empty errors', () => {

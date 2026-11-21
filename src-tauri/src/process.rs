@@ -1,7 +1,9 @@
 //! Command lines and loopback ports of other running processes. Antigravity
-//! 2.16+ puts the CSRF token its local quota server expects only on that
-//! server's command line (`siphon_core::antigravity`), so this is the one
-//! place Siphon looks at another process. It needs no elevation:
+//! 2.16–2.33 put the CSRF token its local quota server expects on that
+//! server's command line, while 2.34+ writes it (with `pid` and `httpsPort`)
+//! to `~/.gemini/antigravity/daemon/hub_<httpPort>.json` (`siphon_core::antigravity`).
+//! Process inspection identifies the running Antigravity server and its
+//! PID-owned loopback ports; it needs no elevation:
 //! `PROCESS_QUERY_LIMITED_INFORMATION` on a process of the same user is enough,
 //! and the read never touches the target's memory.
 
@@ -14,8 +16,8 @@ pub fn antigravity_endpoint() -> Result<
     siphon_core::providers::Observation,
 > {
     use siphon_core::antigravity::{
-        discover_endpoint, language_server_log_path, main_log_path, read_language_server_log_port,
-        read_log_port,
+        daemon_dir_path, discover_endpoint_with_hubs, language_server_log_path, main_log_path,
+        read_hub_discoveries, read_language_server_log_port, read_log_port,
     };
     let log_port = main_log_path()
         .and_then(|path| read_log_port(&path).ok().flatten())
@@ -23,11 +25,15 @@ pub fn antigravity_endpoint() -> Result<
             language_server_log_path()
                 .and_then(|path| read_language_server_log_port(&path).ok().flatten())
         });
+    let hubs = daemon_dir_path()
+        .map(|dir| read_hub_discoveries(&dir))
+        .unwrap_or_default();
     let processes = server_processes("language_server");
     let installed = antigravity_installed();
-    discover_endpoint(
+    discover_endpoint_with_hubs(
         log_port,
         processes.as_deref().map_err(std::io::Error::kind),
+        &hubs,
         installed,
     )
 }
@@ -91,6 +97,7 @@ pub fn server_processes(exe_prefix: &str) -> std::io::Result<Vec<ServerProcess>>
                     .map(|(_, port)| *port)
                     .collect();
                 out.push(ServerProcess {
+                    pid,
                     command_line,
                     ports,
                 });

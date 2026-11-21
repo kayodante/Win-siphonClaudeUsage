@@ -3,29 +3,39 @@
 //! loopback HTTPS port with a self-signed certificate and a per-launch CSRF
 //! token:
 //!
-//! * the ports: PID-owned loopback listeners; `main.log` is an optional hint
-//!   that only prioritizes ports already owned by an identified server;
-//! * the token: only on the server's command line (`--csrf_token <uuid>`).
-//!   Up to 2.15 the log carried it too; 2.16 stopped writing it there.
+//! * the ports: PID-owned loopback listeners; `main.log` and
+//!   `language_server.log` are optional hints that only prioritize ports
+//!   already owned by an identified server;
+//! * the token: in `~/.gemini/antigravity/daemon/hub_<httpPort>.json` (2.31+,
+//!   and the only source in 2.34+, paired with the running PID and its owned
+//!   `httpsPort`), or on the server's command line (`--csrf_token <uuid>`,
+//!   up to 2.33). Up to 2.15 the log carried it too; 2.16 stopped writing it
+//!   there.
 //!
-//! The binary crate reads the command line and performs the POST; everything
-//! that interprets what comes back is here. The server exists only while the
-//! app is open, so a closed app is an expected state, not an error.
+//! The binary crate reads the command line, hub discovery files and performs
+//! the POST; everything that interprets what comes back is here. The server
+//! exists only while the app is open, so a closed app is an expected state, not
+//! an error.
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+use chrono::{DateTime, Utc};
 use regex_lite::Regex;
 use serde_json::Value;
 
 use crate::format::parse_iso;
-use crate::providers::{iso, Observation, ProviderStatus, ProviderWindow, QuotaSection};
+use crate::providers::{
+    iso, normalize_sections, Observation, ProviderQuota, ProviderStatus, ProviderWindow,
+    QuotaSection,
+};
 
 /// Connect path of the quota call, POSTed with a `{}` body.
 pub const QUOTA_RPC_PATH: &str =
     "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary";
 pub const CSRF_HEADER: &str = "X-Codeium-Csrf-Token";
 const LOG_TAIL_BYTES: u64 = 256 * 1024;
+const MAX_HUB_FILE_BYTES: u64 = 64 * 1024;
 
 /// Optional port hint at `%APPDATA%\Antigravity\logs\main.log`.
 pub fn main_log_path() -> Option<PathBuf> {
@@ -46,6 +56,17 @@ pub fn language_server_log_path() -> Option<PathBuf> {
             .join("Antigravity")
             .join("logs")
             .join("language_server.log"),
+    )
+}
+
+/// Hub discovery directory at `~/.gemini/antigravity/daemon`.
+pub fn daemon_dir_path() -> Option<PathBuf> {
+    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
+    Some(
+        PathBuf::from(home)
+            .join(".gemini")
+            .join("antigravity")
+            .join("daemon"),
     )
 }
 
@@ -120,6 +141,10 @@ pub fn csrf_token(command_line: &str) -> Option<String> {
         return None;
     }
     let raw = &token_regex().captures(command_line)?[1];
+    plausible_token(raw)
+}
+
+fn plausible_token(raw: &str) -> Option<String> {
     let token = raw.trim_matches(['"', '\'']).to_string();
     // A UUID today. Anything outside this set would not survive as a header
     // value anyway; refusing it here keeps a malformed line from reaching one.
@@ -141,10 +166,85 @@ fn is_antigravity(command_line: &str) -> bool {
     .is_match(command_line)
 }
 
+/// Discovery metadata written by Antigravity 2.31+ to
+/// `~/.gemini/antigravity/daemon/hub_<httpPort>.json`. Antigravity 2.34+
+/// stopped passing `--csrf_token` on the `language_server` command line and
+/// publishes the token and HTTPS port here instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HubDiscovery {
+    pub pid: u32,
+    pub https_port: u16,
+    pub http_port: Option<u16>,
+    pub csrf_token: String,
+}
+
+/// Parse one `hub_<httpPort>.json` payload.
+pub fn parse_hub_discovery(raw: &str) -> Option<HubDiscovery> {
+    let v: Value = serde_json::from_str(raw).ok()?;
+    let pid = v
+        .get("pid")?
+        .as_u64()
+        .and_then(|n| u32::try_from(n).ok())
+        .filter(|&p| p != 0)?;
+    let https_port = v
+        .get("httpsPort")?
+        .as_u64()
+        .and_then(|n| u16::try_from(n).ok())
+        .filter(|&p| p != 0)?;
+    let http_port = match v.get("httpPort") {
+        None | Some(Value::Null) => None,
+        Some(val) => Some(
+            val.as_u64()
+                .and_then(|n| u16::try_from(n).ok())
+                .filter(|&p| p != 0 && p != https_port)?,
+        ),
+    };
+    let csrf_token = v.get("csrfToken")?.as_str().and_then(plausible_token)?;
+    Some(HubDiscovery {
+        pid,
+        https_port,
+        http_port,
+        csrf_token,
+    })
+}
+
+/// Read all valid `hub_*.json` discovery files from `~/.gemini/antigravity/daemon`.
+/// Old files from previous launches can remain on disk; `resolve_endpoint_with_hubs`
+/// accepts only the one whose `pid` and `https_port` match a live Antigravity
+/// `language_server` process in the OS TCP table.
+pub fn read_hub_discoveries(dir: &Path) -> Vec<HubDiscovery> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if !name.starts_with("hub_") || !name.ends_with(".json") {
+            continue;
+        }
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if !meta.is_file() || meta.len() > MAX_HUB_FILE_BYTES {
+            continue;
+        }
+        if let Ok(raw) = std::fs::read_to_string(entry.path()) {
+            if let Some(hub) = parse_hub_discovery(&raw) {
+                out.push(hub);
+            }
+        }
+    }
+    out
+}
+
 /// A running `language_server` process and the loopback TCP ports its PID is
 /// listening on (`127.0.0.1`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ServerProcess {
+    pub pid: u32,
     pub command_line: String,
     pub ports: Vec<u16>,
 }
@@ -160,25 +260,41 @@ pub enum EndpointPick {
     Ambiguous,
 }
 
-/// Combine the port from `main.log` with the running `language_server`
-/// processes and their OS-owned loopback ports.
+/// Combine the port from `main.log` / `language_server.log` with the running
+/// `language_server` processes and their OS-owned loopback ports.
+pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> EndpointPick {
+    resolve_endpoint_with_hubs(log_port, processes, &[])
+}
+
+/// Combine the optional log port hint, the running `language_server` processes
+/// (with their OS-owned loopback ports), and any `hub_*.json` discovery files.
 ///
+/// * Every candidate process must still carry Antigravity's identity flags on
+///   its command line.
+/// * Its CSRF token comes from `--csrf_token` on the command line (≤ 2.33) or
+///   from a `hub_*.json` file whose `pid` and `https_port` (plus `http_port`,
+///   when present) are currently owned by that process in the kernel TCP table.
+///   Stale `hub_*.json` files from exited processes are ignored.
+/// * When a matching `hub_*.json` names `https_port`, that port is placed first
+///   for that process and `http_port` is excluded from HTTPS candidates.
 /// * If the kernel TCP table ties `log_port` to a process (or processes sharing
 ///   one token), that token wins even when another server with a different
 ///   token is also running.
-/// * Otherwise, if all Antigravity processes share one token, only their
-///   owned ports are candidates. An unowned log port is never authenticated.
-pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> EndpointPick {
-    if processes
-        .iter()
-        .any(|p| is_antigravity(&p.command_line) && csrf_token(&p.command_line).is_none())
-    {
-        return EndpointPick::Ambiguous;
+pub fn resolve_endpoint_with_hubs(
+    log_port: Option<u16>,
+    processes: &[ServerProcess],
+    hubs: &[HubDiscovery],
+) -> EndpointPick {
+    let mut servers: Vec<(String, Vec<u16>)> = Vec::new();
+    for process in processes {
+        if !is_antigravity(&process.command_line) {
+            continue;
+        }
+        let Some(resolved) = resolve_process_server(process, hubs) else {
+            return EndpointPick::Ambiguous;
+        };
+        servers.push(resolved);
     }
-    let servers: Vec<(String, &[u16])> = processes
-        .iter()
-        .filter_map(|p| Some((csrf_token(&p.command_line)?, p.ports.as_slice())))
-        .collect();
     if servers.is_empty() {
         return EndpointPick::Closed;
     }
@@ -193,7 +309,7 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
                 let mut ports = vec![port];
                 for (t, p_ports) in &servers {
                     if *t == token {
-                        for &p in *p_ports {
+                        for &p in p_ports {
                             if p != 0
                                 && !ports.contains(&p)
                                 && !servers
@@ -218,7 +334,7 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
 
     let mut ports = Vec::new();
     for (_, p_ports) in &servers {
-        for &p in *p_ports {
+        for &p in p_ports {
             if p != 0 && !ports.contains(&p) {
                 ports.push(p);
             }
@@ -231,6 +347,49 @@ pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> E
     }
 }
 
+fn resolve_process_server(
+    process: &ServerProcess,
+    hubs: &[HubDiscovery],
+) -> Option<(String, Vec<u16>)> {
+    let cmd_token = csrf_token(&process.command_line);
+    let matching_hubs: Vec<&HubDiscovery> = if process.pid != 0 {
+        hubs.iter()
+            .filter(|h| {
+                h.pid == process.pid
+                    && process.ports.contains(&h.https_port)
+                    && h.http_port.map_or(true, |hp| process.ports.contains(&hp))
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    if matching_hubs.is_empty() {
+        let token = cmd_token?;
+        return Some((token, process.ports.clone()));
+    }
+
+    let first = matching_hubs[0];
+    if matching_hubs.iter().any(|h| {
+        h.csrf_token != first.csrf_token
+            || h.https_port != first.https_port
+            || h.http_port != first.http_port
+    }) {
+        return None;
+    }
+    if cmd_token.as_ref().is_some_and(|ct| ct != &first.csrf_token) {
+        return None;
+    }
+
+    let mut ports = vec![first.https_port];
+    for &port in &process.ports {
+        if port != 0 && port != first.https_port && Some(port) != first.http_port {
+            ports.push(port);
+        }
+    }
+    Some((first.csrf_token.clone(), ports))
+}
+
 /// Running processes establish presence even without any files. Inspection
 /// failures are errors, never proof that an installation disappeared.
 pub fn discover_endpoint(
@@ -238,8 +397,19 @@ pub fn discover_endpoint(
     processes: Result<&[ServerProcess], std::io::ErrorKind>,
     installed: Result<bool, std::io::ErrorKind>,
 ) -> Result<EndpointPick, Observation> {
+    discover_endpoint_with_hubs(log_port, processes, &[], installed)
+}
+
+/// Same as `discover_endpoint`, including any `~/.gemini/antigravity/daemon/hub_*.json`
+/// discovery records for Antigravity 2.34+.
+pub fn discover_endpoint_with_hubs(
+    log_port: Option<u16>,
+    processes: Result<&[ServerProcess], std::io::ErrorKind>,
+    hubs: &[HubDiscovery],
+    installed: Result<bool, std::io::ErrorKind>,
+) -> Result<EndpointPick, Observation> {
     let error = || Observation::NoReading(ProviderStatus::Error);
-    match resolve_endpoint(log_port, processes.map_err(|_| error())?) {
+    match resolve_endpoint_with_hubs(log_port, processes.map_err(|_| error())?, hubs) {
         EndpointPick::Ready { ports, token } => Ok(EndpointPick::Ready { ports, token }),
         EndpointPick::Ambiguous => Err(error()),
         EndpointPick::Closed => match installed {
@@ -416,12 +586,67 @@ fn parse_bucket(bucket: &Value) -> ProviderWindow {
     }
 }
 
+/// Build the on-disk payload for `%APPDATA%\Siphon\antigravity-quota-cache.json`.
+/// Only stores the quota reading (`updatedAt` and `sections`), never tokens or
+/// ports. Returns `None` when the quota carries no dated sections to persist.
+pub fn serialize_cached_quota(quota: &ProviderQuota) -> Option<Value> {
+    let updated_at = quota.updated_at.as_deref()?;
+    parse_iso(updated_at)?;
+    if quota.sections.is_empty() {
+        return None;
+    }
+    Some(serde_json::json!({
+        "updatedAt": updated_at,
+        "sections": quota.sections,
+    }))
+}
+
+/// Restore a cached Antigravity reading from disk under `status: Closed`,
+/// normalizing every window against `now` so any window whose `resetsAt` passed
+/// while the app was closed is marked `rolledOver` rather than shown as a
+/// stale percentage.
+pub fn restore_cached_quota(raw: &Value, now: DateTime<Utc>) -> Option<ProviderQuota> {
+    let updated_at = raw.get("updatedAt")?.as_str()?;
+    let parsed_updated = parse_iso(updated_at)?;
+    let mut sections: Vec<QuotaSection> =
+        serde_json::from_value(raw.get("sections")?.clone()).ok()?;
+    if sections.is_empty() {
+        return None;
+    }
+    let mut seen_ids = Vec::new();
+    for section in &sections {
+        if !matches!(section.id.as_str(), "gemini" | "thirdParty" | "argon")
+            || seen_ids.contains(&section.id.as_str())
+        {
+            return None;
+        }
+        seen_ids.push(section.id.as_str());
+    }
+    let has_window = sections
+        .iter()
+        .flat_map(|s| [&s.session, &s.weekly])
+        .flatten()
+        .any(|w| w.percent.is_some() || w.rolled_over || w.resets_at.is_some());
+    if !has_window {
+        return None;
+    }
+    normalize_sections(&mut sections, now);
+    Some(ProviderQuota {
+        status: ProviderStatus::Closed,
+        updated_at: Some(iso(parsed_updated)),
+        sections,
+        today_stats: None,
+        month_stats: None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn server(token: &str, ports: &[u16]) -> ServerProcess {
         ServerProcess {
+            pid: 0,
             command_line: format!(
                 "language_server.exe --override_ide_name antigravity --csrf_token {token}"
             ),
@@ -467,6 +692,7 @@ mod tests {
     #[test]
     fn identifiable_servers_with_missing_tokens_are_errors_not_closed() {
         let process = ServerProcess {
+            pid: 0,
             command_line: "language_server.exe --override_ide_name antigravity".into(),
             ports: vec![50001],
         };
@@ -830,6 +1056,7 @@ I1026 17:22:34.033718 server.go:695] Language server listening on random port at
     #[test]
     fn resolves_endpoint_from_pid_ports_and_disambiguates_two_servers() {
         let proc_with = |token: &str, ports: &[u16]| ServerProcess {
+            pid: 0,
             command_line: format!(
                 "language_server.exe --override_ide_name antigravity --csrf_token {token}"
             ),
@@ -863,5 +1090,185 @@ I1026 17:22:34.033718 server.go:695] Language server listening on random port at
             resolve_endpoint(Some(59999), &[a, b]),
             EndpointPick::Ambiguous
         );
+    }
+
+    #[test]
+    fn resolves_v2_34_server_from_hub_discovery_and_ignores_stale_hub_files() {
+        let live_hub = parse_hub_discovery(
+            r#"{
+              "pid": 38604,
+              "httpsPort": 60999,
+              "httpPort": 61000,
+              "lsVersion": "2.34.0",
+              "csrfToken": "076b1d0b-08c2-4f6d-85e3-470961d4b77c"
+            }"#,
+        )
+        .unwrap();
+        // Old files from previous launches (including one with a recycled PID
+        // whose ports are no longer owned by 38604).
+        let stale_other_pid = parse_hub_discovery(
+            r#"{"pid":12000,"httpsPort":58737,"httpPort":58738,"csrfToken":"11111111-2222-3333-4444-555555555555"}"#,
+        )
+        .unwrap();
+        let stale_same_pid_wrong_port = parse_hub_discovery(
+            r#"{"pid":38604,"httpsPort":49674,"httpPort":49675,"csrfToken":"99999999-8888-7777-6666-555555555555"}"#,
+        )
+        .unwrap();
+
+        let process = ServerProcess {
+            pid: 38604,
+            command_line: "language_server.exe --standalone --override_ide_name antigravity --override_ide_version 2.34.0 --app_data_dir antigravity --read_host_bridge_token_from_stdin".into(),
+            // Kernel TCP table order may put sidecar or HTTP ports before HTTPS.
+            ports: vec![52739, 61000, 60999],
+        };
+
+        let pick = resolve_endpoint_with_hubs(
+            None,
+            std::slice::from_ref(&process),
+            &[stale_other_pid, stale_same_pid_wrong_port, live_hub],
+        );
+        assert_eq!(
+            pick,
+            EndpointPick::Ready {
+                // HTTPS port is placed first and plain HTTP port 61000 is excluded.
+                ports: vec![60999, 52739],
+                token: "076b1d0b-08c2-4f6d-85e3-470961d4b77c".into(),
+            }
+        );
+    }
+
+    #[test]
+    fn conflicting_or_invalid_hub_discoveries_fail_closed() {
+        assert!(
+            parse_hub_discovery(r#"{"pid":0,"httpsPort":60999,"csrfToken":"aaaaaaaa-1111"}"#)
+                .is_none()
+        );
+        assert!(
+            parse_hub_discovery(r#"{"pid":10,"httpsPort":0,"csrfToken":"aaaaaaaa-1111"}"#)
+                .is_none()
+        );
+        assert!(parse_hub_discovery(
+            r#"{"pid":10,"httpsPort":60999,"httpPort":60999,"csrfToken":"aaaaaaaa-1111"}"#
+        )
+        .is_none());
+        assert!(parse_hub_discovery(
+            r#"{"pid":10,"httpsPort":60999,"csrfToken":"bad\u0007token"}"#
+        )
+        .is_none());
+
+        let process = ServerProcess {
+            pid: 38604,
+            command_line: "language_server.exe --override_ide_name antigravity".into(),
+            ports: vec![60999, 61000],
+        };
+        let hub_a = HubDiscovery {
+            pid: 38604,
+            https_port: 60999,
+            http_port: Some(61000),
+            csrf_token: "aaaaaaaa-1111".into(),
+        };
+        let hub_b = HubDiscovery {
+            pid: 38604,
+            https_port: 60999,
+            http_port: Some(61000),
+            csrf_token: "bbbbbbbb-2222".into(),
+        };
+        assert_eq!(
+            resolve_endpoint_with_hubs(None, &[process], &[hub_a.clone(), hub_b]),
+            EndpointPick::Ambiguous
+        );
+
+        // Mismatch between a command-line token and a hub discovery for the same PID is ambiguous.
+        let mismatched_cmd = ServerProcess {
+            pid: 38604,
+            command_line:
+                "language_server.exe --override_ide_name antigravity --csrf_token cccccccc-3333"
+                    .into(),
+            ports: vec![60999, 61000],
+        };
+        assert_eq!(
+            resolve_endpoint_with_hubs(None, &[mismatched_cmd], &[hub_a]),
+            EndpointPick::Ambiguous
+        );
+    }
+
+    #[test]
+    fn reads_hub_files_from_daemon_dir() {
+        let dir = std::env::temp_dir().join(format!(
+            "siphon-hub-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("hub_61000.json"),
+            r#"{"pid":38604,"httpsPort":60999,"httpPort":61000,"csrfToken":"076b1d0b-08c2-4f6d-85e3-470961d4b77c"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("other.json"),
+            r#"{"pid":1,"httpsPort":2,"csrfToken":"aaaaaaaa-1111"}"#,
+        )
+        .unwrap();
+        std::fs::write(dir.join("hub_bad.json"), "not json").unwrap();
+
+        let hubs = read_hub_discoveries(&dir);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(
+            hubs,
+            vec![HubDiscovery {
+                pid: 38604,
+                https_port: 60999,
+                http_port: Some(61000),
+                csrf_token: "076b1d0b-08c2-4f6d-85e3-470961d4b77c".into(),
+            }]
+        );
+    }
+
+    #[test]
+    fn cached_quota_restores_as_closed_and_rolls_over_expired_windows() {
+        use crate::providers::apply;
+        let raw: Value = serde_json::from_str(REAL_RESPONSE).unwrap();
+        let taken = parse_iso("2026-10-22T12:00:00Z").unwrap();
+        let live = apply(
+            None,
+            Observation::Reading {
+                taken_at: Some(iso(taken)),
+                sections: parse_quota_summary(&raw).unwrap(),
+            },
+            taken,
+        )
+        .unwrap();
+        let cached = serialize_cached_quota(&live).unwrap();
+
+        // Booting while Antigravity is closed after the 5h reset (2026-10-23T07:40:54Z)
+        // but before the weekly resets (2026-10-27 / 2026-10-30).
+        let boot_after_5h = parse_iso("2026-10-24T00:00:00Z").unwrap();
+        let restored = restore_cached_quota(&cached, boot_after_5h).unwrap();
+        assert_eq!(restored.status, ProviderStatus::Closed);
+        assert_eq!(
+            restored.updated_at.as_deref(),
+            Some("2026-10-22T12:00:00.000Z")
+        );
+        // 5h session rolled over while closed; weekly quota stays intact.
+        let gemini = restored.section("gemini").unwrap();
+        assert!(gemini.session.as_ref().unwrap().rolled_over);
+        assert_eq!(gemini.session.as_ref().unwrap().percent, None);
+        assert!(!gemini.weekly.as_ref().unwrap().rolled_over);
+        assert!(gemini.weekly.as_ref().unwrap().percent.is_some());
+
+        // Third-party weekly hasn't rolled over yet, so `blocked` holds.
+        let third = restored.section("thirdParty").unwrap();
+        assert!(third.blocked);
+        assert_eq!(third.weekly.as_ref().unwrap().percent, Some(100.0));
+
+        // After the weekly reset passes too, `blocked` is lifted.
+        let boot_after_weekly = parse_iso("2026-10-28T00:00:00Z").unwrap();
+        let restored_later = restore_cached_quota(&cached, boot_after_weekly).unwrap();
+        let third_later = restored_later.section("thirdParty").unwrap();
+        assert!(!third_later.blocked);
+        assert!(third_later.weekly.as_ref().unwrap().rolled_over);
     }
 }

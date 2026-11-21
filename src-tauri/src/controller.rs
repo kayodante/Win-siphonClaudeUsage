@@ -94,6 +94,7 @@ pub struct Controller {
     /// Set while an Antigravity read is in flight. The loop and the refresh
     /// button can ask at once; the second ask is dropped, not queued.
     antigravity_busy: AtomicBool,
+    antigravity_store: JsonStore,
     cache_path: PathBuf,
 }
 
@@ -105,6 +106,7 @@ impl Controller {
         cache_path: PathBuf,
         config_dir: PathBuf,
     ) -> Self {
+        let antigravity_store = JsonStore::new(config_dir.join("antigravity-quota-cache.json"));
         Controller {
             app,
             prefs,
@@ -121,6 +123,7 @@ impl Controller {
                 reset_store: JsonStore::new(config_dir.join(channel.reset_file())),
             }),
             antigravity_busy: AtomicBool::new(false),
+            antigravity_store,
             cache_path,
         }
     }
@@ -167,12 +170,19 @@ impl Controller {
     }
 
     pub async fn start(self: std::sync::Arc<Self>) {
+        let now = Utc::now();
+        let cached_antigravity = self
+            .antigravity_store
+            .load()
+            .ok()
+            .flatten()
+            .and_then(|raw| siphon_core::antigravity::restore_cached_quota(&raw, now));
         {
             let mut state = self.state.lock().unwrap();
             state.is_signed_in = self.tokens.load().ok().flatten().is_some();
             state.preferences = self.prefs.load();
+            state.antigravity = cached_antigravity;
         }
-        let now = Utc::now();
         let mut missed = Vec::new();
         for channel in Channel::ALL {
             if let Some((key, when)) = self.load_stored_reset(channel) {
@@ -279,11 +289,26 @@ impl Controller {
         // Keep ownership through state application; cancellation also releases it.
         let _busy = BusyGuard(&self.antigravity_busy);
         let observation = self.read_antigravity().await;
+        let is_reading = matches!(observation, Observation::Reading { .. });
+        let is_not_installed = matches!(observation, Observation::NotInstalled);
 
-        {
+        let to_cache = {
             let mut state = self.state.lock().unwrap();
             let previous = state.antigravity.take();
             state.antigravity = siphon_core::providers::apply(previous, observation, Utc::now());
+            if is_reading {
+                state
+                    .antigravity
+                    .as_ref()
+                    .and_then(siphon_core::antigravity::serialize_cached_quota)
+            } else {
+                None
+            }
+        };
+        if is_not_installed {
+            let _ = self.antigravity_store.save(None);
+        } else if let Some(payload) = to_cache {
+            let _ = self.antigravity_store.save(Some(&payload));
         }
         self.sync_reset(Channel::AntigravityGemini);
         self.sync_reset(Channel::AntigravityThirdParty);

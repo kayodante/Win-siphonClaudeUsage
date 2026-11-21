@@ -13,6 +13,7 @@ All data written by Siphon stays on your machine under `%APPDATA%\Siphon\`:
 | `reset-notification.json` | Pending Claude session-reset timestamp | Schedule Windows toast |
 | `reset-notification-<provider>.json` | Pending Codex / Antigravity session-reset timestamp | Schedule Windows toast |
 | `local-usage-cache.json` | Aggregated Claude Code JSONL usage metadata | Avoid re-reading unchanged session files |
+| `antigravity-quota-cache.json` | Last known Antigravity quota percentages and reset times | Keep quota visible while Antigravity is closed |
 
 Files are written with mode `0600` (owner read/write only) where supported.
 
@@ -29,14 +30,16 @@ to its session logs (`~/.codex/sessions/**/rollout-*.jsonl`) to show your Codex
 session and weekly limits. It reads only those entries' percentages and reset
 times; it does not read `~/.codex/auth.json` or any other credential.
 
-For Antigravity, Siphon reads the identified server process's command line
-and Windows' PID-owned loopback listeners. It sends that process's access
-token only to its verified ports on `127.0.0.1` to request quota data.
-`%APPDATA%\Antigravity\logs\main.log` is an optional port-ordering hint;
-missing or unreadable logs do not block process-based discovery. Siphon checks
-whether `%APPDATA%\Antigravity` and `%LOCALAPPDATA%\Programs\Antigravity`
-exist to distinguish a closed app from an absent installation. The token
-never leaves your machine and is never stored or logged.
+For Antigravity, Siphon reads the identified server process's command line,
+Windows' PID-owned loopback listeners, and `~/.gemini/antigravity/daemon/hub_*.json`
+discovery files. It sends that process's access token only to its verified
+ports on `127.0.0.1` to request quota data.
+`%APPDATA%\Antigravity\logs\main.log` and `language_server.log` are optional
+port-ordering hints; missing or unreadable logs do not block process-based
+discovery. Siphon checks whether `%APPDATA%\Antigravity`,
+`%LOCALAPPDATA%\Programs\Antigravity`, and `~/.gemini/antigravity` exist to
+distinguish a closed app from an absent installation. The token never leaves
+your machine and is never stored or logged.
 
 These files are never uploaded or shared.
 

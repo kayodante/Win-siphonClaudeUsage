@@ -121,6 +121,12 @@ is added above it.
 
 ### Fixed
 
+- Antigravity 2.34+ quota discovery reads `~/.gemini/antigravity/daemon/hub_*.json`
+  (matching `pid` and OS-owned loopback ports while keeping the command-line
+  `--csrf_token` fallback for older versions), and persists the last valid
+  quota reading in `%APPDATA%\Siphon\antigravity-quota-cache.json` so active
+  weekly and session windows remain visible across Siphon restarts while
+  Antigravity is closed.
 - Claude Fable 5.2, Mythos 5.2, Sonnet 5.5 and Haiku 5.5 usage now counts
   toward the Claude Code cost cards; those models were missing from the bundled
   pricing table, so their tokens were costed at $0.

@@ -584,6 +584,31 @@ own, same shape, from `providers::Channel::reset_file`:
 `reset-notification-antigravityThirdParty.json`. Signing out of Claude clears
 only Claude's.
 
+### `%APPDATA%\Siphon\antigravity-quota-cache.json`
+
+Written by `Controller::refresh_antigravity` through `JsonStore` (`0600`) on
+every live Antigravity reading (`siphon_core::antigravity::serialize_cached_quota`),
+and cleared when Antigravity is not installed (`Observation::NotInstalled`).
+Loaded on boot (`restore_cached_quota`) under `status: "closed"` and normalized
+against the current time so active weekly/session windows survive Siphon
+restarts while Antigravity is closed, and any window whose `resetsAt` has
+passed is immediately marked `rolledOver: true` with `percent: null`. Holds
+only the quota sections and timestamps — never the CSRF token or loopback ports.
+
+```jsonc
+{
+  "updatedAt": "2026-11-21T13:34:13.000Z",
+  "sections": [
+    {
+      "id": "gemini",
+      "session": { "percent": 1.2, "resetsAt": "2026-11-21T18:34:13.000Z", "rolledOver": false },
+      "weekly":  { "percent": 0.9, "resetsAt": "2026-11-28T13:34:13.000Z", "rolledOver": false },
+      "blocked": false
+    }
+  ]
+}
+```
+
 ### `~/.claude/settings.json` (the one exception outside `%APPDATA%`)
 
 Written by `ClaudeSettings` (not `JsonStore`) when the
@@ -688,25 +713,39 @@ supported, and only while it runs: its `resources\bin\language_server.exe`
 serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
 
 - **Ports:** IPv4 loopback TCP listeners owned by each identified
-  `language_server` PID, from `GetExtendedTcpTable` (`process.rs`). The newest
-  port in `%APPDATA%\Antigravity\logs\main.log` (256 KB tail, full-file fallback)
-  is an optional hint: it can prioritize or disambiguate only an already-owned
-  port. An unowned, historical or reused log port is never a candidate. Missing
-  and unreadable logs do not prevent valid process-based discovery.
-- **CSRF token:** `--csrf_token <uuid>` on the `language_server` process
-  command line (read with `NtQueryInformationProcess`, `process.rs`), taken only
-  from a command line that also carries `--override_ide_name antigravity` or
-  `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged it; 2.16 stopped.
-  Identity flags require an exact `antigravity` value. A recognized server with
-  no usable token is an error. Two with different tokens are disambiguated
-  when only one process owns the logged loopback port; otherwise →
+  `language_server` PID, from `GetExtendedTcpTable` (`process.rs`). When a
+  matching `~/.gemini/antigravity/daemon/hub_<httpPort>.json` record exists for
+  that PID and its currently owned ports, `httpsPort` is placed first and
+  `httpPort` is excluded from HTTPS candidates. The newest port in
+  `%APPDATA%\Antigravity\logs\main.log` or `language_server.log` (256 KB tail,
+  full-file fallback) is an optional hint: it can prioritize or disambiguate
+  only an already-owned port. An unowned, historical or reused log port is
+  never a candidate. Missing and unreadable logs do not prevent valid
+  process-based discovery.
+- **CSRF token:** read from `~/.gemini/antigravity/daemon/hub_<httpPort>.json`
+  (`csrfToken`, when `pid` and `httpsPort` match a live Antigravity
+  `language_server` process and its kernel-verified loopback listeners;
+  Antigravity 2.34+ stopped passing `--csrf_token` on the command line), or from
+  `--csrf_token <uuid>` on the `language_server` process command line (read with
+  `NtQueryInformationProcess`, `process.rs`, for Antigravity ≤ 2.33). In both
+  cases the process command line must carry `--override_ide_name antigravity` or
+  `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged the token; 2.16
+  stopped. Stale `hub_*.json` files from exited processes are ignored because
+  their PID/port pair does not match a running Antigravity server. Identity flags
+  require an exact `antigravity` value. A recognized server with no usable token
+  (or conflicting tokens) is an error. Two with different tokens are
+  disambiguated when only one process owns the logged loopback port; otherwise →
   `status: error`: Siphon does not guess.
-- **Presence:** a running identified server establishes presence without files.
-  With no such server, an existing `%APPDATA%\Antigravity` data directory or
-  `%LOCALAPPDATA%\Programs\Antigravity` installation means `status: closed`.
-  Only successful inspection finding no server and neither path yields
-  `NotInstalled` (tab removed). Process/TCP enumeration, command-line access or
-  presence-check errors yield `status: error`, preserving the previous reading.
+- **Presence & persistence:** a running identified server establishes presence
+  without files. With no such server, an existing `%APPDATA%\Antigravity`,
+  `%LOCALAPPDATA%\Programs\Antigravity`, `%USERPROFILE%\.gemini\antigravity`,
+  or `%ProgramFiles%\Antigravity` path means `status: closed` and preserves the
+  last reading (including across Siphon restarts via
+  `%APPDATA%\Siphon\antigravity-quota-cache.json`, normalized against the
+  current time). Only successful inspection finding no server and none of those
+  paths yields `NotInstalled` (tab removed and cache cleared). Process/TCP
+  enumeration, command-line access or presence-check errors yield
+  `status: error`, preserving the previous reading.
 
 ### Request
 
