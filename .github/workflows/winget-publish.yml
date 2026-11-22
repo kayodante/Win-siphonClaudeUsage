@@ -11,12 +11,17 @@ jobs:
   winget:
     runs-on: windows-latest
     steps:
+      # Event data and secrets reach the scripts as environment variables, never
+      # interpolated into the script text, so they cannot inject commands.
       - name: Compute version and installer URL
         id: vars
         shell: pwsh
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
         run: |
-          $version = "${{ github.event.release.tag_name }}".TrimStart('v')
-          $url = "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/Siphon.Setup.$version.exe"
+          $version = $env:TAG.TrimStart('v')
+          $url = "https://github.com/$env:REPO/releases/download/$env:TAG/Siphon.Setup.$version.exe"
           echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "url=$url" >> $env:GITHUB_OUTPUT
 
@@ -26,9 +31,13 @@ jobs:
 
       - name: Submit updated manifest to winget-pkgs
         shell: pwsh
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          URL: ${{ steps.vars.outputs.url }}
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           .\wingetcreate.exe update kayodante.Siphon `
-            --version ${{ steps.vars.outputs.version }} `
-            --urls "${{ steps.vars.outputs.url }}|x64" `
+            --version $env:VERSION `
+            --urls "$env:URL|x64" `
             --submit `
-            --token ${{ secrets.WINGET_TOKEN }}
+            --token $env:WINGET_TOKEN
