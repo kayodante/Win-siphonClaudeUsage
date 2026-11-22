@@ -222,11 +222,20 @@ fn main() {
                     if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
                         return;
                     }
+                    // A collapsed rail shifts the left edge right by the rail's
+                    // width (the right edge stays put), but the rail always boots
+                    // expanded — save the x it will need then. The collapse flag
+                    // flips before the window moves, so this event sees it.
+                    let mut x = pos.x as i64;
+                    if windows_ctl::rail_collapsed() {
+                        let scale = window.scale_factor().unwrap_or(1.0);
+                        x -= siphon_core::geometry::rail_delta_px(windows_ctl::RAIL_W, scale);
+                    }
                     debounce_pref_pair(
                         &MAIN_PENDING_POS,
                         window.app_handle().clone(),
                         ["window.x", "window.y"],
-                        (pos.x as i64, pos.y as i64),
+                        (x, pos.y as i64),
                     );
                 }
                 // Persist size on resize, same debounce as `Moved`. Minimizing

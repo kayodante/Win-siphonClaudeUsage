@@ -93,12 +93,26 @@ pub fn right_edge_position(monitor: MonitorRect, w: f64, h: f64) -> (f64, f64) {
     (x, y)
 }
 
+/// Physical-px shift of the main window's left edge when the side rail
+/// (`rail_w` logical px) collapses. One rounding shared by the collapse itself
+/// and the `Moved` handler that undoes it before saving the position.
+pub fn rail_delta_px(rail_w: f64, scale: f64) -> i64 {
+    (rail_w * scale).round() as i64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     // Primary 1920×1080 at the origin plus a secondary to its right.
     const TWO: [MonitorRect; 2] = [(0.0, 0.0, 1920.0, 1080.0), (1920.0, 0.0, 2560.0, 1440.0)];
+
+    #[test]
+    fn rail_delta_matches_collapse_rounding() {
+        assert_eq!(rail_delta_px(62.0, 1.0), 62);
+        assert_eq!(rail_delta_px(62.0, 1.25), 78); // 77.5 rounds up
+        assert_eq!(rail_delta_px(62.0, 1.5), 93);
+    }
 
     #[test]
     fn detects_the_windows_hide_sentinel() {

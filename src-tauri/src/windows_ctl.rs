@@ -49,7 +49,7 @@ pub fn set_rail_collapsed(app: &AppHandle, collapsed: bool) {
         return;
     };
     let scale = win.scale_factor().unwrap_or(1.0);
-    let delta = (RAIL_W * scale).round() as i32;
+    let delta = siphon_core::geometry::rail_delta_px(RAIL_W, scale) as i32;
     let delta = if collapsed { delta } else { -delta };
     let (x, y) = (pos.x + delta, pos.y);
     let (w, h) = (size.width as i32 - delta, size.height as i32);
