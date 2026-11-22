@@ -27,8 +27,11 @@ Siphon reads Claude Code's local usage files:
 
 When Codex is installed, Siphon also reads the rate-limit entries Codex writes
 to its session logs (`~/.codex/sessions/**/rollout-*.jsonl`) to show your Codex
-session and weekly limits. It reads only those entries' percentages and reset
-times; it does not read `~/.codex/auth.json` or any other credential.
+session and weekly limits. It reads those entries' percentages and reset times,
+plus the token counts, timestamps and model names Codex records with each turn,
+to estimate your Today and This Month usage and cost. It never stores or sends
+anything else from those logs, and it does not read `~/.codex/auth.json` or any
+other credential.
 
 For Antigravity, Siphon reads the identified server process's command line,
 Windows' PID-owned loopback listeners, and `~/.gemini/antigravity/daemon/hub_*.json`
