@@ -196,12 +196,18 @@ fn collect_rollouts(dir: &Path, limit: usize, out: &mut Vec<(SystemTime, PathBuf
 /// Scans `path` backwards in `CHUNK_BYTES` blocks, stitching lines across
 /// chunk boundaries and skipping lines over `MAX_EVENT_LINE_BYTES` (such as
 /// inline base64 screenshots or large tool outputs) without allocating them.
-fn scan_lines_rev(
+fn scan_lines_rev(path: &Path, visit: impl FnMut(&str) -> ControlFlow<()>) -> std::io::Result<()> {
+    scan_lines_rev_to(path, u64::MAX, visit)
+}
+
+/// `scan_lines_rev` over the bytes before `end`.
+fn scan_lines_rev_to(
     path: &Path,
+    end: u64,
     mut visit: impl FnMut(&str) -> ControlFlow<()>,
 ) -> std::io::Result<()> {
     let mut file = std::fs::File::open(path)?;
-    let mut pos = file.metadata()?.len();
+    let mut pos = file.metadata()?.len().min(end);
     let mut buf = vec![0u8; CHUNK_BYTES];
     let mut carry: Vec<u8> = Vec::new();
     let mut carry_overflow = false;
@@ -288,6 +294,78 @@ fn scan_lines_rev(
         }
     }
     Ok(())
+}
+
+/// The offset just past the file's last `\n`, or 0 when it has none.
+fn last_line_end(path: &Path) -> std::io::Result<u64> {
+    let mut file = std::fs::File::open(path)?;
+    let mut pos = file.metadata()?.len();
+    let mut buf = vec![0u8; CHUNK_BYTES];
+    while pos > 0 {
+        let read_len = (pos.min(CHUNK_BYTES as u64)) as usize;
+        pos -= read_len as u64;
+        file.seek(SeekFrom::Start(pos))?;
+        file.read_exact(&mut buf[..read_len])?;
+        if let Some(i) = buf[..read_len].iter().rposition(|&b| b == b'\n') {
+            return Ok(pos + i as u64 + 1);
+        }
+    }
+    Ok(0)
+}
+
+/// Reads `path` forward from `from` in `CHUNK_BYTES` blocks, visiting each
+/// complete line and skipping lines over `MAX_EVENT_LINE_BYTES` without
+/// allocating them. Returns the offset just past the last `\n` and the
+/// unterminated last line, if any (and not oversized).
+fn scan_lines_fwd(
+    path: &Path,
+    from: u64,
+    mut visit: impl FnMut(&str),
+) -> std::io::Result<(u64, Option<String>)> {
+    let mut file = std::fs::File::open(path)?;
+    file.seek(SeekFrom::Start(from))?;
+    let mut buf = vec![0u8; CHUNK_BYTES];
+    let mut carry: Vec<u8> = Vec::new();
+    let mut overflow = false;
+    let mut pos = from;
+    let mut line_end = from;
+    let lossy = |bytes: &[u8]| {
+        let bytes = bytes.strip_suffix(b"\r").unwrap_or(bytes);
+        (!bytes.is_empty()).then(|| String::from_utf8_lossy(bytes).into_owned())
+    };
+    loop {
+        let n = match file.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        let chunk = &buf[..n];
+        let mut start = 0;
+        while let Some(i) = chunk[start..].iter().position(|&b| b == b'\n') {
+            let segment = &chunk[start..start + i];
+            if !overflow && carry.len() + segment.len() <= MAX_EVENT_LINE_BYTES {
+                carry.extend_from_slice(segment);
+                if let Some(line) = lossy(&carry) {
+                    visit(&line);
+                }
+            }
+            carry.clear();
+            overflow = false;
+            start += i + 1;
+            line_end = pos + start as u64;
+        }
+        let rest = &chunk[start..];
+        if overflow || carry.len() + rest.len() > MAX_EVENT_LINE_BYTES {
+            carry.clear();
+            overflow = true;
+        } else {
+            carry.extend_from_slice(rest);
+        }
+        pos += n as u64;
+    }
+    let partial = if overflow { None } else { lossy(&carry) };
+    Ok((line_end, partial))
 }
 
 /// The file's newest reading (or rate-limit exhaustion signal) scanned
@@ -554,12 +632,13 @@ pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, Period
             {
                 entry
             }
-            _ => UsageMemo {
-                len: len.unwrap_or(u64::MAX),
+            prior => file_usage(
+                &path,
+                prior,
+                len.unwrap_or(u64::MAX),
                 modified,
-                month_prefix: month_prefix.to_string(),
-                deltas: file_usage_deltas(&path, month_prefix, modified_utc),
-            },
+                month_prefix,
+            ),
         };
         for usage in &entry.deltas {
             let day_key = to_local_date_key(usage.taken_at.unwrap_or(modified_utc));
@@ -596,8 +675,9 @@ pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, Period
 
 /// `read_usage` runs on every local refresh (30 s by default) and a month of
 /// rollouts with inline base64 can reach hundreds of MB, so each file's deltas
-/// are kept until its length, mtime or the current month changes. Keyed by
-/// Codex home, then by file.
+/// are kept until its length, mtime or the current month changes; a file that
+/// only grew is then read from `scanned_to` onwards. Keyed by Codex home, then
+/// by file.
 static USAGE_MEMO: Mutex<Option<UsageMemos>> = Mutex::new(None);
 type UsageMemos = HashMap<PathBuf, HashMap<PathBuf, UsageMemo>>;
 
@@ -611,7 +691,15 @@ struct UsageMemo {
     len: u64,
     modified: SystemTime,
     month_prefix: String,
+    /// Just past the last complete line read; `u64::MAX` after a failed read
+    /// forces a full rescan on the next change.
+    scanned_to: u64,
+    /// The last cumulative usage and model at `scanned_to`.
+    walk: Walk,
     deltas: Vec<SessionUsage>,
+    /// Trailing deltas from an unterminated last line, dropped and read again
+    /// once the line is complete.
+    partial: usize,
 }
 
 fn add_usage(target: &mut PeriodStats, u: &SessionUsage, uncached_input: u64, cost: f64) {
@@ -632,62 +720,46 @@ enum UsageLine {
     Model(String),
 }
 
-/// Each usage event's growth over the event before it, oldest first. Codex
-/// logs cumulative per-thread totals, so a thread resumed today or carried
-/// over from last month would otherwise count its earlier tokens again. The
-/// backward scan stops at the first event dated before `month_prefix`, which
-/// becomes the baseline; `taken_at` falls back to `fallback_at` (the file's
-/// mtime) and `model` is the model in effect at each event.
-fn file_usage_deltas(
-    path: &Path,
-    month_prefix: &str,
-    fallback_at: DateTime<Utc>,
-) -> Vec<SessionUsage> {
-    let mut lines = Vec::new();
-    let mut has_baseline = false;
-    let scanned = scan_lines_rev(path, |line| {
-        if line.contains("\"total_token_usage\"") || line.contains("\"thread_token_usage\"") {
-            if let Some((usage, inline_model)) = parse_usage_line(line) {
-                let day = to_local_date_key(usage.taken_at.unwrap_or(fallback_at));
-                // Pushed backwards: after the reverse the inline model sits
-                // just before its own event.
-                lines.push(UsageLine::Usage(usage));
-                if let Some(model) = inline_model {
-                    lines.push(UsageLine::Model(model));
-                }
-                if day.as_str() < month_prefix {
-                    has_baseline = true;
-                    return ControlFlow::Break(());
-                }
-                return ControlFlow::Continue(());
-            }
+/// A usage event (with its inline `model_name`, if any) or a model line.
+fn parse_rollout_line(line: &str) -> Option<(Option<SessionUsage>, Option<String>)> {
+    if line.contains("\"total_token_usage\"") || line.contains("\"thread_token_usage\"") {
+        if let Some((usage, inline_model)) = parse_usage_line(line) {
+            return Some((Some(usage), inline_model));
         }
-        if line.contains("\"model") {
-            if let Some(model) = parse_model_line(line) {
-                lines.push(UsageLine::Model(model));
-            }
-        }
-        ControlFlow::Continue(())
-    });
-    if scanned.is_err() {
-        return Vec::new();
     }
-    lines.reverse();
+    if line.contains("\"model") {
+        return parse_model_line(line).map(|model| (None, Some(model)));
+    }
+    None
+}
 
-    let mut model: Option<String> = None;
-    let mut head_model: Option<Option<String>> = None;
-    let mut previous: Option<SessionUsage> = None;
-    let mut skip_baseline = has_baseline;
-    let mut deltas = Vec::new();
-    for line in lines {
+/// The growth walk's state between events: the last cumulative usage and the
+/// model in effect.
+#[derive(Clone, Default)]
+struct Walk {
+    previous: Option<SessionUsage>,
+    model: Option<String>,
+    skip_baseline: bool,
+}
+
+/// What every growth falls back to: the file's mtime for `taken_at`, and its
+/// head model (read once, on demand) when no model line came first.
+struct WalkFallback<'a> {
+    path: &'a Path,
+    at: DateTime<Utc>,
+    head_model: Option<Option<String>>,
+}
+
+impl Walk {
+    fn feed(&mut self, line: UsageLine, fallback: &mut WalkFallback, out: &mut Vec<SessionUsage>) {
         let current = match line {
             UsageLine::Model(m) => {
-                model = Some(m);
-                continue;
+                self.model = Some(m);
+                return;
             }
             UsageLine::Usage(current) => current,
         };
-        let mut growth = match &previous {
+        let mut growth = match &self.previous {
             Some(prev) if current.total_tokens >= prev.total_tokens => SessionUsage {
                 taken_at: current.taken_at,
                 input_tokens: current.input_tokens.saturating_sub(prev.input_tokens),
@@ -704,23 +776,158 @@ fn file_usage_deltas(
             // No earlier event, or the counter reset: all of it is new.
             _ => current.clone(),
         };
-        previous = Some(current);
-        if std::mem::take(&mut skip_baseline) || growth.total_tokens == 0 {
-            continue;
+        self.previous = Some(current);
+        if std::mem::take(&mut self.skip_baseline) || growth.total_tokens == 0 {
+            return;
         }
-        growth.taken_at = Some(growth.taken_at.unwrap_or(fallback_at));
-        // ponytail: a model switch before the month baseline is not seen; head model is the fallback
-        growth.model = model
+        growth.taken_at = Some(growth.taken_at.unwrap_or(fallback.at));
+        growth.model = self
+            .model
             .clone()
             .or_else(|| {
-                head_model
+                let path = fallback.path;
+                fallback
+                    .head_model
                     .get_or_insert_with(|| read_head_model(path))
                     .clone()
             })
             .unwrap_or_else(|| "gpt-5-codex".to_string());
-        deltas.push(growth);
+        out.push(growth);
     }
-    deltas
+
+    /// Feeds one parsed rollout line, its inline model first.
+    fn feed_parsed(
+        &mut self,
+        (usage, model): (Option<SessionUsage>, Option<String>),
+        fallback: &mut WalkFallback,
+        out: &mut Vec<SessionUsage>,
+    ) {
+        if let Some(model) = model {
+            self.feed(UsageLine::Model(model), fallback, out);
+        }
+        if let Some(usage) = usage {
+            self.feed(UsageLine::Usage(usage), fallback, out);
+        }
+    }
+}
+
+/// The file's usage deltas, oldest first: a full scan when there is no
+/// `prior` memo, the month changed or the file shrank below what was read,
+/// else only the bytes appended since `prior`.
+fn file_usage(
+    path: &Path,
+    prior: Option<UsageMemo>,
+    len: u64,
+    modified: SystemTime,
+    month_prefix: &str,
+) -> UsageMemo {
+    let mut fallback = WalkFallback {
+        path,
+        at: DateTime::<Utc>::from(modified),
+        head_model: None,
+    };
+    let memo = match prior {
+        Some(prior) if prior.month_prefix == month_prefix && len >= prior.scanned_to => Ok(prior),
+        _ => full_usage_scan(path, month_prefix, &mut fallback),
+    };
+    let mut memo = memo
+        .and_then(|mut memo| extend_usage(&mut memo, path, &mut fallback).map(|()| memo))
+        .unwrap_or_else(|_| UsageMemo {
+            len,
+            modified,
+            month_prefix: String::new(),
+            scanned_to: u64::MAX,
+            walk: Walk::default(),
+            deltas: Vec::new(),
+            partial: 0,
+        });
+    memo.len = len;
+    memo.modified = modified;
+    memo.month_prefix = month_prefix.to_string();
+    memo
+}
+
+/// Each usage event's growth over the event before it, up to the file's last
+/// complete line. Codex logs cumulative per-thread totals, so a thread resumed
+/// today or carried over from last month would otherwise count its earlier
+/// tokens again. The backward scan stops at the first event dated before
+/// `month_prefix`, which becomes the baseline.
+fn full_usage_scan(
+    path: &Path,
+    month_prefix: &str,
+    fallback: &mut WalkFallback,
+) -> std::io::Result<UsageMemo> {
+    let scanned_to = last_line_end(path)?;
+    let mut lines = Vec::new();
+    let mut has_baseline = false;
+    scan_lines_rev_to(path, scanned_to, |line| {
+        let Some((usage, model)) = parse_rollout_line(line) else {
+            return ControlFlow::Continue(());
+        };
+        let mut baseline = false;
+        // Pushed backwards: after the reverse the inline model sits just
+        // before its own event.
+        if let Some(usage) = usage {
+            let day = to_local_date_key(usage.taken_at.unwrap_or(fallback.at));
+            baseline = day.as_str() < month_prefix;
+            lines.push(UsageLine::Usage(usage));
+        }
+        if let Some(model) = model {
+            lines.push(UsageLine::Model(model));
+        }
+        if baseline {
+            // ponytail: a model switch before the month baseline is not seen; head model is the fallback
+            has_baseline = true;
+            return ControlFlow::Break(());
+        }
+        ControlFlow::Continue(())
+    })?;
+    lines.reverse();
+
+    let mut walk = Walk {
+        skip_baseline: has_baseline,
+        ..Walk::default()
+    };
+    let mut deltas = Vec::new();
+    for line in lines {
+        walk.feed(line, fallback, &mut deltas);
+    }
+    Ok(UsageMemo {
+        len: 0,
+        modified: SystemTime::UNIX_EPOCH,
+        month_prefix: String::new(),
+        scanned_to,
+        walk,
+        deltas,
+        partial: 0,
+    })
+}
+
+/// Reads the bytes after `memo.scanned_to` forward with the same growth walk.
+/// An unterminated last line is counted on a copy of the walk and read again
+/// once complete, so it is never counted twice.
+fn extend_usage(
+    memo: &mut UsageMemo,
+    path: &Path,
+    fallback: &mut WalkFallback,
+) -> std::io::Result<()> {
+    let committed = memo.deltas.len().saturating_sub(memo.partial);
+    memo.deltas.truncate(committed);
+    let (walk, deltas) = (&mut memo.walk, &mut memo.deltas);
+    let (scanned_to, partial) = scan_lines_fwd(path, memo.scanned_to, |line| {
+        if let Some(parsed) = parse_rollout_line(line) {
+            walk.feed_parsed(parsed, fallback, deltas);
+        }
+    })?;
+    memo.scanned_to = scanned_to;
+    let committed = memo.deltas.len();
+    if let Some(parsed) = partial.as_deref().and_then(parse_rollout_line) {
+        memo.walk
+            .clone()
+            .feed_parsed(parsed, fallback, &mut memo.deltas);
+    }
+    memo.partial = memo.deltas.len() - committed;
+    Ok(())
 }
 
 fn parse_model_line(line: &str) -> Option<String> {
@@ -1356,5 +1563,80 @@ mod tests {
         // A new mtime is a miss, so the file is read again.
         home.rollout("memo", &usage_line("2026-10-22T12:00:00.000Z", 200_000), 6);
         assert_eq!(read_usage(&home.0, now).0.total_tokens, 200_000);
+    }
+
+    #[test]
+    fn scan_lines_fwd_skips_oversized_lines_and_returns_the_partial_tail() {
+        let home = Home::new("fwd");
+        let path = home.0.join("fwd.jsonl");
+        let big = "B".repeat(MAX_EVENT_LINE_BYTES + CHUNK_BYTES);
+        let head = format!("a\r\n{big}\nb\n");
+        std::fs::write(&path, format!("{head}c")).unwrap();
+        let mut seen = Vec::new();
+        let (end, partial) = scan_lines_fwd(&path, 0, |l| seen.push(l.to_string())).unwrap();
+        assert_eq!(seen, ["a", "b"]);
+        assert_eq!(end, head.len() as u64);
+        assert_eq!(partial.as_deref(), Some("c"));
+
+        std::fs::write(&path, format!("{head}{big}")).unwrap();
+        let (_, partial) = scan_lines_fwd(&path, 2, |_| {}).unwrap();
+        assert_eq!(partial, None);
+    }
+
+    #[test]
+    fn appended_events_are_read_incrementally() {
+        let home = Home::new("usage-append");
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let first = usage_line("2026-10-22T12:00:00.000Z", 100_000);
+        let second = usage_line("2026-10-22T12:01:00.000Z", 150_000);
+        let third = usage_line("2026-10-22T12:02:00.000Z", 200_000);
+        home.rollout("append", &format!("{first}\n{second}\n"), 5);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 150_000);
+
+        // The already-read first line is replaced by a same-length one that
+        // would add 800k if it were read again; only the appended line is new.
+        let tampered = usage_line("2026-10-22T12:00:00.000Z", 900_000);
+        assert_eq!(tampered.len(), first.len());
+        home.rollout("append", &format!("{tampered}\n{second}\n{third}\n"), 6);
+        let (today, month) = read_usage(&home.0, now);
+
+        let fresh = Home::new("usage-append-fresh");
+        fresh.rollout("append", &format!("{first}\n{second}\n{third}\n"), 6);
+        let (fresh_today, fresh_month) = read_usage(&fresh.0, now);
+        assert_eq!(today.total_tokens, 200_000);
+        assert_eq!(today.total_tokens, fresh_today.total_tokens);
+        assert_eq!(month.total_tokens, fresh_month.total_tokens);
+        assert_eq!(today.cost, fresh_today.cost);
+    }
+
+    #[test]
+    fn partial_trailing_line_is_counted_once() {
+        let home = Home::new("usage-partial");
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let first = usage_line("2026-10-22T12:00:00.000Z", 100_000);
+        let second = usage_line("2026-10-22T12:01:00.000Z", 150_000);
+        let third = usage_line("2026-10-22T12:02:00.000Z", 200_000);
+        home.rollout("partial", &format!("{first}\n{second}"), 5);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 150_000);
+
+        home.rollout("partial", &format!("{first}\n{second}\n{third}\n"), 6);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 200_000);
+    }
+
+    #[test]
+    fn shrunk_file_is_rescanned() {
+        let home = Home::new("usage-shrunk");
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let first = usage_line("2026-10-22T12:00:00.000Z", 100_000);
+        let second = usage_line("2026-10-22T12:01:00.000Z", 150_000);
+        home.rollout("shrunk", &format!("{first}\n{second}\n"), 5);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 150_000);
+
+        home.rollout(
+            "shrunk",
+            &format!("{}\n", usage_line("2026-10-22T12:00:00.000Z", 70_000)),
+            6,
+        );
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 70_000);
     }
 }
