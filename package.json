@@ -1,8 +1,11 @@
 {
   "name": "siphon-windows",
-  "version": "1.15.2",
+  "version": "1.15.3",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
   "type": "module",
+  "engines": {
+    "node": "^22.13.0 || >=24"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kayodante/Win-siphonClaudeUsage.git"
@@ -34,8 +37,8 @@
   "author": "Kayo Dante",
   "license": "MIT",
   "devDependencies": {
-    "eslint": "^9.0.0",
-    "fallow": "^2.102.0",
+    "eslint": "^10.14.0",
+    "fallow": "^3.38.1",
     "globals": "^16.0.0"
   }
 }
