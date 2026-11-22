@@ -282,6 +282,23 @@ impl Channel {
         }
     }
 
+    /// The session window as the reset scheduler reads it: `session`, except a
+    /// rolled-over window is `None`. Its 0% would clear the armed toast before
+    /// it fires; no reading means no change, and the timer still delivers.
+    pub fn reset_session(self, state: &AppState) -> Option<Slot> {
+        match self {
+            Channel::Claude => self.session(state),
+            _ => {
+                let window = self.section(state)?.session.as_ref()?;
+                if window.rolled_over {
+                    None
+                } else {
+                    window.slot()
+                }
+            }
+        }
+    }
+
     /// A session reset only frees the provider when nothing else holds it: a
     /// blocked group or a spent weekly window keeps it unusable, so the reset
     /// toast would promise something that is not true.
@@ -534,6 +551,43 @@ mod tests {
         assert_eq!(pct(Channel::Codex), Some(10.0));
         assert_eq!(pct(Channel::AntigravityGemini), Some(20.0));
         assert_eq!(pct(Channel::AntigravityThirdParty), Some(30.0));
+    }
+
+    #[test]
+    fn rolled_over_session_is_hidden_from_the_reset_scheduler() {
+        let state_with = |rolled_over: bool| AppState {
+            codex: Some(ProviderQuota {
+                status: ProviderStatus::Live,
+                updated_at: None,
+                sections: vec![section(
+                    "codex",
+                    Some(ProviderWindow {
+                        percent: Some(100.0),
+                        resets_at: Some("2026-10-22T13:00:00.000Z".to_string()),
+                        rolled_over,
+                    }),
+                )],
+                today_stats: None,
+                month_stats: None,
+            }),
+            ..AppState::default()
+        };
+
+        let rolled = state_with(true);
+        // Alerts still see the fresh window at 0%, but the reset scheduler sees
+        // nothing, so the armed toast is not cleared.
+        assert_eq!(
+            Channel::Codex.session(&rolled).map(|s| s.percent),
+            Some(0.0)
+        );
+        assert_eq!(Channel::Codex.reset_session(&rolled), None);
+
+        let live = state_with(false);
+        assert!(Channel::Codex.session(&live).is_some());
+        assert_eq!(
+            Channel::Codex.reset_session(&live),
+            Channel::Codex.session(&live)
+        );
     }
 
     #[test]

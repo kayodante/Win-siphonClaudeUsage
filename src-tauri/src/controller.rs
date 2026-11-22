@@ -863,7 +863,7 @@ impl Controller {
     /// window, or clear it when reset toasts are off.
     fn sync_reset(&self, channel: Channel) {
         if self.prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) {
-            let session = channel.session(&self.state.lock().unwrap());
+            let session = channel.reset_session(&self.state.lock().unwrap());
             self.update_reset(channel, session.as_ref());
         } else {
             self.clear_reset(channel);
