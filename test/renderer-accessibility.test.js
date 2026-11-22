@@ -199,6 +199,17 @@ test('Codex and Antigravity tabs are named and start hidden until detected', () 
   assert.match(html, /class="quota-pace"\s+data-pace\s+data-status="no_data"\s+tabindex="0"/);
 });
 
+test('codex cost buttons use the codex tooltip', () => {
+  const grid = html.match(/<section id="providerCostGrid"[\s\S]*?<\/section>/);
+  assert.ok(grid, 'missing #providerCostGrid');
+  const buttons = grid[0].match(/<button[^>]*\bcost-info-btn[^>]*>/g) ?? [];
+  assert.ok(buttons.length >= 1, 'no cost-info-btn inside #providerCostGrid');
+  for (const button of buttons) {
+    assert.match(button, /data-i18n-tooltip="codex\.costTooltip"/);
+    assert.match(button, /data-i18n-aria-label="codex\.costTooltip"/);
+  }
+});
+
 test('the main window min width matches the Rust restore floor', () => {
   const conf = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
   const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
