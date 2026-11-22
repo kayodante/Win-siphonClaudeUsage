@@ -3,6 +3,9 @@
   "version": "1.15.3",
   "description": "Windows tray app for Claude Code usage and reset notifications.",
   "type": "module",
+  "engines": {
+    "node": "^22.13.0 || >=24"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kayodante/Win-siphonClaudeUsage.git"

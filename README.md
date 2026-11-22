@@ -51,7 +51,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 ## Requirements
 
 - Windows 10 or later
-- Node.js 22 or later (development only)
+- Node.js 22.13 or later (development only)
 - [Claude Code](https://claude.ai/code) installed and used at least once
 
 ## Installation
