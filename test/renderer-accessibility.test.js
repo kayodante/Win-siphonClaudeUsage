@@ -180,8 +180,8 @@ test('icon-only rail and header buttons carry translated accessible names and to
     ['footerQuitButton', 'footer.quit']
   ]) {
     const el = elementWithId(id);
-    assert.match(el, new RegExp(`data-i18n-aria-label="${key.replace('.', '\.')}"`), `#${id} aria-label`);
-    assert.match(el, new RegExp(`data-i18n-title="${key.replace('.', '\.')}"`), `#${id} title`);
+    assert.match(el, new RegExp(`data-i18n-aria-label="${key.replaceAll('.', '\\.')}"`), `#${id} aria-label`);
+    assert.match(el, new RegExp(`data-i18n-title="${key.replaceAll('.', '\\.')}"`), `#${id} title`);
   }
   assert.match(elementWithId('providerClaudeButton'), /aria-label="Claude"/);
   assert.doesNotMatch(elementWithId('providerClaudeButton'), /aria-current/, 'selection is resolved from signed-in view state');
