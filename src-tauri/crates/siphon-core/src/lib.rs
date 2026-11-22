@@ -10,6 +10,8 @@
 //! command handlers. It calls into the pure functions exposed here.
 
 pub mod alerts;
+pub mod antigravity;
+pub mod codex;
 pub mod command_error;
 pub mod diagnostics;
 pub mod format;
@@ -22,6 +24,7 @@ pub mod oauth_callback;
 pub mod preferences;
 pub mod pricing;
 pub mod profile;
+pub mod providers;
 pub mod quota;
 pub mod reset_scheduler;
 pub mod security;

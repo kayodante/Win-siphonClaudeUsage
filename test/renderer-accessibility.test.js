@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { settingsControlState } from '../src/renderer/viewState.js';
+
 const html = readFileSync(new URL('../src/renderer/index.html', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('../src/renderer/renderer.js', import.meta.url), 'utf8');
 
@@ -55,7 +57,8 @@ test('settings tabs implement the complete automatic-activation keyboard pattern
   assert.match(renderer, /tabs\[name\]\.tabIndex = 0;/);
   assert.match(renderer, /if \(focus\) tabs\[name\]\.focus\(\);/);
   assert.match(renderer, /clearTimeout\(_tabTransitionTimer\);/);
-  assert.match(renderer, /panel\.hidden = panelName !== currentSettingsTab;/);
+  // Mid-swap, only a third panel is dropped; the arriving one leaves from where it is.
+  assert.match(renderer, /if \(panelName === currentSettingsTab \|\| panelName === name\) continue;\s+panel\.hidden = true;/);
 });
 
 test('settings navigation moves focus to context and restores the invoking control', () => {
@@ -72,8 +75,8 @@ test('widget style chooser exposes one selected radio and supports arrow navigat
   assert.match(elementWithId('settingsStylePicker'), /role="radiogroup"[^>]+aria-labelledby="settingsWidgetStyleHeading"/);
   assert.match(elementWithId('settingsStyleClassic'), /role="radio"[^>]+aria-checked="true"[^>]+tabindex="0"/);
   assert.match(elementWithId('settingsStyleMini'), /role="radio"[^>]+aria-checked="false"[^>]+tabindex="-1"/);
-  assert.match(renderer, /settingsStyleClassic\.setAttribute\('aria-checked'/);
-  assert.match(renderer, /settingsStyleMini\.setAttribute\('aria-checked'/);
+  assert.match(renderer, /function renderStylePicker\(/);
+  assert.match(renderer, /setAttribute\('aria-checked', String\(/);
   assert.match(renderer, /event\.key === 'ArrowRight' \|\| event\.key === 'ArrowDown'/);
   assert.match(renderer, /options\[nextIndex\]\.click\(\);/);
 });
@@ -101,13 +104,16 @@ test('status changes use atomic live regions and deduplicated update milestones'
 test('each main-window view and data card has a programmatic heading', () => {
   for (const [view, heading] of [
     ['onboardView', 'onboardingHeading'],
-    ['mainView', 'sessionHeading'],
+    ['overviewView', 'providerHeading'],
+    ['mainView', 'providerHeading'],
+    ['providerView', 'providerHeading'],
     ['settingsView', 'settingsTitle']
   ]) assert.match(elementWithId(view), new RegExp(`aria-labelledby="${heading}"`));
 
   for (const id of [
     'onboardingHeading', 'sessionHeading', 'weeklyHeading', 'extraUsageHeading',
-    'todayHeading', 'monthHeading', 'settingsTitle', 'settingsResetSectionHeading',
+    'todayHeading', 'monthHeading', 'providerHeading', 'providerTodayHeading',
+    'providerMonthHeading', 'settingsTitle', 'settingsResetSectionHeading',
     'settingsLimitSectionHeading', 'settingsExpireSectionHeading', 'settingsWidgetStyleHeading'
   ]) assert.match(elementWithId(id), /role="heading"[^>]+aria-level="[12]"/);
 });
@@ -158,7 +164,75 @@ test('Pill weekly switch uses a visible translated label and is limited to the P
   assert.match(elementWithId('settingsPillWeeklyOption'), /hidden/);
   assert.match(elementWithId('settingsPillWeeklyLabel'), /data-i18n="settings\.widget\.showWeekly"/);
   assert.match(elementWithId('settingsPillWeeklyToggle'), /type="checkbox"[^>]*aria-labelledby="settingsPillWeeklyLabel"/);
-  assert.match(renderer, /settingsPillWeeklyOption\.hidden = floatingStyle !== 'mini'/);
-  assert.match(renderer, /settingsPillWeeklyToggle\.checked = state\.preferences\?\.floating\?\.showWeekly \?\? true/);
+  const pillState = style => settingsControlState({ floating: { style } }, { isPackaged: true });
+  assert.equal(pillState('classic').settingsPillWeeklyOption.hidden, true);
+  assert.equal(pillState('mini').settingsPillWeeklyOption.hidden, false);
+  assert.equal(pillState('mini').settingsPillWeeklyToggle.checked, true);
   assert.match(renderer, /setPreference\('floating\.showWeekly', event\.target\.checked\)/);
+});
+
+test('icon-only rail and header buttons carry translated accessible names and tooltips', () => {
+  for (const [id, key] of [
+    ['refreshButton', 'topbar.refresh'],
+    ['overviewButton', 'navigation.overview'],
+    ['settingsButton', 'topbar.settings'],
+    ['openClaudeLink', 'footer.openClaude'],
+    ['footerQuitButton', 'footer.quit']
+  ]) {
+    const el = elementWithId(id);
+    assert.match(el, new RegExp(`data-i18n-aria-label="${key.replaceAll('.', '\\.')}"`), `#${id} aria-label`);
+    assert.match(el, new RegExp(`data-i18n-title="${key.replaceAll('.', '\\.')}"`), `#${id} title`);
+  }
+  assert.match(elementWithId('providerClaudeButton'), /aria-label="Claude"/);
+  assert.doesNotMatch(elementWithId('providerClaudeButton'), /aria-current/, 'selection is resolved from signed-in view state');
+  assert.match(elementWithId('railToggleButton'), /aria-controls="navigationRail"[^>]+aria-expanded="true"/);
+});
+
+test('Codex and Antigravity tabs are named and start hidden until detected', () => {
+  for (const [id, name] of [['providerCodexButton', 'Codex'], ['providerAntigravityButton', 'Antigravity']]) {
+    const el = elementWithId(id);
+    assert.match(el, new RegExp(`aria-label="${name}"`), `#${id} aria-label`);
+    assert.match(el, /\shidden[\s>]/, `#${id} hidden by default`);
+    assert.doesNotMatch(el, /aria-current/, `#${id} is not the current tab at boot`);
+  }
+  assert.match(renderer, /elements\.railProviders\?\.addEventListener\('keydown'/);
+  assert.match(html, /class="quota-pace"\s+data-pace\s+data-status="no_data"\s+tabindex="0"/);
+});
+
+test('codex cost buttons use the codex tooltip', () => {
+  const grid = html.match(/<section id="providerCostGrid"[\s\S]*?<\/section>/);
+  assert.ok(grid, 'missing #providerCostGrid');
+  const buttons = grid[0].match(/<button[^>]*\bcost-info-btn[^>]*>/g) ?? [];
+  assert.ok(buttons.length >= 1, 'no cost-info-btn inside #providerCostGrid');
+  for (const button of buttons) {
+    assert.match(button, /data-i18n-tooltip="codex\.costTooltip"/);
+    assert.match(button, /data-i18n-aria-label="codex\.costTooltip"/);
+  }
+});
+
+test('the main window min width matches the Rust restore floor', () => {
+  const conf = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+  const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
+  const main = conf.app.windows.find(w => w.label === 'main');
+  assert.equal(Number(rust.match(/pub const MIN_W: f64 = ([\d.]+);/)[1]), main.minWidth);
+  assert.equal(Number(rust.match(/pub const MIN_H: f64 = ([\d.]+);/)[1]), main.minHeight);
+});
+
+test('hiding the sidebar narrows the window by exactly the rail width', () => {
+  const rust = readFileSync(new URL('../src-tauri/src/windows_ctl.rs', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/renderer/styles.css', import.meta.url), 'utf8');
+  const bridge = readFileSync(new URL('../src/renderer/siphonBridge.js', import.meta.url), 'utf8');
+  const railWidth = Number(css.match(/\n\.rail \{[^}]*?\bwidth: (\d+)px;/)[1]);
+  assert.equal(Number(rust.match(/pub const RAIL_W: f64 = ([\d.]+);/)[1]), railWidth);
+  assert.match(bridge, /setRailCollapsed: collapsed => invoke\('window_set_rail_collapsed', \{ collapsed \}\)/);
+  assert.match(renderer, /railToggleButton\.addEventListener\('click', \(\) => setRailCollapsed\(!elements\.rail\.hidden\)\)/);
+  assert.match(renderer, /window\.siphon\.setRailCollapsed\(collapsed\)/);
+  // Onboarding has no rail; it must never be squeezed into the collapsed width.
+  assert.match(renderer, /if \(activeView === 'onboard'\) setRailCollapsed\(false\);/);
+});
+
+test('quota suffixes are read, so "used" and "left" do not sound the same', () => {
+  const suffixes = html.match(/<span class="quota-suffix"[^>]*>/g);
+  assert.equal(suffixes.length, 4, 'Claude page and the shared quota group, session + weekly');
+  for (const suffix of suffixes) assert.doesNotMatch(suffix, /aria-hidden/);
 });

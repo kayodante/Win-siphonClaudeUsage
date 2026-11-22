@@ -12,10 +12,7 @@ const MINI_WEEKLY: (f64, f64) = (136.0, 32.0);
 const COMPACT: (f64, f64) = (220.0, 104.0);
 const EXPANDED: (f64, f64) = (220.0, 192.0);
 
-/// Latest dragged position waiting to be persisted. `Some` also means a
-/// flush task is already scheduled (trailing debounce, one write per burst).
 static PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
-const POS_FLUSH_DELAY_MS: u64 = 500;
 
 /// Bumped by every `create`; the topmost-keeper task exits when it no longer
 /// matches, so re-enabling the widget can never leave two loops running.
@@ -57,40 +54,6 @@ fn raise(win: &tauri::WebviewWindow) {
 #[cfg(not(windows))]
 fn raise(win: &tauri::WebviewWindow) {
     let _ = win.set_always_on_top(true);
-}
-
-/// Round the window itself, so the acrylic backdrop stops squaring off the
-/// widget's corners.
-///
-/// `apply_acrylic` hands the backdrop to DWM, which paints it across the whole
-/// window rect. The webview's `border-radius` only clips the HTML layer, so the
-/// acrylic kept showing through outside the radius as four grey corners.
-/// `DWMWCP_ROUND` is ~8px, matching `--radius-sm` on `.floating-widget` — keep
-/// the two in step. The attribute sticks for the window's lifetime, so resizing
-/// between compact and expanded does not need to re-apply it.
-///
-/// Windows 11 only: on 10 the call fails and the corners stay square, which is
-/// exactly today's rendering, so the failure needs no handling beyond ignoring
-/// it.
-#[cfg(windows)]
-fn round_corners(win: &tauri::WebviewWindow) {
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-        DWM_WINDOW_CORNER_PREFERENCE,
-    };
-
-    let Ok(handle) = win.hwnd() else { return };
-    let preference = DWMWCP_ROUND;
-    // Same raw-pointer rebuild as `raise`, for the same version-skew reason.
-    unsafe {
-        let _ = DwmSetWindowAttribute(
-            HWND(handle.0 as _),
-            DWMWA_WINDOW_CORNER_PREFERENCE,
-            std::ptr::addr_of!(preference).cast(),
-            std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>() as u32,
-        );
-    }
 }
 
 fn size_for(style: &str, expanded: bool, show_weekly: bool) -> (f64, f64) {
@@ -170,9 +133,7 @@ fn create(app: &AppHandle, state: &AppState) {
 
     #[cfg(windows)]
     if style != "mini" {
-        use window_vibrancy::apply_acrylic;
-        let _ = apply_acrylic(&win, Some((0, 0, 0, 190)));
-        round_corners(&win);
+        crate::windows_ctl::apply_backdrop(&win);
     }
 
     let _ = win.show();
@@ -207,27 +168,12 @@ fn create(app: &AppHandle, state: &AppState) {
             if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
                 return;
             }
-            let schedule_flush = {
-                let mut p = PENDING_POS.lock().unwrap();
-                let first = p.is_none();
-                *p = Some((pos.x as i64, pos.y as i64));
-                first
-            };
-            if schedule_flush {
-                let handle = handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(POS_FLUSH_DELAY_MS)).await;
-                    let Some((x, y)) = PENDING_POS.lock().unwrap().take() else {
-                        return;
-                    };
-                    if let Some(ctx) = handle.try_state::<crate::AppContext>() {
-                        let _ = ctx.prefs.set_many(vec![
-                            ("floating.x".into(), x.into()),
-                            ("floating.y".into(), y.into()),
-                        ]);
-                    }
-                });
-            }
+            crate::debounce_pref_pair(
+                &PENDING_POS,
+                handle.clone(),
+                ["floating.x", "floating.y"],
+                (pos.x as i64, pos.y as i64),
+            );
         }
     });
 }

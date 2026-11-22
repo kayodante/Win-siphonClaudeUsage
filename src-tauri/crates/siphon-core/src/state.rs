@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::preferences::Preferences;
+use crate::providers::ProviderQuota;
 use crate::quota::Quota;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -65,4 +66,9 @@ pub struct AppState {
     pub last_updated: Option<String>,
     pub is_offline: bool,
     pub needs_reauth: bool,
+    /// `None` while Codex is not installed (no `~/.codex/sessions`): the
+    /// renderer hides its tab.
+    pub codex: Option<ProviderQuota>,
+    /// `None` while the Antigravity app is not installed (no `main.log`).
+    pub antigravity: Option<ProviderQuota>,
 }

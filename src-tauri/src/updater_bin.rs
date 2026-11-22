@@ -94,7 +94,7 @@ async fn fetch_to_file(
     progress: Option<&AppHandle>,
 ) -> Result<(), String> {
     use tokio::io::AsyncWriteExt;
-    let resp = client
+    let mut resp = client
         .get(url)
         .header("User-Agent", "Siphon-Windows")
         .send()
@@ -116,10 +116,7 @@ async fn fetch_to_file(
     let mut file = tokio::fs::File::create(dest)
         .await
         .map_err(|e| e.to_string())?;
-    let mut stream = resp.bytes_stream();
-    use futures_util::StreamExt;
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
+    while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
         received += chunk.len() as u64;
         file.write_all(&chunk).await.map_err(|e| e.to_string())?;
         if let (Some(app), true) = (progress, total > 0) {

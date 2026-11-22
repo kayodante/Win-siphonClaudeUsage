@@ -10,8 +10,10 @@ All data written by Siphon stays on your machine under `%APPDATA%\Siphon\`:
 |------|----------|---------|
 | `credentials.json` | Anthropic OAuth access and refresh tokens | Authenticate usage API calls |
 | `preferences.json` | Language, notification toggle, widget position, autostart and refresh interval | User preferences |
-| `reset-notification.json` | Pending session-reset timestamp | Schedule Windows toast |
+| `reset-notification.json` | Pending Claude session-reset timestamp | Schedule Windows toast |
+| `reset-notification-<provider>.json` | Pending Codex / Antigravity session-reset timestamp | Schedule Windows toast |
 | `local-usage-cache.json` | Aggregated Claude Code JSONL usage metadata | Avoid re-reading unchanged session files |
+| `antigravity-quota-cache.json` | Last known Antigravity quota percentages and reset times | Keep quota visible while Antigravity is closed |
 
 Files are written with mode `0600` (owner read/write only) where supported.
 
@@ -22,6 +24,25 @@ Siphon reads Claude Code's local usage files:
 - `~/.claude/readout-cost-cache.json`
 - `~/.claude/readout-pricing.json`
 - `~/.claude/projects/**/*.jsonl`
+
+When Codex is installed, Siphon also reads the rate-limit entries Codex writes
+to its session logs (`~/.codex/sessions/**/rollout-*.jsonl`) to show your Codex
+session and weekly limits. It reads those entries' percentages and reset times,
+plus the token counts, timestamps and model names Codex records with each turn,
+to estimate your Today and This Month usage and cost. It never stores or sends
+anything else from those logs, and it does not read `~/.codex/auth.json` or any
+other credential.
+
+For Antigravity, Siphon reads the identified server process's command line,
+Windows' PID-owned loopback listeners, and `~/.gemini/antigravity/daemon/hub_*.json`
+discovery files. It sends that process's access token only to its verified
+ports on `127.0.0.1` to request quota data.
+`%APPDATA%\Antigravity\logs\main.log` and `language_server.log` are optional
+port-ordering hints; missing or unreadable logs do not block process-based
+discovery. Siphon checks whether `%APPDATA%\Antigravity`,
+`%LOCALAPPDATA%\Programs\Antigravity`, and `~/.gemini/antigravity` exist to
+distinguish a closed app from an absent installation. The token never leaves
+your machine and is never stored or logged.
 
 These files are never uploaded or shared.
 
@@ -39,6 +60,9 @@ data, and GitHub, for updates:
 
 The GitHub requests carry no usage data, no account information, and no
 identifier — they only ask what the latest release is and fetch a file.
+
+The Antigravity quota request goes to `127.0.0.1` only — your own machine,
+not the network.
 
 No data is sent to any other third party. No analytics, no crash reporting, no telemetry.
 

@@ -63,11 +63,6 @@ pub async fn auth_sign_out(ctx: State<'_, AppContext>) -> CommandResult {
     Ok(())
 }
 
-#[tauri::command]
-pub fn prefs_get(ctx: State<'_, AppContext>) -> Value {
-    serde_json::to_value(ctx.prefs.load()).unwrap_or(Value::Null)
-}
-
 const ALLOWED_PREFS: &[&str] = &[
     "language",
     "notifications.sessionReset",
@@ -93,6 +88,7 @@ const ALLOWED_PREFS: &[&str] = &[
     "startup.showWindowOnLogin",
     "refresh.intervalSeconds",
     "claudePath",
+    "codexPath",
     "integration.launchWithClaudeCode",
     "privacy.maskEmail",
     "display.quotaMode",
@@ -175,16 +171,6 @@ pub async fn prefs_set(app: AppHandle, ctx: State<'_, AppContext>, args: PrefSet
 }
 
 #[tauri::command]
-pub fn view_show_main(app: AppHandle) {
-    crate::windows_ctl::show_main(&app);
-}
-
-#[tauri::command]
-pub fn view_show_settings(app: AppHandle) {
-    crate::windows_ctl::show_settings(&app);
-}
-
-#[tauri::command]
 pub fn floating_open_main(app: AppHandle) {
     crate::windows_ctl::show_main(&app);
 }
@@ -231,6 +217,13 @@ pub fn window_minimize(app: AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.minimize();
     }
+}
+
+/// Hide/show sidebar: the window gives up (or takes back) the rail's width,
+/// right edge fixed. See `windows_ctl::set_rail_collapsed`.
+#[tauri::command]
+pub fn window_set_rail_collapsed(app: AppHandle, collapsed: bool) {
+    crate::windows_ctl::set_rail_collapsed(&app, collapsed);
 }
 
 #[tauri::command]

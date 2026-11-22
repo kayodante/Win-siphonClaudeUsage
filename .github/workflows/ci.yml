@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels that PR's run still in progress. Pushes to main
+# never cancel each other, so every commit on main keeps its own result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: windows-latest
@@ -19,9 +25,10 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint
         run: npm run lint
@@ -31,6 +38,7 @@ jobs:
 
   # Rust core logic (parsing, pricing, PKCE, quota, preferences, scheduler).
   # Cross-platform and free of Tauri/Windows deps, so it runs fast on Linux.
+  # rustup ships on the hosted runners, so no third-party setup action is needed.
   rust-core:
     runs-on: ubuntu-latest
     steps:
@@ -38,12 +46,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
 
+      # Pinned to a commit SHA (tags can be moved); Dependabot bumps it.
       - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
 
@@ -69,10 +78,12 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
 

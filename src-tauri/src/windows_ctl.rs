@@ -9,8 +9,109 @@ use tauri::{AppHandle, Emitter, Manager};
 /// `set_size` call bypasses that clamp entirely, so a size smaller than this
 /// (as happened when a stale, DPI-shrunk value was persisted — see the
 /// `Resized` guard in `main.rs`) has to be floored here by hand.
-pub const MIN_W: f64 = 300.0;
+/// 352 is the rail (64) plus the content well; raising it from 300 is also
+/// what widens windows whose 320px size was persisted before the rail existed.
+pub const MIN_W: f64 = 352.0;
 pub const MIN_H: f64 = 700.0;
+
+/// Logical width of the side rail — `.rail { width }` in styles.css, keep the
+/// two in step. Collapsing the rail gives exactly this much back to the screen.
+pub const RAIL_W: f64 = 62.0;
+
+/// Whether the main window is currently narrowed by a collapsed rail. Not
+/// persisted: the rail always boots expanded, which is why the `Resized`
+/// handler in `main.rs` adds `RAIL_W` back before saving the width.
+static RAIL_COLLAPSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn rail_collapsed() -> bool {
+    RAIL_COLLAPSED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Narrow (or widen) the main window by the rail's width when the sidebar is
+/// hidden (or shown), keeping the right edge where it is so the content well
+/// never moves on screen — the left edge travels instead. Idempotent: asking
+/// for the state the window is already in does nothing.
+///
+/// The minimum width follows along: lowered *before* shrinking (the OS would
+/// otherwise clamp the new size back up) and raised only *after* growing.
+pub fn set_rail_collapsed(app: &AppHandle, collapsed: bool) {
+    use std::sync::atomic::Ordering;
+    let Some(win) = app.get_webview_window("main") else {
+        return;
+    };
+    if RAIL_COLLAPSED.swap(collapsed, Ordering::Relaxed) == collapsed {
+        return;
+    }
+    if collapsed {
+        let _ = win.set_min_size(Some(tauri::LogicalSize::new(MIN_W - RAIL_W, MIN_H)));
+    }
+    let (Ok(pos), Ok(size)) = (win.outer_position(), win.outer_size()) else {
+        return;
+    };
+    let scale = win.scale_factor().unwrap_or(1.0);
+    let delta = siphon_core::geometry::rail_delta_px(RAIL_W, scale) as i32;
+    let delta = if collapsed { delta } else { -delta };
+    let (x, y) = (pos.x + delta, pos.y);
+    let (w, h) = (size.width as i32 - delta, size.height as i32);
+    move_and_resize(&win, x, y, w, h);
+    if !collapsed {
+        let _ = win.set_min_size(Some(tauri::LogicalSize::new(MIN_W, MIN_H)));
+    }
+}
+
+/// One atomic move+resize on Windows, so the right edge never twitches between
+/// a separate `set_position` and `set_size`.
+#[cfg(windows)]
+fn move_and_resize(win: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h: i32) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+    let Ok(handle) = win.hwnd() else { return };
+    unsafe {
+        let _ = SetWindowPos(HWND(handle.0 as _), None, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+}
+
+#[cfg(not(windows))]
+fn move_and_resize(win: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h: i32) {
+    let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
+    let _ = win.set_size(tauri::PhysicalSize::new(w.max(1) as u32, h.max(1) as u32));
+}
+
+/// Acrylic backdrop for a transparent, undecorated window, with the window's
+/// own corners rounded to match.
+///
+/// `apply_acrylic` hands the backdrop to DWM, which paints it across the whole
+/// window rect. The webview's `border-radius` only clips the HTML layer, so
+/// without `DWMWCP_ROUND` the acrylic shows through outside the radius as four
+/// grey corners. `DWMWCP_ROUND` is ~8px, matching `--radius-sm` on `.shell`
+/// and `.floating-widget` — keep them in step. The attribute sticks for the
+/// window's lifetime, so resizing does not need to re-apply it.
+///
+/// Rounding is Windows 11 only: on 10 the call fails and the corners stay
+/// square, which needs no handling beyond ignoring it.
+#[cfg(windows)]
+pub fn apply_backdrop(win: &tauri::WebviewWindow) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
+        DWM_WINDOW_CORNER_PREFERENCE,
+    };
+
+    let _ = window_vibrancy::apply_acrylic(win, Some((0, 0, 0, 190)));
+
+    let Ok(handle) = win.hwnd() else { return };
+    let preference = DWMWCP_ROUND;
+    // Aligned with Tauri 2 and tauri-winrt-notification on windows 0.61; rebuild
+    // the handle from the raw pointer rather than depending on both versions.
+    unsafe {
+        let _ = DwmSetWindowAttribute(
+            HWND(handle.0 as _),
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            std::ptr::addr_of!(preference).cast(),
+            std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>() as u32,
+        );
+    }
+}
 
 pub fn show_main(app: &AppHandle) {
     show_window(app);

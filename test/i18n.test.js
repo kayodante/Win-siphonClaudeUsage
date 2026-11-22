@@ -19,6 +19,15 @@ test('unknown language falls back to English', () => {
   assert.equal(t('settings.language', 'fr'), 'Language');
 });
 
+test('overview navigation copy is translated in all supported languages', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const key of ['navigation.label', 'navigation.overview', 'navigation.hideSidebar', 'navigation.showSidebar']) {
+      assert.notEqual(t(key, lang), key);
+      if (lang !== 'en') assert.notEqual(t(key, lang), t(key, 'en'));
+    }
+  }
+});
+
 test('missing key returns the key', () => {
   assert.equal(t('missing.translation.key', 'pt-BR'), 'missing.translation.key');
 });
@@ -61,6 +70,18 @@ test('pace and tray strings exist in both languages', () => {
     assert.notEqual(t('tray.weekly', lang), 'tray.weekly');
     assert.notEqual(t('tray.sessionReset', lang), 'tray.sessionReset');
     assert.notEqual(t('tray.updated', lang), 'tray.updated');
+  }
+});
+
+test('every pace status has a tooltip in every language', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const status of ['no_data', 'on_track', 'high_pace', 'likely_out', 'depleted']) {
+      const key = `pace.${status}Tooltip`;
+      assert.notEqual(t(key, lang), key);
+      // t() falls back to English, so a missing translation would equal it.
+      if (lang !== 'en') assert.notEqual(t(key, lang), t(key, 'en'), `${lang} is missing ${key}`);
+    }
+    assert.match(t('pace.likely_outTooltip', lang), /\{time\}/);
   }
 });
 
@@ -165,6 +186,29 @@ test('the loopback sign-in copy exists in every supported language', () => {
       const value = t(key, lang);
       assert.notEqual(value, key, `${key} is missing from ${lang}`);
       assert.ok(value.trim().length > 0, `${key} is empty in ${lang}`);
+    }
+  }
+});
+
+test('the provider tab copy exists in every supported language', () => {
+  const keys = [
+    'provider.antigravity.thirdParty',
+    'provider.codex.empty',
+    'provider.antigravity.closed',
+    'provider.antigravity.error',
+    'provider.codex.error',
+    'provider.lastReading',
+    'provider.window.unknown',
+    'provider.window.rolledOver',
+    'provider.blocked.weekly',
+    'provider.blocked'
+  ];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    for (const key of keys) {
+      const value = t(key, lang);
+      assert.notEqual(value, key, `${key} is missing from ${lang}`);
+      // `t` falls back to English; a translation must not be that fallback.
+      if (lang !== 'en') assert.notEqual(value, t(key, 'en'), `${key} is untranslated in ${lang}`);
     }
   }
 });

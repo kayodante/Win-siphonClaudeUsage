@@ -85,6 +85,10 @@ test('mini widget labels both quotas and reuses every tray status in used and re
               assert.equal(nodes.get(id).title, label + ': ' + (mode === 'remaining' ? 100 - percent : percent) + '% ' + suffix);
             }
             assert.equal(nodes.get('#floatingLogo').src, '../assets/f-icon/f-icon-' + sessionLevel + '.png');
+            assert.equal(
+              nodes.get('#floatingOpenButton').attributes['aria-label'],
+              t('home.session', lang) + ': ' + (mode === 'remaining' ? 100 - session : session) + '% ' + suffix + ', ' + t('floating.openMain', lang)
+            );
           }
         }
       }
@@ -113,6 +117,23 @@ test('mini widget labels both quotas and reuses every tray status in used and re
       if (!quota.session) assert.equal(nodes.get('#floatingMiniPercent').textContent, '--');
       if (!quota.weeklyAll) assert.equal(nodes.get('#floatingMiniWeekly').textContent, '--');
     }
+    assert.equal(nodes.get('#floatingOpenButton').attributes['aria-label'], t('floating.openMain', state.preferences.language));
+
+    // .floating-reset is aria-live: an unchanged state push must not rewrite it.
+    state.quota = { session: { percent: 25, resetsAt: '2026-10-23T18:00:00Z' } };
+    render(state);
+    let writes = 0;
+    for (const id of ['#floatingResetLabel', '#floatingResetTime']) {
+      const el = nodes.get(id);
+      let text = el.textContent;
+      Object.defineProperty(el, 'textContent', { get: () => text, set: value => { writes++; text = value; } });
+    }
+    render(state);
+    render(state);
+    assert.equal(writes, 0);
+    state.quota = { session: { percent: 0 } };
+    render(state);
+    assert.equal(writes, 1);
   } finally {
     globalThis.document = previousDocument;
     globalThis.window = previousWindow;

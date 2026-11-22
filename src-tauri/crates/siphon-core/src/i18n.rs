@@ -50,6 +50,19 @@ const EN: &[(&str, &str)] = &[
     ("alert.highUsage.body", "Session has reached 70%."),
     ("alert.critical.title", "Critical usage"),
     ("alert.critical.body", "Session has reached 90%."),
+    ("provider.antigravity.thirdParty", "Claude and GPT"),
+    (
+        "notification.providerResetTitle",
+        "{provider} session reset",
+    ),
+    (
+        "notification.providerResetBody",
+        "Your {provider} session limit should be available again.",
+    ),
+    (
+        "notification.providerExpireBody",
+        "Your {provider} session has reached its limit.",
+    ),
 ];
 
 const PT: &[(&str, &str)] = &[
@@ -78,6 +91,19 @@ const PT: &[(&str, &str)] = &[
     ("alert.highUsage.body", "Sessão atingiu 70%."),
     ("alert.critical.title", "Uso crítico"),
     ("alert.critical.body", "Sessão atingiu 90%."),
+    ("provider.antigravity.thirdParty", "Claude e GPT"),
+    (
+        "notification.providerResetTitle",
+        "Sessão do {provider} reiniciada",
+    ),
+    (
+        "notification.providerResetBody",
+        "Seu limite de sessão do {provider} deve estar disponível novamente.",
+    ),
+    (
+        "notification.providerExpireBody",
+        "Sua sessão do {provider} atingiu o limite.",
+    ),
 ];
 
 const JA: &[(&str, &str)] = &[
@@ -109,6 +135,19 @@ const JA: &[(&str, &str)] = &[
     ("alert.highUsage.body", "セッションの70%に達しました。"),
     ("alert.critical.title", "使用量が限界に近いです"),
     ("alert.critical.body", "セッションの90%に達しました。"),
+    ("provider.antigravity.thirdParty", "ClaudeとGPT"),
+    (
+        "notification.providerResetTitle",
+        "{provider}のセッションがリセットされました",
+    ),
+    (
+        "notification.providerResetBody",
+        "{provider}のセッション制限がリセットされ、再び利用可能です。",
+    ),
+    (
+        "notification.providerExpireBody",
+        "{provider}のセッションが制限に達しました。",
+    ),
 ];
 
 const KO: &[(&str, &str)] = &[
@@ -137,6 +176,16 @@ const KO: &[(&str, &str)] = &[
     ("alert.highUsage.body", "세션의 70%에 도달했습니다."),
     ("alert.critical.title", "사용량 위험"),
     ("alert.critical.body", "세션의 90%에 도달했습니다."),
+    ("provider.antigravity.thirdParty", "Claude 및 GPT"),
+    ("notification.providerResetTitle", "{provider} 세션 리셋"),
+    (
+        "notification.providerResetBody",
+        "{provider} 세션 한도가 초기화되어 다시 이용할 수 있습니다.",
+    ),
+    (
+        "notification.providerExpireBody",
+        "{provider} 세션 사용량 한도에 도달했습니다.",
+    ),
 ];
 
 #[cfg(test)]

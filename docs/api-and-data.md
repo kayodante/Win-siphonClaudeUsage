@@ -151,6 +151,7 @@ They match Claude Code's own client.
 | `five_hour`          | `session`        | Session         |
 | `seven_day`          | `weeklyAll`      | Weekly Limit    |
 | `extra_usage`        | `extraUsage`     | Extra usage (conditional) |
+| `limits[]` (`weekly_scoped`) | `weeklyScoped` | Model name + Weekly Limit |
 
 Each becomes `{ percent: Number, resetsAt: Date | null }`.
 
@@ -158,6 +159,30 @@ Each becomes `{ percent: Number, resetsAt: Date | null }`.
 only come populated on Max plans (on Pro they arrive empty or absent). They
 were displayed early in the port, intentionally removed, and are ignored by
 the parser today.
+
+Model-scoped weekly quotas — Fable's, as of 2026-11 — do **not** arrive as a
+`seven_day_*` key. They come in the `limits` array, one entry per limit:
+
+```jsonc
+{
+  "limits": [
+    { "kind": "session",    "group": "session", "percent": 66, "resets_at": "…", "scope": null },
+    { "kind": "weekly_all", "group": "weekly",  "percent": 56, "resets_at": "…", "scope": null },
+    {
+      "kind": "weekly_scoped", "group": "weekly", "percent": 66, "resets_at": "…",
+      "scope": { "model": { "id": null, "display_name": "Fable" }, "surface": null }
+    }
+  ]
+}
+```
+
+`parse_weekly_scoped` keeps every `weekly_scoped` entry whose
+`scope.model.display_name` is set and that carries a `percent`, as
+`weeklyScoped: [{ name, percent, resetsAt }]`; surface-scoped entries are
+skipped. Each one renders as a weekly-only group titled with the model's name
+— compact on the Overview's Claude card, its own card under the main one on
+the Claude page. The tray icon, widget, banners and toasts still read only
+`five_hour` / `seven_day`.
 
 The endpoint may also return an `extra_usage` object describing purchased
 credits beyond the plan quota:
@@ -445,7 +470,8 @@ with defaults on load so old files remain valid.
     "width": null,
     "height": null
   },
-  "claudePath": null
+  "claudePath": null,
+  "codexPath": null
 }
 ```
 
@@ -552,6 +578,37 @@ is written when `session.percent` first crosses 100 with a future reset,
 and cleared when the timer fires, when a new session starts
 (`percent < 15`), or when the user signs out.
 
+This file is Claude's. Codex and the two Antigravity groups each get their
+own, same shape, from `providers::Channel::reset_file`:
+`reset-notification-codex.json`, `reset-notification-antigravityGemini.json`,
+`reset-notification-antigravityThirdParty.json`. Signing out of Claude clears
+only Claude's.
+
+### `%APPDATA%\Siphon\antigravity-quota-cache.json`
+
+Written by `Controller::refresh_antigravity` through `JsonStore` (`0600`) on
+every live Antigravity reading (`siphon_core::antigravity::serialize_cached_quota`),
+and cleared when Antigravity is not installed (`Observation::NotInstalled`).
+Loaded on boot (`restore_cached_quota`) under `status: "closed"` and normalized
+against the current time so active weekly/session windows survive Siphon
+restarts while Antigravity is closed, and any window whose `resetsAt` has
+passed is immediately marked `rolledOver: true` with `percent: null`. Holds
+only the quota sections and timestamps — never the CSRF token or loopback ports.
+
+```jsonc
+{
+  "updatedAt": "2026-11-21T13:34:13.000Z",
+  "sections": [
+    {
+      "id": "gemini",
+      "session": { "percent": 1.2, "resetsAt": "2026-11-21T18:34:13.000Z", "rolledOver": false },
+      "weekly":  { "percent": 0.9, "resetsAt": "2026-11-28T13:34:13.000Z", "rolledOver": false },
+      "blocked": false
+    }
+  ]
+}
+```
+
 ### `~/.claude/settings.json` (the one exception outside `%APPDATA%`)
 
 Written by `ClaudeSettings` (not `JsonStore`) when the
@@ -599,6 +656,188 @@ and start a second Siphon. Enabled hooks are migrated on app startup or when
 the integration is enabled in Settings.
 Writes go through a `.tmp` file + `rename` so a partial write can't corrupt
 the user's Claude Code settings.
+
+## 5. Codex session logs (read-only)
+
+Read by `siphon_core::codex`. Codex (CLI and desktop app) appends one JSON
+object per line to `<codex home>/sessions/YYYY/MM/DD/rollout-*.jsonl`, where
+`<codex home>` is `preferences.codexPath`, `$CODEX_HOME`, `~/.codex`, or (when
+`~/.codex/sessions` is absent on Windows and `$WSL_DISTRO_NAME` is set) a WSL
+`\\wsl$\<distro>\home\<user>\.codex` directory. Every model turn adds a
+`token_count` event carrying the account's current rate limits and cumulative
+token usage (`info.total_token_usage`). `codex::read_usage` counts Today and
+This Month as each event's growth over the previous one, dated by that event and
+priced by the `turn_context.model` in effect at it, observed on Codex 0.160:
+
+```jsonc
+{
+  "timestamp": "2026-10-22T12:13:23.892Z",      // → state.codex.updatedAt
+  "type": "event_msg",
+  "payload": {
+    "type": "token_count",
+    "info": { /* token totals — not read */ },
+    "rate_limits": {
+      "limit_id": "codex",                       // other ids (e.g. "codex-spark") are model-specific: skipped
+      "primary":   { "used_percent": 67.0, "window_minutes": 300,   "resets_at": 1792688645 },  // → session
+      "secondary": { "used_percent": 54.0, "window_minutes": 10080, "resets_at": 1793096377 },  // → weekly
+      "credits": { /* not read */ }
+    }
+  }
+}
+```
+
+- `resets_at` is Unix seconds; either window may be `null` (its row is then
+  not shown).
+- Windows are named by `window_minutes`: 300 → session, 10080 → weekly. A
+  window without it falls back to its position (`primary` → session,
+  `secondary` → weekly); any other length is left out.
+- Siphon stats every `rollout-*.jsonl` and opens, newest mtime first, only
+  those modified since the reading it already holds (up to 40 per attempt).
+  In each it takes the **last** qualifying line of the last 512 KB, then of
+  the last 4 MB if the shorter tail has none. Across files the reading with
+  the latest event `timestamp` wins; mtime only bounds the search, since any
+  event touches a file without carrying a new quota.
+- `providers::apply` keeps the newest reading: an older or undated line, an
+  empty search or a read error (`status: error`) never replaces or erases it.
+- A window whose `resets_at` has passed is marked `rolledOver`
+  (`providers::normalize_window`) and shown as waiting for a new reading,
+  never as a measured 0%: the log only moves when Codex is used on this
+  machine.
+- `~/.codex/auth.json` is never read.
+
+## 6. Antigravity local quota server (read-only, loopback)
+
+Read by `siphon_core::antigravity` (parsing) and `controller::read_antigravity`
+(I/O). Only the Antigravity 2.x app (`%LOCALAPPDATA%\Programs\Antigravity`) is
+supported, and only while it runs: its `resources\bin\language_server.exe`
+serves a Connect RPC on a loopback HTTPS port with a self-signed certificate.
+
+- **Ports:** IPv4 loopback TCP listeners owned by each identified
+  `language_server` PID, from `GetExtendedTcpTable` (`process.rs`). When a
+  matching `~/.gemini/antigravity/daemon/hub_<httpPort>.json` record exists for
+  that PID and its currently owned ports, `httpsPort` is placed first and
+  `httpPort` is excluded from HTTPS candidates. The newest port in
+  `%APPDATA%\Antigravity\logs\main.log` or `language_server.log` (256 KB tail,
+  full-file fallback) is an optional hint: it can prioritize or disambiguate
+  only an already-owned port. An unowned, historical or reused log port is
+  never a candidate. Missing and unreadable logs do not prevent valid
+  process-based discovery.
+- **CSRF token:** read from `~/.gemini/antigravity/daemon/hub_<httpPort>.json`
+  (`csrfToken`, when `pid` and `httpsPort` match a live Antigravity
+  `language_server` process and its kernel-verified loopback listeners;
+  Antigravity 2.34+ stopped passing `--csrf_token` on the command line), or from
+  `--csrf_token <uuid>` on the `language_server` process command line (read with
+  `NtQueryInformationProcess`, `process.rs`, for Antigravity ≤ 2.33). In both
+  cases the process command line must carry `--override_ide_name antigravity` or
+  `--app_data_dir antigravity`. Antigravity ≤ 2.15 also logged the token; 2.16
+  stopped. Stale `hub_*.json` files from exited processes are ignored because
+  their PID/port pair does not match a running Antigravity server. Identity flags
+  require an exact `antigravity` value. A recognized server with no usable token
+  (or conflicting tokens) is an error. Two with different tokens are
+  disambiguated when only one process owns the logged loopback port; otherwise →
+  `status: error`: Siphon does not guess.
+- **Presence & persistence:** a running identified server establishes presence
+  without files. With no such server, an existing `%APPDATA%\Antigravity`,
+  `%LOCALAPPDATA%\Programs\Antigravity`, `%USERPROFILE%\.gemini\antigravity`,
+  or `%ProgramFiles%\Antigravity` path means `status: closed` and preserves the
+  last reading (including across Siphon restarts via
+  `%APPDATA%\Siphon\antigravity-quota-cache.json`, normalized against the
+  current time). Only successful inspection finding no server and none of those
+  paths yields `NotInstalled` (tab removed and cache cleared). Process/TCP
+  enumeration, command-line access or presence-check errors yield
+  `status: error`, preserving the previous reading.
+
+### Request
+
+```
+POST https://127.0.0.1:<port>/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary
+X-Codeium-Csrf-Token: <token>
+Connect-Protocol-Version: 1
+Content-Type: application/json
+
+{}
+```
+
+Sent by a dedicated client: invalid certificates accepted, no proxy, no
+redirects, 5-second timeout per request. Connection refused or timeout leads
+to a fresh discovery: no server with installation evidence means `closed`;
+a server still present but unreachable means `error`. Non-2xx (a stale token
+gives 401) and unparseable bodies mean `error`.
+Port/token association is rediscovered before every authenticated request,
+including retries on another candidate. If it changed, the old attempt stops;
+the next refresh can use the restarted server. No generic HTTP probe establishes
+identity. Overlapping refreshes are dropped until state application finishes;
+cancellation releases the guard. Failed reads preserve the previous reading.
+
+### Response (200, observed on 2.16)
+
+```jsonc
+{
+  "response": {
+    "groups": [
+      { "displayName": "Gemini Models", "buckets": [
+          { "bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.976, "resetTime": "2026-10-27T21:11:10Z" },
+          { "bucketId": "gemini-5h",     "window": "5h",     "remainingFraction": 1,     "resetTime": "2026-10-23T07:40:54Z" } ] },
+      { "displayName": "Claude and GPT models", "buckets": [
+          { "bucketId": "3p-weekly", "window": "weekly", "remainingFraction": 0, "resetTime": "2026-10-27T00:54:20Z" },
+          { "bucketId": "3p-5h",     "window": "5h",     "remainingFraction": 1, "disabled": true, "resetTime": "2026-10-23T07:40:54Z" } ] },
+      { "displayName": "Gemini 4 Argon", "buckets": [
+          { "bucketId": "gemini-argon-wtu-weekly", "window": "weekly", "remainingFraction": 1, "resetTime": "2026-10-30T02:40:54Z" } ] }
+    ]
+  }
+}
+```
+
+| Bucket | `state.antigravity.sections[]` |
+|---|---|
+| `gemini-5h` / `gemini-weekly` | `gemini` → `session` / `weekly` |
+| `3p-5h` / `3p-weekly` | `thirdParty` → `session` / `weekly` |
+| `gemini-argon-wtu-5h` / `gemini-argon-wtu-weekly` | `argon` → `session` / `weekly` |
+
+The parser accepts `/response/groups`, `/summary/groups`, and root `groups`.
+It preserves source-group identity: the three exact source display names above
+scope their buckets; otherwise only unambiguous known bucket IDs infer a group.
+No translated-name matching is performed. Repeated section IDs across source
+groups or two buckets targeting the same window make the response unreadable.
+Foreign IDs in an explicitly identified group cannot supply another group's quota.
+
+An explicit `window` takes priority over the bucket-ID suffix: `5h` is session,
+`weekly` is weekly (including a `-5h` ID explicitly marked `weekly`). Only an
+absent `window` uses the known ID's duration. Unknown, empty, null or non-string
+durations on recognized buckets make the response unreadable, preserving the
+previous reading rather than inventing a session or hiding an offered window.
+Weekly-only sections have no session row or session alert.
+
+`percent = (1 − remainingFraction) × 100`, clamped. Besides the direct field,
+`remaining.remainingFraction` and the tagged form
+`remaining: { case: "remainingFraction", value: 0.25 }` are supported.
+The summary envelope and nested forms are compatibility contracts exercised
+by the external RPC parser and sanitized tests, not new live captures from
+this Siphon session. CLI-only snake_case fields, generic `id` aliases and
+model-specific quotas are not inferred from those CLI fixtures.
+A bucket without
+`remainingFraction` reads as unknown ("No reading available"), not as
+exhausted. A response in which no window has a usable value is
+`status: error`, not a reading. `disabled: true` (the 5-hour window while the
+weekly one is spent) marks the section `blocked`: the card says so instead of
+suggesting a message, and that section's session-reset toast is not shown
+while the block lasts.
+
+### Freshness and alternative source (deferred)
+
+Manual and scheduled refresh still send `{}` to `RetrieveUserQuotaSummary`.
+Win-CodexBar at `98a3ca7c7f6929f8fa6925ba9f4a0b5026a8791d`
+(`rust/src/providers/antigravity/mod.rs:417–478`) sends `forceRefresh: true`
+and optionally enriches or falls back through `GetUserStatus`. This proves its
+implementation contract, not stale data or RPC compatibility on this machine.
+No Antigravity process was available during this change, so neither feature
+was adopted and polling/request timeouts remain unchanged.
+
+Before adoption, capture sanitized local RPC responses and compare quota and
+reset changes after use with and without `forceRefresh`, including latency.
+Establish bounded fallback behavior and known window durations. Identity lookup
+must remain optional and must never discard valid summary quota data; model
+quotas without a duration must not become session/weekly quotas.
 
 ## Field cheat sheet
 

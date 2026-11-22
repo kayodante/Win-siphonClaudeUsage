@@ -4,7 +4,7 @@
 
 use chrono::{DateTime, Utc};
 
-use crate::quota::Quota;
+use crate::quota::Slot;
 
 /// Max chunk for one timer sleep. The binary crate re-checks the wall clock
 /// (and cancellation) on every wake, so a system suspend can delay the toast
@@ -33,18 +33,15 @@ pub enum ResetDecision {
     },
 }
 
-/// Decide the scheduler action for a new quota reading. Mirrors
-/// `updateFromQuota`: below 15% clears, below 100% is a no-op, at 100% schedules
-/// for a not-already-tracked/fired reset key.
+/// Decide the scheduler action for a new reading of one channel's session
+/// window. Mirrors `updateFromQuota`: below 15% clears, below 100% is a no-op,
+/// at 100% schedules for a not-already-tracked/fired reset key.
 pub fn decide_update(
-    quota: &Quota,
+    session: Option<&Slot>,
     current_reset_key: Option<&str>,
     last_fired_reset_key: Option<&str>,
 ) -> ResetDecision {
-    let Some(session) = &quota.session else {
-        return ResetDecision::NoChange;
-    };
-    let Some(resets_at_raw) = &session.resets_at else {
+    let Some(session) = session else {
         return ResetDecision::NoChange;
     };
 
@@ -54,6 +51,10 @@ pub fn decide_update(
     if session.percent < 100.0 {
         return ResetDecision::NoChange;
     }
+
+    let Some(resets_at_raw) = &session.resets_at else {
+        return ResetDecision::NoChange;
+    };
 
     let Ok(resets_at) = DateTime::parse_from_rfc3339(resets_at_raw) else {
         return ResetDecision::NoChange;
@@ -76,35 +77,35 @@ pub fn decide_update(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quota::Slot;
 
-    fn quota_with(percent: f64, resets_at: Option<&str>) -> Quota {
-        Quota {
-            session: Some(Slot {
-                percent,
-                resets_at: resets_at.map(|s| s.to_string()),
-            }),
-            weekly_all: None,
-            extra_usage: None,
+    fn quota_with(percent: f64, resets_at: Option<&str>) -> Slot {
+        Slot {
+            percent,
+            resets_at: resets_at.map(|s| s.to_string()),
         }
     }
 
     #[test]
     fn clears_below_15() {
         let q = quota_with(10.0, Some("2026-07-06T15:00:00.000Z"));
-        assert_eq!(decide_update(&q, None, None), ResetDecision::Clear);
+        assert_eq!(decide_update(Some(&q), None, None), ResetDecision::Clear);
+        let rolled = quota_with(0.0, None);
+        assert_eq!(
+            decide_update(Some(&rolled), Some("2026-07-06T15:00:00.000Z"), None),
+            ResetDecision::Clear
+        );
     }
 
     #[test]
     fn no_change_between_15_and_100() {
         let q = quota_with(80.0, Some("2026-07-06T15:00:00.000Z"));
-        assert_eq!(decide_update(&q, None, None), ResetDecision::NoChange);
+        assert_eq!(decide_update(Some(&q), None, None), ResetDecision::NoChange);
     }
 
     #[test]
     fn schedules_at_100() {
         let q = quota_with(100.0, Some("2026-07-06T15:00:00.000Z"));
-        match decide_update(&q, None, None) {
+        match decide_update(Some(&q), None, None) {
             ResetDecision::Schedule { reset_key, .. } => {
                 assert_eq!(reset_key, "2026-07-06T15:00:00.000Z");
             }
@@ -116,8 +117,14 @@ mod tests {
     fn no_reschedule_for_same_key() {
         let q = quota_with(100.0, Some("2026-07-06T15:00:00.000Z"));
         let key = "2026-07-06T15:00:00.000Z";
-        assert_eq!(decide_update(&q, Some(key), None), ResetDecision::NoChange);
-        assert_eq!(decide_update(&q, None, Some(key)), ResetDecision::NoChange);
+        assert_eq!(
+            decide_update(Some(&q), Some(key), None),
+            ResetDecision::NoChange
+        );
+        assert_eq!(
+            decide_update(Some(&q), None, Some(key)),
+            ResetDecision::NoChange
+        );
     }
 
     #[test]

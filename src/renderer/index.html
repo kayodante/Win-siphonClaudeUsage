@@ -10,12 +10,45 @@
   <body data-view="onboard">
     <main class="shell">
       <header class="topbar">
-        <div class="topbar-card">
         <div class="brand">
           <img class="brand-logo" src="../assets/Logo.png" alt="Siphon" />
         </div>
-        <div class="top-actions">
-          <button type="button" class="icon-button notif-badge" id="notificationState" data-tone="accent">
+        <div class="window-controls">
+          <button class="window-control-btn" id="minimizeButton" title="Minimize" aria-label="Minimize" data-i18n-title="topbar.minimize" data-i18n-aria-label="topbar.minimize">
+            <!-- Carbon: Subtract -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 15H24V17H8z"/></svg>
+          </button>
+          <button class="window-control-btn" id="closeButton" title="Close" aria-label="Close" data-i18n-title="topbar.close" data-i18n-aria-label="topbar.close">
+            <!-- Carbon: Close -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="shell-body">
+      <!-- Provider tabs on top (Codex and Antigravity appear once installed),
+           app actions at the bottom. Hidden during onboarding. -->
+      <nav class="rail" id="navigationRail" aria-label="Navigation" data-i18n-aria-label="navigation.label">
+        <div class="rail-providers">
+          <button type="button" class="rail-provider" id="overviewButton" title="Overview" aria-label="Overview" data-i18n-title="navigation.overview" data-i18n-aria-label="navigation.overview">
+            <img class="overview-icon-default" src="../assets/navigation/overview.svg" width="20" height="20" alt="" />
+            <img class="overview-icon-active" src="../assets/navigation/overview-active.svg" width="20" height="20" alt="" />
+          </button>
+          <button type="button" class="rail-provider" id="providerClaudeButton" title="Claude" aria-label="Claude">
+            <!-- lobe-icons: Claude -->
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.92417 13.2958L7.8575 11.09L7.92417 10.8983L7.8575 10.7917H7.66667L7.00833 10.7517L4.76 10.6908L2.81083 10.61L0.9225 10.5083L0.446667 10.4075L0 9.82L0.0458333 9.52667L0.445833 9.25917L1.0175 9.30917L2.28417 9.395L4.1825 9.52667L5.55917 9.6075L7.6 9.82H7.92417L7.97 9.68917L7.85833 9.6075L7.7725 9.52667L5.8075 8.19667L3.68083 6.79L2.5675 5.98L1.96417 5.57083L1.66083 5.18583L1.52917 4.34583L2.07583 3.74417L2.81 3.79417L2.9975 3.845L3.74167 4.41667L5.33167 5.64667L7.4075 7.17417L7.71167 7.4275L7.8325 7.34167L7.84833 7.28083L7.71167 7.0525L6.5825 5.01417L5.3775 2.93917L4.84083 2.07917L4.69917 1.56333C4.64519 1.36521 4.61608 1.16114 4.6125 0.955833L5.23583 0.111667L5.58 0L6.41 0.111667L6.76 0.415L7.27667 1.59333L8.11167 3.45083L9.4075 5.97583L9.7875 6.72417L9.99 7.4175L10.0658 7.63H10.1975V7.50833L10.3042 6.08667L10.5017 4.34083L10.6933 2.095L10.76 1.46167L11.0733 0.703333L11.6958 0.293333L12.1825 0.526667L12.5825 1.0975L12.5267 1.4675L12.2883 3.01L11.8225 5.42917L11.5192 7.0475H11.6958L11.8983 6.84583L12.7192 5.7575L14.0958 4.0375L14.7042 3.35417L15.4125 2.60083L15.8683 2.24167H16.7292L17.3625 3.1825L17.0792 4.15417L16.1925 5.27667L15.4583 6.22833L14.405 7.645L13.7467 8.77833L13.8075 8.87L13.9642 8.85333L16.3442 8.34833L17.63 8.115L19.1642 7.8525L19.8583 8.17583L19.9342 8.505L19.6608 9.1775L18.02 9.5825L16.0958 9.9675L13.23 10.645L13.195 10.67L13.2358 10.7208L14.5267 10.8425L15.0783 10.8725H16.43L18.9467 11.06L19.605 11.495L20 12.0267L19.9342 12.4308L18.9217 12.9475L17.555 12.6233L14.3642 11.865L13.2708 11.5908H13.1192V11.6825L14.03 12.5725L15.7017 14.0808L17.7925 16.0225L17.8983 16.5042L17.63 16.8833L17.3467 16.8425L15.5092 15.4617L14.8 14.8392L13.195 13.4892H13.0883V13.6308L13.4583 14.1717L15.4125 17.1058L15.5142 18.0058L15.3725 18.3L14.8658 18.4775L14.3092 18.3758L13.1642 16.7717L11.985 14.9658L11.0325 13.3467L10.9158 13.4133L10.3542 19.4583L10.0908 19.7667L9.48333 20L8.9775 19.6158L8.70917 18.9933L8.9775 17.7633L9.30167 16.16L9.56417 14.885L9.8025 13.3017L9.94417 12.775L9.93417 12.74L9.8175 12.755L8.6225 14.3942L6.80583 16.8483L5.3675 18.3858L5.0225 18.5225L4.425 18.2142L4.48083 17.6625L4.815 17.1717L6.805 14.6417L8.005 13.0733L8.78 12.1683L8.775 12.0367H8.72917L3.44333 15.4667L2.50167 15.5883L2.09583 15.2083L2.14667 14.5867L2.33917 14.3842L3.92917 13.2908Z"/></svg>
+          </button>
+          <button type="button" class="rail-provider" id="providerCodexButton" title="Codex" aria-label="Codex" hidden>
+            <!-- lobe-icons: Codex -->
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.086.457a6.105 6.105 0 013.046-.415c1.333.153 2.521.72 3.564 1.7a.117.117 0 00.107.029c1.408-.346 2.762-.224 4.061.366l.063.03.154.076c1.357.703 2.33 1.77 2.918 3.198.278.679.418 1.388.421 2.126a5.655 5.655 0 01-.18 1.631.167.167 0 00.04.155 5.982 5.982 0 011.578 2.891c.385 1.901-.01 3.615-1.183 5.14l-.182.22a6.063 6.063 0 01-2.934 1.851.162.162 0 00-.108.102c-.255.736-.511 1.364-.987 1.992-1.199 1.582-2.962 2.462-4.948 2.451-1.583-.008-2.986-.587-4.21-1.736a.145.145 0 00-.14-.032c-.518.167-1.04.191-1.604.185a5.924 5.924 0 01-2.595-.622 6.058 6.058 0 01-2.146-1.781c-.203-.269-.404-.522-.551-.821a7.74 7.74 0 01-.495-1.283 6.11 6.11 0 01-.017-3.064.166.166 0 00.008-.074.115.115 0 00-.037-.064 5.958 5.958 0 01-1.38-2.202 5.196 5.196 0 01-.333-1.589 6.915 6.915 0 01.188-2.132c.45-1.484 1.309-2.648 2.577-3.493.282-.188.55-.334.802-.438.286-.12.573-.22.861-.304a.129.129 0 00.087-.087A6.016 6.016 0 015.635 2.31C6.315 1.464 7.132.846 8.086.457zm-.804 7.85a.848.848 0 00-1.473.842l1.694 2.965-1.688 2.848a.849.849 0 001.46.864l1.94-3.272a.849.849 0 00.007-.854l-1.94-3.393zm5.446 6.24a.849.849 0 000 1.695h4.848a.849.849 0 000-1.696h-4.848z"/></svg>
+          </button>
+          <button type="button" class="rail-provider" id="providerAntigravityButton" title="Antigravity" aria-label="Antigravity" hidden>
+            <!-- lobe-icons: Antigravity -->
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z"/></svg>
+          </button>
+        </div>
+        <div class="rail-actions">
+          <button type="button" class="icon-button rail-btn notif-badge" id="notificationState" data-tone="accent">
             <span id="notificationStateText" class="notif-label" data-i18n="home.notif.on">Notify reset</span>
             <span class="notif-icon-wrap" aria-hidden="true">
               <!-- Carbon: Notification -->
@@ -24,27 +57,41 @@
               <svg id="notificationIconOff" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M26,16.5859V13a9.9217,9.9217,0,0,0-1.0833-4.5024L30,3.4141,28.5859,2,2,28.5859,3.4141,30l6-6H11v1a5,5,0,0,0,10,0V24h7a1,1,0,0,0,1-1V20a1,1,0,0,0-.293-.707ZM19,25a3,3,0,0,1-6,0V24h6Zm8-3H11.4141L23.4119,10.0024A7.949,7.949,0,0,1,24,13v4a1,1,0,0,0,.293.707L27,20.4141Z"/><path d="M7.707,17.707A1,1,0,0,0,8,17V13a8.0092,8.0092,0,0,1,8-8,7.9253,7.9253,0,0,1,4.9857,1.7681l1.4264-1.4263A9.934,9.934,0,0,0,17,3.0508V1H15V3.0508A10.0136,10.0136,0,0,0,6,13v3.5859l-3,3L4.4141,21Z"/></svg>
             </span>
           </button>
-          <button class="icon-button" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
-            <!-- Carbon: Restart -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
-          </button>
-          <button class="icon-button" id="settingsButton" title="Settings" aria-label="Settings" data-i18n-title="topbar.settings" data-i18n-aria-label="topbar.settings">
-            <!-- Carbon: Settings -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M27,16.76c0-.25,0-.5,0-.76s0-.51,0-.77l1.92-1.68A2,2,0,0,0,29.3,11L26.94,7a2,2,0,0,0-1.73-1,2,2,0,0,0-.64.1l-2.43.82a11.35,11.35,0,0,0-1.31-.75l-.51-2.52a2,2,0,0,0-2-1.61H13.64a2,2,0,0,0-2,1.61l-.51,2.52a11.48,11.48,0,0,0-1.32.75L7.43,6.06A2,2,0,0,0,6.79,6,2,2,0,0,0,5.06,7L2.7,11a2,2,0,0,0,.41,2.51L5,15.24c0,.25,0,.5,0,.76s0,.51,0,.77L3.11,18.45A2,2,0,0,0,2.7,21L5.06,25a2,2,0,0,0,1.73,1,2,2,0,0,0,.64-.1l2.43-.82a11.35,11.35,0,0,0,1.31.75l.51,2.52a2,2,0,0,0,2,1.61h4.72a2,2,0,0,0,2-1.61l.51-2.52a11.48,11.48,0,0,0,1.32-.75l2.42.82a2,2,0,0,0,.64.1,2,2,0,0,0,1.73-1L29.3,21a2,2,0,0,0-.41-2.51ZM25.21,24l-3.43-1.16a8.86,8.86,0,0,1-2.71,1.57L18.36,28H13.64l-.71-3.55a9.36,9.36,0,0,1-2.7-1.57L6.79,24,4.43,20l2.72-2.4a8.9,8.9,0,0,1,0-3.13L4.43,12,6.79,8l3.43,1.16a8.86,8.86,0,0,1,2.71-1.57L13.64,4h4.72l.71,3.55a9.36,9.36,0,0,1,2.7,1.57L25.21,8,27.57,12l-2.72,2.4a8.9,8.9,0,0,1,0,3.13L27.57,20Z"/><path d="M16,22a6,6,0,1,1,6-6A5.94,5.94,0,0,1,16,22Zm0-10a3.91,3.91,0,0,0-4,4,3.91,3.91,0,0,0,4,4,3.91,3.91,0,0,0,4-4A3.91,3.91,0,0,0,16,12Z"/></svg>
-          </button>
-          <div class="top-actions-divider" aria-hidden="true"></div>
-          <div class="window-controls">
-            <button class="window-control-btn" id="minimizeButton" title="Minimize" aria-label="Minimize" data-i18n-title="topbar.minimize" data-i18n-aria-label="topbar.minimize">
-              <!-- Carbon: Subtract -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 15H24V17H8z"/></svg>
-            </button>
-            <button class="window-control-btn" id="closeButton" title="Close" aria-label="Close" data-i18n-title="topbar.close" data-i18n-aria-label="topbar.close">
-              <!-- Carbon: Close -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16 24 9.4z"/></svg>
-            </button>
-          </div>
         </div>
+        <div class="rail-divider" aria-hidden="true"></div>
+        <div class="rail-actions rail-account-actions">
+          <button class="icon-button rail-btn" id="settingsButton" title="Settings" aria-label="Settings" data-i18n-title="topbar.settings" data-i18n-aria-label="topbar.settings">
+            <!-- Carbon: IbmCloudKubernetesService -->
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 14.375C9.875 14.375 9.75 14.375 9.6875 14.3125L6.5625 12.4375C6.375 12.3125 6.25 12.125 6.25 11.875V8.125C6.25 7.875 6.375 7.6875 6.5625 7.5625L9.6875 5.6875C9.75 5.625 9.875 5.625 10 5.625C10.125 5.625 10.25 5.625 10.3125 5.6875L13.4375 7.5625C13.625 7.6875 13.75 7.875 13.75 8.125V11.875C13.75 12.125 13.625 12.3125 13.4375 12.4375L10.3125 14.3125C10.25 14.375 10.125 14.375 10 14.375ZM7.5 11.5L10 13L12.5 11.5V8.4375L10 6.9375L7.5 8.4375V11.5Z"/><path d="M10 19.375C9.875 19.375 9.8125 19.375 9.6875 19.3125L2.1875 14.9375C2 14.8125 1.875 14.625 1.875 14.375V5.625C1.875 5.375 2 5.1875 2.1875 5.0625L9.6875 0.6875C9.8125 0.625 9.875 0.625 10 0.625C10.125 0.625 10.1875 0.625 10.3125 0.6875L17.8125 5.0625L17.1875 6.125L10 2L3.125 6V14.0625L10 18.0625L16.875 14.0625V9.375H18.125V14.375C18.125 14.625 18 14.8125 17.8125 14.9375L10.3125 19.3125C10.1875 19.375 10.125 19.375 10 19.375Z"/></svg>
+          </button>
+          <a class="icon-button rail-btn" id="openClaudeLink" href="#" title="Open claude.ai" aria-label="Open claude.ai" data-i18n-title="footer.openClaude" data-i18n-aria-label="footer.openClaude">
+            <!-- UserDollar (Figma) -->
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M15.0003 9.79183C15.3453 9.792 15.6253 10.0717 15.6253 10.4168V11.0418H17.0836C17.4286 11.042 17.7086 11.3217 17.7086 11.6668C17.7086 12.0119 17.4286 12.2917 17.0836 12.2918H14.167C13.8217 12.2918 13.542 12.5717 13.542 12.9168C13.542 13.262 13.8217 13.5418 14.167 13.5418H15.8336C16.869 13.542 17.7086 14.3814 17.7086 15.4168C17.7086 16.4522 16.869 17.2917 15.8336 17.2918H15.6253V17.9168C15.6253 18.2619 15.3453 18.5417 15.0003 18.5418C14.6551 18.5418 14.3753 18.262 14.3753 17.9168V17.2918H12.917C12.5717 17.2918 12.292 17.012 12.292 16.6668C12.292 16.3217 12.5717 16.0418 12.917 16.0418H15.8336C16.1786 16.0417 16.4586 15.7619 16.4586 15.4168C16.4586 15.0717 16.1786 14.792 15.8336 14.7918H14.167C13.1314 14.7918 12.292 13.9523 12.292 12.9168C12.292 11.8813 13.1314 11.0418 14.167 11.0418H14.3753V10.4168C14.3753 10.0717 14.6551 9.79183 15.0003 9.79183ZM9.62514 10.6268L10.4544 10.6822C10.7987 10.7052 11.0592 11.0027 11.0362 11.347C11.0133 11.6913 10.7156 11.9517 10.3714 11.9289L9.57872 11.876C9.29539 11.8839 9.03064 11.8938 8.78122 11.9061C6.02891 12.0412 3.75434 14.3497 3.54031 17.1315C3.51383 17.4757 3.21304 17.7333 2.86891 17.7068C2.5248 17.6803 2.26709 17.3796 2.29356 17.0355C2.5533 13.6604 5.30477 10.8252 8.72014 10.6577C8.98506 10.6447 9.26589 10.6334 9.56647 10.6252L9.62514 10.6268ZM9.58364 1.4585C11.7696 1.45865 13.542 3.2308 13.542 5.41683C13.542 7.60285 11.7696 9.375 9.58364 9.37516C7.39747 9.37516 5.62526 7.60295 5.62526 5.41683C5.62526 3.2307 7.39747 1.4585 9.58364 1.4585ZM9.58364 2.7085C8.08783 2.7085 6.87527 3.92105 6.87527 5.41683C6.87527 6.9126 8.08783 8.12516 9.58364 8.12516C11.0792 8.125 12.292 6.9125 12.292 5.41683C12.292 3.92115 11.0792 2.70865 9.58364 2.7085Z"/></svg>
+          </a>
+          <button class="icon-button rail-btn" id="footerQuitButton" title="Quit" aria-label="Quit" data-i18n-title="footer.quit" data-i18n-aria-label="footer.quit">
+            <!-- Carbon: Power -->
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22.5,5.74l-1,1.73a11,11,0,1,1-11,0l-1-1.73a13,13,0,1,0,13,0Z"/><path d="M15 2H17V16H15z"/></svg>
+          </button>
         </div>
+      </nav>
+
+      <div class="panel">
+
+      <header class="panel-header">
+        <button type="button" class="icon-button panel-toggle" id="railToggleButton" aria-controls="navigationRail" aria-expanded="true" aria-label="Hide sidebar" title="Hide sidebar">
+          <img src="../assets/navigation/panel.svg" width="16" height="16" alt="" />
+        </button>
+        <span class="panel-header-divider" aria-hidden="true"></span>
+        <button class="back-btn" id="backButton" hidden>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M14 26L4 16 14 6l1.41 1.41L6.83 16l8.58 8.59z"/><path d="M5 15h23v2H5z"/></svg>
+          <span data-i18n="settings.back">Back</span>
+        </button>
+        <span class="panel-title" id="providerHeading" role="heading" aria-level="1" tabindex="-1">Overview</span>
+        <span class="settings-title" id="settingsTitle" role="heading" aria-level="1" tabindex="-1" data-i18n="settings.title" hidden>Settings</span>
+        <button type="button" class="icon-button panel-refresh" id="refreshButton" title="Refresh now" aria-label="Refresh now" data-i18n-title="topbar.refresh" data-i18n-aria-label="topbar.refresh">
+          <!-- Carbon: Restart -->
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,18A10,10,0,1,1,16,8h6.1821l-3.5844,3.5854L20,13l6-6L20,1,18.5977,2.414,22.1851,6H16A12,12,0,1,0,28,18Z"/></svg>
+        </button>
       </header>
 
       <div class="shell-scroll">
@@ -242,111 +289,201 @@
           </button>
         </div>
 
-      <section id="mainView" class="view" aria-labelledby="sessionHeading" hidden>
-        <section class="card quota-panel" aria-labelledby="sessionHeading">
-          <div class="card-eyebrow card-eyebrow-row">
-            <span class="card-eyebrow-left">
-              <!-- Carbon: Lightning -->
-              <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M11.61,29.92a1,1,0,0,1-.6-1.07L12.83,17H8a1,1,0,0,1-1-1.23l3-13A1,1,0,0,1,11,2H21a1,1,0,0,1,.78.37,1,1,0,0,1,.2.85L20.25,11H25a1,1,0,0,1,.9.56,1,1,0,0,1-.11,1l-13,17A1,1,0,0,1,12,30,1.09,1.09,0,0,1,11.61,29.92ZM17.75,13l2-9H11.8L9.26,15h5.91L13.58,25.28,23,13Z"/></svg>
-              <span id="sessionHeading" role="heading" aria-level="1" data-i18n="home.session">Current Session</span>
+      <section id="overviewView" class="view" aria-labelledby="providerHeading" hidden>
+        <div id="overviewCards" class="provider-groups"></div>
+      </section>
+
+      <template id="overviewCardTemplate">
+        <section class="card overview-card">
+          <div class="overview-title">
+            <!-- The title opens the provider's own page; a click anywhere else
+                 on the card that is not another control does the same. -->
+            <span class="overview-heading" role="heading" aria-level="2">
+              <button type="button" class="overview-open" data-overview-open>
+                <span data-overview-icon aria-hidden="true"></span>
+                <span data-overview-title></span>
+                <!-- Carbon: ChevronRight -->
+                <svg class="overview-chevron" viewBox="0 0 32 32" aria-hidden="true"><path d="M22 16L12 26l-1.4-1.4L19.2 16 10.6 7.4 12 6z"/></svg>
+              </button>
             </span>
-            <span id="peakHoursBadge" class="peak-badge" hidden>
-              <span data-i18n="home.peakHours">Peak hours</span>
-              <button type="button" class="cost-info-btn" id="peakHoursInfo" tabindex="0" aria-label="Peak hours info">
+            <span class="overview-title-end">
+            <!-- Shown only when the reading is old; the full sentence is the
+                 card's accessible description. -->
+            <span class="overview-reading" data-overview-stale aria-hidden="true" hidden>
+              <!-- Carbon: Time -->
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 30a14 14 0 1 1 14-14 14 14 0 0 1-14 14zm0-26a12 12 0 1 0 12 12A12 12 0 0 0 16 4z"/><path d="M20.59 22L15 16.41V7h2v8.58l5 5.01L20.59 22z"/></svg>
+              <span data-stale-text></span>
+            </span>
+            <span class="peak-badge" data-overview-peak hidden>
+              <span data-peak-label></span>
+              <button type="button" class="cost-info-btn" data-peak-info>
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
             </span>
-          </div>
-          <div class="quota-headline">
-            <span class="quota-value-group">
-              <span class="quota-percent" id="sessionPercent">--</span>
-              <span class="quota-suffix" id="sessionQuotaSuffix" aria-hidden="true"></span>
             </span>
-            <div class="quota-pace-stack">
-              <div id="sessionPace" class="quota-pace" data-status="no_data">--</div>
+          </div>
+          <div class="overview-sections" data-overview-sections></div>
+          <p class="overview-status" data-overview-status role="status" aria-live="polite" hidden>
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+            <span data-status-text></span>
+          </p>
+          <span class="notif-label" data-overview-reading></span>
+        </section>
+      </template>
+
+      <template id="overviewSectionTemplate">
+        <div class="overview-section">
+          <span class="overview-group-title" role="heading" aria-level="3" data-group-title hidden></span>
+          <!-- Rows are flat grids: the same children lay out as the large
+               session row or as a compact two-line row (.overview-compact). -->
+          <div class="quota-row" data-window="session">
+            <span class="quota-row-label" data-label></span>
+            <span class="quota-value-group">
+              <span class="quota-percent" data-percent>--</span>
+              <span class="quota-suffix" data-suffix></span>
+            </span>
+            <div class="quota-pace" data-pace data-status="no_data" tabindex="0">--</div>
+            <div class="meter" data-meter aria-hidden="true"></div>
+            <span class="reset-line" data-reset>--</span>
+          </div>
+          <div class="quota-row overview-compact" data-window="weekly">
+            <span class="quota-row-label" data-label></span>
+            <span class="quota-value-group">
+              <span class="quota-percent" data-percent>--</span>
+              <span class="quota-suffix" data-suffix></span>
+            </span>
+            <div class="meter" data-meter aria-hidden="true"></div>
+            <span class="reset-line" data-reset>--</span>
+          </div>
+          <p class="overview-status" data-section-status></p>
+        </div>
+      </template>
+
+      <section id="mainView" class="view" aria-labelledby="providerHeading" hidden>
+        <!-- Same card and row grid as the Overview card, without the provider
+             title the panel header already shows. -->
+        <section class="card overview-card" aria-labelledby="sessionHeading">
+          <div class="overview-section">
+            <div class="quota-row" data-window="session">
+              <span class="quota-row-label" id="sessionHeading" role="heading" aria-level="2" data-i18n="home.session">5h Session</span>
+              <span id="peakHoursBadge" class="peak-badge" hidden>
+                <span data-i18n="home.peakHours">Peak</span>
+                <button type="button" class="cost-info-btn" id="peakHoursInfo" tabindex="0" aria-label="Peak hours info">
+                  <!-- Carbon: Information -->
+                  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+                </button>
+              </span>
+              <span class="quota-value-group">
+                <span class="quota-percent" id="sessionPercent">--</span>
+                <span class="quota-suffix" id="sessionQuotaSuffix"></span>
+              </span>
+              <div id="sessionPace" class="quota-pace" data-status="no_data" tabindex="0" aria-describedby="sessionPaceHint">--</div>
+              <span id="sessionPaceHint" hidden></span>
+              <div id="sessionMeter" class="meter" aria-hidden="true"></div>
+              <span id="sessionReset" class="reset-line">--</span>
+            </div>
+            <div class="quota-row overview-compact" data-window="weekly">
+              <span class="quota-row-label" id="weeklyHeading" role="heading" aria-level="2" data-i18n="home.weekly">Weekly Limit</span>
+              <span class="quota-value-group">
+                <span class="quota-percent" id="weeklyPercent">--</span>
+                <span class="quota-suffix" id="weeklyQuotaSuffix"></span>
+              </span>
+              <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
+              <span id="weeklyReset" class="reset-line">--</span>
             </div>
           </div>
-          <div id="sessionMeter" class="meter" aria-hidden="true"></div>
-          <div class="quota-meta">
-            <span id="sessionReset" class="reset-line">--</span>
-          </div>
         </section>
 
-        <section class="card quota-panel" aria-labelledby="weeklyHeading">
-          <div class="card-eyebrow">
-            <!-- Carbon: ArrayDateTime -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20,14c-3.3137,0-6,2.6863-6,6s2.6863,6,6,6,6-2.6863,6-6-2.6863-6-6-6ZM21.5859,23l-2.5859-2.5854v-4.4143h2v3.5857l2,2-1.4141,1.4141ZM8,9h3v2.0001h2v-2.0001h6v2.0001h2v-2.0001h3v4h2v-4c0-1.1-.9-2-2-2h-3v-2h-2v2h-6v-2h-2v2h-3c-1.1,0-2,.9-2,2v14c0,1.1.9,2,2,2h4v-2h-4v-14ZM4,24h-2v4c0,1.1.9,2,2,2h4v-2h-4v-4ZM28,28h-4v2h4c1.1,0,2-.9,2-2v-4h-2v4ZM4,4h4v-2h-4c-1.1,0-2,.9-2,2v4h2v-4ZM28,2h-4v2h4v4h2v-4c0-1.1-.9-2-2-2Z"/></svg>
-            <span id="weeklyHeading" role="heading" aria-level="2" data-i18n="home.weekly">Weekly Limit</span>
-          </div>
-          <div class="quota-headline">
-            <span class="quota-value-group">
-              <span class="quota-percent" id="weeklyPercent">--</span>
-              <span class="quota-suffix" id="weeklyQuotaSuffix" aria-hidden="true"></span>
-            </span>
-          </div>
-          <div id="weeklyMeter" class="meter" aria-hidden="true"></div>
-          <div class="quota-meta">
-            <span id="weeklyReset" class="reset-line">--</span>
-          </div>
-        </section>
+        <!-- Weekly quotas the API scopes to one model (Fable), one card each. -->
+        <div id="claudeScopedGroups" class="provider-groups"></div>
 
-        <section class="card quota-panel quota-panel--extra" id="extraUsageCard" aria-labelledby="extraUsageHeading" hidden>
-          <div class="card-eyebrow">
-            <!-- Carbon: Wallet -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26,6H6A2,2,0,0,0,4,8V24a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V8A2,2,0,0,0,26,6Zm0,2v3H6V8ZM6,24V13H26V24Z"/><path d="M21 18H24V20H21z"/></svg>
-            <span id="extraUsageHeading" role="heading" aria-level="2" data-i18n="home.extraUsage">Extra usage</span>
-          </div>
-          <div class="quota-headline quota-headline--extra">
+        <section class="card quota-panel--extra" id="extraUsageCard" aria-labelledby="extraUsageHeading" hidden>
+          <div class="extra-usage-data">
+            <span id="extraUsageHeading" class="extra-usage-label" role="heading" aria-level="2" data-i18n="home.extraUsage">Extra usage</span>
             <span class="quota-credits">
               <span class="quota-credits-used" id="extraUsedCredits">--</span>
               <span class="quota-credits-sep" aria-hidden="true">/</span>
               <span class="quota-credits-limit" id="extraMonthlyLimit">--</span>
             </span>
           </div>
+          <!-- Share of the monthly limit spent, coloured like the session meter. -->
+          <svg class="extra-gauge" id="extraGauge" viewBox="0 0 32 32" aria-hidden="true">
+            <circle class="extra-gauge-track" cx="16" cy="16" r="14.4" pathLength="100"/>
+            <circle class="extra-gauge-glow" cx="16" cy="16" r="14.4" pathLength="100"/>
+            <circle class="extra-gauge-fill" cx="16" cy="16" r="14.4" pathLength="100"/>
+          </svg>
         </section>
 
         <section class="grid">
           <article class="card cost-card" aria-labelledby="todayHeading">
-            <span class="card-eyebrow" id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
-            <span class="cost-estimate-row">
-              <span data-i18n="home.costEstimate">Usage estimate</span>
+            <div class="card-eyebrow">
+              <span id="todayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
               <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
-            </span>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
             <span class="stat-value" id="todayCost">--</span>
             <span class="cost-tokens" id="todayTokens"></span>
           </article>
           <article class="card cost-card" aria-labelledby="monthHeading">
-            <span class="card-eyebrow" id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
-            <span class="cost-estimate-row">
-              <span data-i18n="home.costEstimate">Usage estimate</span>
+            <div class="card-eyebrow">
+              <span id="monthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
               <button type="button" class="cost-info-btn" data-i18n-tooltip="home.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="home.costTooltip">
                 <!-- Carbon: Information -->
                 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
               </button>
-            </span>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
             <span class="stat-value" id="monthCost">--</span>
             <span class="cost-tokens" id="monthTokens"></span>
           </article>
         </section>
 
-        <p id="errorText" class="error" role="alert" aria-live="assertive" aria-atomic="true"></p>
-        <button id="reauthButton" class="reauth-button" hidden></button>
+      </section>
+
+      <p id="errorText" class="error" role="alert" aria-live="assertive" aria-atomic="true"></p>
+      <button id="reauthButton" class="reauth-button" hidden></button>
+
+      <!-- Codex / Antigravity: one card per quota group, each holding a group
+           from #overviewSectionTemplate. The heading names the provider shown. -->
+      <section id="providerView" class="view" aria-labelledby="providerHeading" hidden>
+        <div id="providerGroups" class="provider-groups"></div>
+        <section id="providerCostGrid" class="grid" hidden>
+          <article class="card cost-card" aria-labelledby="providerTodayHeading">
+            <div class="card-eyebrow">
+              <span id="providerTodayHeading" role="heading" aria-level="2" data-i18n="home.today">Today</span>
+              <button type="button" class="cost-info-btn" data-i18n-tooltip="codex.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="codex.costTooltip">
+                <!-- Carbon: Information -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+              </button>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
+            <span class="stat-value" id="providerTodayCost">--</span>
+            <span class="cost-tokens" id="providerTodayTokens"></span>
+          </article>
+          <article class="card cost-card" aria-labelledby="providerMonthHeading">
+            <div class="card-eyebrow">
+              <span id="providerMonthHeading" role="heading" aria-level="2" data-i18n="home.month">This Month</span>
+              <button type="button" class="cost-info-btn" data-i18n-tooltip="codex.costTooltip" tabindex="0" aria-label="Usage calculation info" data-i18n-aria-label="codex.costTooltip">
+                <!-- Carbon: Information -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16,2A14,14,0,1,0,30,16,14,14,0,0,0,16,2Zm0,26A12,12,0,1,1,28,16,12,12,0,0,1,16,28Z"/><path d="M16 13H14V23H18V21H16zM15.5 8.5A1.5 1.5 0 1 0 17 10 1.5 1.5 0 0 0 15.5 8.5z"/></svg>
+              </button>
+            </div>
+            <span class="cost-estimate-row" data-i18n="home.costEstimate">Estimate</span>
+            <span class="stat-value" id="providerMonthCost">--</span>
+            <span class="cost-tokens" id="providerMonthTokens"></span>
+          </article>
+        </section>
+        <p id="providerStatus" class="provider-status" role="status" aria-live="polite" hidden>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M29 26H3a1 1 0 01-.88-1.47l13-24a1 1 0 011.76 0l13 24A1 1 0 0129 26zm-24.2-2h22.4L16 5.3z"/><path d="M15 12h2v8h-2zm1 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+          <span data-status-text></span>
+        </p>
       </section>
 
       <section id="settingsView" class="view settings-stack" aria-labelledby="settingsTitle" hidden>
-        <div class="settings-back">
-          <button class="back-btn" id="backButton">
-            <!-- Carbon: ArrowLeft -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 26L4 16 14 6l1.41 1.41L6.83 16l8.58 8.59z"/><path d="M5 15h23v2H5z"/></svg>
-            <span data-i18n="settings.back">Back</span>
-          </button>
-          <span class="settings-title" id="settingsTitle" role="heading" aria-level="1" tabindex="-1" data-i18n="settings.title">Settings</span>
-        </div>
-
         <div class="account-card">
           <div class="account-inner">
             <p class="account-name" id="settingsName">--</p>
@@ -419,16 +556,16 @@
             </select>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" id="settingsLaunchWithClaudeCodeLabel" data-i18n="settings.launchWithClaudeCode">Open with Claude Code</span>
-            <label class="switch" for="settingsLaunchWithClaudeCodeToggle">
-              <input id="settingsLaunchWithClaudeCodeToggle" type="checkbox" aria-labelledby="settingsLaunchWithClaudeCodeLabel" />
+            <span class="settings-row-label" id="settingsStartupLabel" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
+            <label class="switch" for="settingsStartupToggle">
+              <input id="settingsStartupToggle" type="checkbox" aria-labelledby="settingsStartupLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
           <div class="settings-row">
-            <span class="settings-row-label" id="settingsStartupLabel" data-i18n="settings.startupOpenAtLogin">Start with Windows</span>
-            <label class="switch" for="settingsStartupToggle">
-              <input id="settingsStartupToggle" type="checkbox" aria-labelledby="settingsStartupLabel" />
+            <span class="settings-row-label" id="settingsLaunchWithClaudeCodeLabel" data-i18n="settings.launchWithClaudeCode">Open with Claude Code</span>
+            <label class="switch" for="settingsLaunchWithClaudeCodeToggle">
+              <input id="settingsLaunchWithClaudeCodeToggle" type="checkbox" aria-labelledby="settingsLaunchWithClaudeCodeLabel" />
               <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
             </label>
           </div>
@@ -605,7 +742,6 @@
       </div><!-- end shell-scroll -->
 
       <footer class="app-footer">
-      <div class="footer-card">
         <div class="footer-updated-row">
           <!-- 4x4 pulse. Static markup + CSS keyframes: the zone classes encode
                what dotMatrix.js used to compute per frame in a rAF loop. Row-major;
@@ -630,29 +766,19 @@
           </span>
           <span id="lastUpdated">--</span>
         </div>
-        <div class="footer-buttons">
-          <a class="footer-link" id="openClaudeLink" href="#" title="Open claude.ai" data-i18n-title="footer.openClaude">
-            <span data-i18n="footer.openClaude">Open claude.ai</span>
-            <!-- Carbon: ArrowUpRight -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M26 6H14V8h10.59L6 26.59 7.41 28 26 9.41V20h2V6z"/></svg>
-          </a>
-          <button class="footer-quit-btn" id="footerQuitButton" title="Quit" data-i18n-title="footer.quit">
-            <!-- Carbon: Power -->
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22.5,5.74l-1,1.73a11,11,0,1,1-11,0l-1-1.73a13,13,0,1,0,13,0Z"/><path d="M15 2H17V16H15z"/></svg>
-            <span data-i18n="footer.quit">Shut down</span>
-          </button>
-        </div>
-      </div>
       </footer>
+      </div><!-- end panel -->
+      </div><!-- end shell-body -->
     </main>
 
     <span id="politeAnnouncer" role="status" aria-live="polite" aria-atomic="true"></span>
     <span id="assertiveAnnouncer" role="alert" aria-live="assertive" aria-atomic="true"></span>
 
-    <!-- Shared tooltip for the three .cost-info-btn triggers (Today/Month
-         cost info + peak-hours info). Each trigger's aria-label already
-         carries this same sentence as its accessible name, so the bubble
-         itself is aria-hidden — a screen reader must not announce it twice. -->
+    <!-- Shared tooltip for the .cost-info-btn triggers (Today/Month cost
+         info + peak-hours info) and the session pace badge. Each trigger
+         already exposes this same sentence (aria-label, or aria-describedby
+         for the pace badge), so the bubble itself is aria-hidden — a screen
+         reader must not announce it twice. -->
     <div class="tooltip" id="tooltip" aria-hidden="true" data-show="false"></div>
 
     <script src="./siphonBridge.js"></script>

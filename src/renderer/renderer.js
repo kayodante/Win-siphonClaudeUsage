@@ -5,6 +5,7 @@ import {
   formatCurrency,
   formatPercent,
   formatTokens,
+  formatWeekdayClock,
   hydrateSlot,
   levelForPercent,
   maskEmail,
@@ -14,12 +15,20 @@ import { logSafeError, redactSensitive } from '../shared/diagnostics.js';
 import { SUPPORTED_LANGUAGES, t, tFormat, formatCommandError } from '../shared/i18n.js';
 import { buildUsagePace, SESSION_WINDOW_MS } from '../shared/pace.js';
 import { isPeakHour, peakHoursLocalRange } from '../shared/peakHours.js';
-import { buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
-import { resolveView } from './viewState.js';
+import { buildProviderResetLine, buildSessionResetLine, buildWeeklyResetLine } from '../shared/resetCopy.js';
+import { createViewSwitcher } from './viewTransition.js';
+import { alertLevel, claudeScopedSections, detectThresholdCrossings, entranceCountUpTiming, extractChannelPercents, isResetDrop, measuredPercent, overviewProviders, providerSessionPeak, resolveNavigation, resolveProvider, resolveView, settingsControlState, showsClaudeErrors, viewDirection } from './viewState.js';
 
 let i18nCache = null;
 
 const elements = {
+  overviewButton: document.querySelector('#overviewButton'),
+  overviewView: document.querySelector('#overviewView'),
+  overviewCards: document.querySelector('#overviewCards'),
+  overviewCardTemplate: document.querySelector('#overviewCardTemplate'),
+  overviewSectionTemplate: document.querySelector('#overviewSectionTemplate'),
+  rail: document.querySelector('#navigationRail'),
+  railToggleButton: document.querySelector('#railToggleButton'),
   refreshButton: document.querySelector('#refreshButton'),
   settingsButton: document.querySelector('#settingsButton'),
   backButton: document.querySelector('#backButton'),
@@ -39,12 +48,27 @@ const elements = {
   onboardCountdown: document.querySelector('#onboardCountdown'),
   onboardHatchNotice: document.querySelector('#onboardHatchNotice'),
   mainView: document.querySelector('#mainView'),
+  providerView: document.querySelector('#providerView'),
+  providerHeading: document.querySelector('#providerHeading'),
+  providerGroups: document.querySelector('#providerGroups'),
+  claudeScopedGroups: document.querySelector('#claudeScopedGroups'),
+  providerCostGrid: document.querySelector('#providerCostGrid'),
+  providerTodayCost: document.querySelector('#providerTodayCost'),
+  providerTodayTokens: document.querySelector('#providerTodayTokens'),
+  providerMonthCost: document.querySelector('#providerMonthCost'),
+  providerMonthTokens: document.querySelector('#providerMonthTokens'),
+  providerStatus: document.querySelector('#providerStatus'),
+  railProviders: document.querySelector('.rail-providers'),
+  providerClaudeButton: document.querySelector('#providerClaudeButton'),
+  providerCodexButton: document.querySelector('#providerCodexButton'),
+  providerAntigravityButton: document.querySelector('#providerAntigravityButton'),
   settingsView: document.querySelector('#settingsView'),
   sessionPercent: document.querySelector('#sessionPercent'),
   sessionQuotaSuffix: document.querySelector('#sessionQuotaSuffix'),
   sessionMeter: document.querySelector('#sessionMeter'),
   sessionReset: document.querySelector('#sessionReset'),
   sessionPace: document.querySelector('#sessionPace'),
+  sessionPaceHint: document.querySelector('#sessionPaceHint'),
   peakHoursBadge: document.querySelector('#peakHoursBadge'),
   peakHoursInfo: document.querySelector('#peakHoursInfo'),
   weeklyPercent: document.querySelector('#weeklyPercent'),
@@ -54,10 +78,9 @@ const elements = {
   extraUsageCard: document.querySelector('#extraUsageCard'),
   extraUsedCredits: document.querySelector('#extraUsedCredits'),
   extraMonthlyLimit: document.querySelector('#extraMonthlyLimit'),
+  extraGauge: document.querySelector('#extraGauge'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
-  notificationIconOn: document.querySelector('#notificationIconOn'),
-  notificationIconOff: document.querySelector('#notificationIconOff'),
   todayCost: document.querySelector('#todayCost'),
   todayTokens: document.querySelector('#todayTokens'),
   monthCost: document.querySelector('#monthCost'),
@@ -111,8 +134,10 @@ const elements = {
   appVersionText: document.querySelector('#appVersionText'),
   githubLink: document.querySelector('#githubLink'),
   highUsageBanner: document.querySelector('#highUsageBanner'),
+  highUsageBannerTitle: document.querySelector('#highUsageBanner .usage-alert-title'),
   highUsageBannerDismiss: document.querySelector('#highUsageBannerDismiss'),
   criticalBanner: document.querySelector('#criticalBanner'),
+  criticalBannerTitle: document.querySelector('#criticalBanner .usage-alert-title'),
   criticalBannerDismiss: document.querySelector('#criticalBannerDismiss'),
   offlineBanner: document.querySelector('#offlineBanner'),
   offlineBannerDismiss: document.querySelector('#offlineBannerDismiss'),
@@ -135,23 +160,48 @@ let appInfo = {
 };
 let currentState = null;
 let requestedView = 'main';
+// Not persisted: the app always opens on Overview.
+let requestedProvider = 'overview';
+// View state lives up here, not beside renderActiveView: the bootstrap's
+// first render() runs before module evaluation reaches the bottom half of
+// this file, and a `let` read before its line throws. Any top-level
+// `const`/`let` that render() reads belongs in this block
+// (test/renderer-bootstrap.test.js enforces it).
+const crossfadeTo = createViewSwitcher(
+  [elements.onboardView, elements.overviewView, elements.mainView, elements.providerView, elements.settingsView],
+  { fadeMs: () => cssMs('--duration-view-fade', 150), shiftPx: () => (reducedMotion() ? 0 : 6) }
+);
+let renderedView = null;
+let renderedProvider = null;
+const PROVIDER_NAMES = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
+// Antigravity groups read Gemini first, then Argon, then Claude and GPT,
+// whatever order the language server reports them in.
+const SECTION_ORDER = ['gemini', 'argon', 'thirdParty'];
+const overviewCards = new Map();
+const groupCards = new Map();
+const ENTER_SEQUENCE_MS = 900;
+const ENTER_DEDUPE_MS = 250;
+// An Overview card shows its source time once the reading is this old.
+const STALE_READING_MS = 60 * 60 * 1000;
+let enterSequenceTimer = null;
+let windowEntranceFrame = null;
+let lastEntranceAt = -Infinity;
+let settingsReturnFocus = null;
 let offlineDismissed = false;
 let updateDismissed = false;
-let highUsageDismissed = false;
-let criticalDismissed = false;
+const highUsageDismissed = new Set();
+const criticalDismissed = new Set();
 let currentSettingsTab = 'system';
 let _tabTransitioning = false;
 let _tabTransitionTimer = null;
-let prevSessionPercent = null;
+const prevChannelPercents = new Map();
 let prevRenderedSessionPct = null;
-let prevRenderedWeeklyPct = null;
 let updateUrl = null;
 let downloadState = 'idle'; // 'idle' | 'downloading' | 'ready'
 let lastDownloadAnnouncementBucket = -1;
 let updateVersion = null;
 let updateDownloadUrl = null;
 let updateChecksumUrl = null;
-let isEntering = false;
 const animatingElements = new Map();
 
 for (const announcer of [elements.politeAnnouncer, elements.assertiveAnnouncer]) {
@@ -205,7 +255,7 @@ function setErrorText(message) {
   const text = String(message ?? '');
   if (elements.errorText.textContent === text) return;
   elements.errorText.textContent = text;
-  if (text && elements.mainView.hidden) {
+  if (text && elements.errorText.hidden) {
     announce(elements.assertiveAnnouncer, text);
   } else if (!text) {
     lastAnnouncements.delete(elements.assertiveAnnouncer);
@@ -232,7 +282,7 @@ function showBanner(el) {
 
 function hideBanner(el) {
   if (el.hidden || el.hasAttribute('data-leaving')) return;
-  if (reducedMotion()) { el.hidden = true; return; }
+  // Reduced motion keeps the exit's opacity fade (styles.css drops the travel).
   el.setAttribute('data-leaving', '');
   clearTimeout(bannerLeaveTimers.get(el));
   bannerLeaveTimers.set(el, setTimeout(() => {
@@ -241,40 +291,32 @@ function hideBanner(el) {
   }, cssMs('--duration-banner-leave', 160)));
 }
 
-function flashUpdate(el) {
-  if (reducedMotion()) return;
-  el.classList.remove('data-updated');
-  void el.offsetWidth;
-  el.classList.add('data-updated');
-  el.addEventListener('animationend', () => el.classList.remove('data-updated'), { once: true });
+function announceDownloadProgress(progress, previousState, lang) {
+  // The one-line banner announces the start itself, so bucket 0 would be a
+  // duplicate; progress buckets pick up at 25%.
+  if (previousState !== 'downloading') lastDownloadAnnouncementBucket = 0;
+  const bucket = Math.floor(progress / 25) * 25;
+  if (bucket > lastDownloadAnnouncementBucket) {
+    lastDownloadAnnouncementBucket = bucket;
+    announce(elements.politeAnnouncer, `${t('update.title', lang)} ${bucket}%`);
+  }
 }
 
 function setDownloadUI(state, percent) {
   const btn = elements.updateBannerDownload;
   const dismiss = elements.updateBannerDismiss;
-  const lang = currentState?.preferences?.language ?? 'en';
+  const lang = currentLanguage();
   const previousState = downloadState;
   downloadState = state;
   btn.dataset.state = state;
   if (state === 'downloading') {
-    const progress = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    const progress = clampPercent(percent);
     btn.textContent = `${progress}%`;
     btn.disabled = true;
     dismiss.hidden = true;
-    // The one-line banner announces the start itself, so bucket 0 would be a
-    // duplicate; progress buckets pick up at 25%.
-    if (previousState !== 'downloading') lastDownloadAnnouncementBucket = 0;
-    const bucket = Math.floor(progress / 25) * 25;
-    if (bucket > lastDownloadAnnouncementBucket) {
-      lastDownloadAnnouncementBucket = bucket;
-      announce(elements.politeAnnouncer, `${t('update.title', lang)} ${bucket}%`);
-    }
-  } else if (state === 'ready') {
-    btn.textContent = t('update.restart', lang);
-    btn.disabled = false;
-    dismiss.hidden = false;
+    announceDownloadProgress(progress, previousState, lang);
   } else {
-    btn.textContent = t('update.download', lang);
+    btn.textContent = t(state === 'ready' ? 'update.restart' : 'update.download', lang);
     btn.disabled = false;
     dismiss.hidden = false;
   }
@@ -321,9 +363,8 @@ async function openExternal(url) {
     }
   }
 }
-function triggerResetFlash() {
-  if (reducedMotion()) return;
-  const el = elements.sessionPercent;
+function triggerResetFlash(el = elements.sessionPercent) {
+  if (reducedMotion() || !el) return;
   el.removeAttribute('data-just-reset');
   void el.offsetWidth;
   el.dataset.justReset = '';
@@ -333,7 +374,7 @@ function triggerResetFlash() {
 // Empty submit and a rejected auth_submit both land here. `.is-error` (the
 // border + the routed message) and `.is-shaking` are kept orthogonal so a
 // second failed attempt can replay the shake without flickering the border
-// treatment off and back on — same reflow dance as flashUpdate/triggerResetFlash.
+// treatment off and back on — same reflow dance as triggerResetFlash.
 function showCodeInputError(message) {
   const el = elements.onboardCodeInput;
   el.classList.add('is-error');
@@ -377,20 +418,24 @@ function setQuotaColorDrift(element, pct) {
   element.style.setProperty('--quota-h', h.toFixed(2));
 }
 
-// ── Tooltip (Today/Month "Usage estimate" info + peak-hours info) ──
+// ── Tooltip (Today/Month "Usage estimate" info, peak hours, session pace) ──
 // Native `title` can't do this job: the copy is multi-line and runs past
-// 100 characters, and the three .cost-info-btn triggers live inside
-// .shell-scroll (overflow-y: auto), which would clip an absolutely
-// positioned bubble. One fixed-position element, shared by all three
-// triggers, reads its text from dataset.tooltip — never `.title` for these
-// three — and repositions itself in viewport coordinates on every show.
-// applyTranslations() and updateQuotaMeters() are the two writers of that
-// text; see the data-i18n-tooltip loop and the peakHoursInfo branch below.
+// 100 characters, and the triggers live inside .shell-scroll
+// (overflow-y: auto), which would clip an absolutely positioned bubble.
+// One fixed-position element, shared by every trigger, reads its text from
+// dataset.tooltip — never `.title` for these — and repositions itself in
+// viewport coordinates on every show. applyTranslations(),
+// updateQuotaMeters() and renderPace() are the writers of that text.
+const TOOLTIP_APPEAR_DELAY_MS = 80;
+const TOOLTIP_WARM_MS = 300;
 let tooltipTrigger = null;
+let tooltipAppearTimer = null;
+let tooltipWarmTimer = null;
+let tooltipWarm = false;
 
-function positionTooltip(trigger) {
+function positionTooltip(anchor) {
   const tip = elements.tooltip;
-  const rect = trigger.getBoundingClientRect();
+  const rect = anchor.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
   const margin = 8;
   // Clamp horizontally to the viewport — the window's minimum width is
@@ -398,31 +443,62 @@ function positionTooltip(trigger) {
   let left = rect.left + rect.width / 2 - tipRect.width / 2;
   left = Math.max(margin, Math.min(left, window.innerWidth - tipRect.width - margin));
   let top = rect.top - tipRect.height - margin;
-  if (top < margin) top = rect.bottom + margin; // no room above: flip below
+  const flipped = top < margin;
+  if (flipped) top = rect.bottom + margin; // no room above: flip below
+  tip.dataset.placement = flipped ? 'bottom' : 'top';
+  // Grow from the trigger, not from the bubble's own centre, when the clamp
+  // above has pushed the bubble sideways.
+  tip.style.setProperty('--tooltip-origin-x', `${rect.left + rect.width / 2 - left}px`);
   tip.style.left = `${left}px`;
   tip.style.top = `${top}px`;
 }
 
-function showTooltip(trigger) {
+function showTooltip(trigger, anchor = trigger) {
   const text = trigger.dataset.tooltip;
   if (!text) return;
+  clearTimeout(tooltipWarmTimer);
+  clearTimeout(tooltipAppearTimer);
+  if (tooltipWarm) {
+    elements.tooltip.dataset.instant = '';
+  } else {
+    delete elements.tooltip.dataset.instant;
+    tooltipAppearTimer = setTimeout(() => {
+      tooltipWarm = true;
+    }, TOOLTIP_APPEAR_DELAY_MS);
+  }
   tooltipTrigger = trigger;
   elements.tooltip.textContent = text;
-  positionTooltip(trigger);
+  positionTooltip(anchor);
   elements.tooltip.dataset.show = 'true';
 }
 
 function hideTooltip() {
+  clearTimeout(tooltipAppearTimer);
+  clearTimeout(tooltipWarmTimer);
   tooltipTrigger = null;
   elements.tooltip.dataset.show = 'false';
+  if (tooltipWarm) {
+    tooltipWarmTimer = setTimeout(() => {
+      tooltipWarm = false;
+      delete elements.tooltip.dataset.instant;
+    }, TOOLTIP_WARM_MS);
+  }
+}
+
+// Hovering anywhere on hoverTarget opens the trigger's tooltip; focus stays on
+// the trigger. The peak badge uses this so the whole "PEAK" pill responds,
+// not just its small info icon (which keeps keyboard focus).
+function wireTooltip(trigger, hoverTarget = trigger) {
+  hoverTarget.addEventListener('pointerenter', () => showTooltip(trigger, hoverTarget));
+  hoverTarget.addEventListener('pointerleave', hideTooltip);
+  trigger.addEventListener('focus', () => showTooltip(trigger));
+  trigger.addEventListener('blur', hideTooltip);
 }
 
 document.querySelectorAll('.cost-info-btn').forEach(trigger => {
-  trigger.addEventListener('pointerenter', () => showTooltip(trigger));
-  trigger.addEventListener('pointerleave', hideTooltip);
-  trigger.addEventListener('focus', () => showTooltip(trigger));
-  trigger.addEventListener('blur', hideTooltip);
+  wireTooltip(trigger, trigger.closest('.peak-badge') ?? trigger);
 });
+wireTooltip(elements.sessionPace);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && tooltipTrigger) hideTooltip();
 });
@@ -430,31 +506,72 @@ document.addEventListener('keydown', event => {
 // underneath it would otherwise leave it pointing at empty space.
 document.querySelector('.shell-scroll')?.addEventListener('scroll', hideTooltip, { passive: true });
 
+function onRovingKeydown(getOptions, onSelect = (options, nextIndex) => {
+  options[nextIndex].focus();
+  options[nextIndex].click();
+}) {
+  return event => {
+    const options = getOptions();
+    const currentIndex = options.indexOf(event.target);
+    if (currentIndex < 0) return;
+
+    let nextIndex;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = options.length - 1;
+    else return;
+
+    event.preventDefault();
+    onSelect(options, nextIndex);
+  };
+}
+
 elements.refreshButton.addEventListener('click', () => refreshNow());
-elements.settingsButton.addEventListener('click', () => window.siphon.showSettingsView());
+elements.settingsButton.addEventListener('click', () => showView('settings'));
 elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
 elements.settingsTabNotification.addEventListener('click', () => switchSettingsTab('notification'));
 elements.settingsTabWidget.addEventListener('click', () => switchSettingsTab('widget'));
-elements.settingsTabs.addEventListener('keydown', event => {
-  const tabs = [
-    ['system', elements.settingsTabSystem],
-    ['notification', elements.settingsTabNotification],
-    ['widget', elements.settingsTabWidget]
-  ];
-  const currentIndex = tabs.findIndex(([, tab]) => tab === event.target);
-  if (currentIndex < 0) return;
+elements.settingsTabs.addEventListener('keydown', onRovingKeydown(
+  () => [elements.settingsTabSystem, elements.settingsTabNotification, elements.settingsTabWidget],
+  (_, nextIndex) => switchSettingsTab(['system', 'notification', 'widget'][nextIndex], { focus: true })
+));
+elements.backButton.addEventListener('click', () => showView('main'));
+elements.railToggleButton.addEventListener('click', () => setRailCollapsed(!elements.rail.hidden));
 
-  let nextIndex;
-  if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
-  else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-  else if (event.key === 'Home') nextIndex = 0;
-  else if (event.key === 'End') nextIndex = tabs.length - 1;
-  else return;
-
-  event.preventDefault();
-  switchSettingsTab(tabs[nextIndex][0], { focus: true });
+// The window gives up (or takes back) the rail's width with its right edge
+// fixed, so the panel stays put on screen and only the rail comes and goes.
+// The DOM change and the native resize go out in the same tick to keep them
+// on the same frame.
+function setRailCollapsed(collapsed) {
+  if (elements.rail.hidden === collapsed) return;
+  elements.rail.hidden = collapsed;
+  renderNavigation(currentState);
+  window.siphon.setRailCollapsed(collapsed)?.catch?.(() => {});
+  if (!collapsed && !reducedMotion()) elements.rail.dataset.entering = '';
+}
+elements.rail.addEventListener('animationend', event => {
+  if (event.target === elements.rail) delete elements.rail.dataset.entering;
 });
-elements.backButton.addEventListener('click', () => window.siphon.showMainView());
+// Picking a provider always lands on its dashboard, Settings included.
+for (const [provider, button] of [
+  ['overview', elements.overviewButton],
+  ['claude', elements.providerClaudeButton],
+  ['codex', elements.providerCodexButton],
+  ['antigravity', elements.providerAntigravityButton]
+]) {
+  button.addEventListener('click', () => {
+    requestedProvider = provider;
+    requestedView = 'main';
+    if (currentState) render(currentState);
+  });
+}
+elements.railProviders?.addEventListener('keydown', onRovingKeydown(() => [
+  elements.overviewButton,
+  elements.providerClaudeButton,
+  elements.providerCodexButton,
+  elements.providerAntigravityButton
+].filter(btn => btn && !btn.hidden)));
 async function beginSignIn() {
   try {
     const result = await window.siphon.startSignIn();
@@ -516,7 +633,7 @@ elements.editClaudePathButton.addEventListener('click', async () => {
 document.querySelector('#minimizeButton').addEventListener('click', () => window.siphon.minimize());
 document.querySelector('#closeButton').addEventListener('click', () => window.siphon.closeWindow());
 
-// Footer
+// Rail: usage page + quit
 document.querySelector('#openClaudeLink').addEventListener('click', event => {
   event.preventDefault();
   openExternal('https://claude.ai/settings/usage');
@@ -594,11 +711,11 @@ elements.settingsLimitAlertToggle.addEventListener('change', async event => {
   }
 });
 elements.highUsageBannerDismiss.addEventListener('click', () => {
-  highUsageDismissed = true;
+  highUsageDismissed.add(activeProvider());
   hideBanner(elements.highUsageBanner);
 });
 elements.criticalBannerDismiss.addEventListener('click', () => {
-  criticalDismissed = true;
+  criticalDismissed.add(activeProvider());
   hideBanner(elements.criticalBanner);
 });
 elements.settingsRefreshInterval.addEventListener('change', async event => {
@@ -645,22 +762,10 @@ elements.settingsStyleMini.addEventListener('click', async () => {
     if (message && elements.errorText) setErrorText(message);
   }
 });
-elements.settingsStylePicker.addEventListener('keydown', event => {
-  const options = [elements.settingsStyleClassic, elements.settingsStyleMini];
-  const currentIndex = options.indexOf(event.target);
-  if (currentIndex < 0) return;
-
-  let nextIndex;
-  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length;
-  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length;
-  else if (event.key === 'Home') nextIndex = 0;
-  else if (event.key === 'End') nextIndex = options.length - 1;
-  else return;
-
-  event.preventDefault();
-  options[nextIndex].focus();
-  options[nextIndex].click();
-});
+elements.settingsStylePicker.addEventListener('keydown', onRovingKeydown(() => [
+  elements.settingsStyleClassic,
+  elements.settingsStyleMini
+]));
 elements.settingsStartupToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('startup.openAtLogin', event.target.checked);
@@ -813,17 +918,12 @@ window.siphon.onUpdateError(({ message } = {}) => {
 
 elements.notificationState.addEventListener('click', async () => {
   const enabled = currentState?.preferences?.notifications?.sessionReset ?? true;
+  // Flip on the click, like the switches do, and put it back if saving fails.
+  renderNotificationPill(!enabled);
   try {
     await window.siphon.setPreference('notifications.sessionReset', !enabled);
-    if (!reducedMotion()) {
-      elements.notificationState.classList.remove('notif-pop');
-      void elements.notificationState.offsetWidth;
-      elements.notificationState.classList.add('notif-pop');
-      elements.notificationState.addEventListener('animationend', () => {
-        elements.notificationState.classList.remove('notif-pop');
-      }, { once: true });
-    }
   } catch (error) {
+    renderNotificationPill(enabled);
     handleToggleError('Failed to toggle notifications:', error, null, 'error.saveNotification');
   }
 });
@@ -834,6 +934,15 @@ try {
     elements.appVersionText.textContent = `Siphon - Claude Usage  —  v ${appInfo.version}`;
   }
   window.siphon.onView(showView);
+  window.siphon.onProviderSelect?.(provider => {
+    if (provider === 'claude' || provider === 'codex' || provider === 'antigravity') {
+      requestedProvider = provider;
+      requestedView = 'main';
+      if (currentState) render(currentState);
+      else renderActiveView();
+      queueWindowEntrance();
+    }
+  });
 
 
   if (!i18nCache) {
@@ -870,15 +979,32 @@ function setPercentValue(element, value) {
   element.textContent = formatPercent(value);
 }
 
-function animateCountUp(element, target, setValue, { duration = 650, delay = 0 } = {}) {
+function updateReading(element, target, setValue) {
+  const value = target == null ? '' : String(target);
+  const previous = element.dataset.entryValue;
+  const unchanged = previous === value;
+  element.dataset.entryValue = value;
+  if (unchanged && animatingElements.has(element)) return;
+  // A new reading travels from the one on screen, like a needle, instead of
+  // being swapped in. Unknown readings and the entrance count-up keep their
+  // own paths.
+  if (!unchanged && previous && value && !animatingElements.has(element) && !document.body.dataset.entering) {
+    animateCountUp(element, target, setValue, { duration: 400, from: Number(previous) });
+    return;
+  }
+  cancelCountUp(element);
+  setValue(element, target);
+}
+
+function animateCountUp(element, target, setValue, { duration = 650, delay = 0, from = 0 } = {}) {
   if (target == null || Number.isNaN(target) || reducedMotion()) { setValue(element, target); return; }
   cancelCountUp(element);
-  setValue(element, 0);
+  setValue(element, from);
   const t0 = performance.now() + delay;
   function tick(now) {
     if (now < t0) { animatingElements.set(element, requestAnimationFrame(tick)); return; }
     const p = Math.min((now - t0) / duration, 1);
-    setValue(element, cubicEaseOut(p) * target);
+    setValue(element, from + cubicEaseOut(p) * (target - from));
     if (p < 1) animatingElements.set(element, requestAnimationFrame(tick));
     else animatingElements.delete(element);
   }
@@ -928,6 +1054,10 @@ function startAuthWait(lang) {
   }
 }
 
+function currentQuotaMode(state = currentState) {
+  return state?.preferences?.display?.quotaMode ?? 'used';
+}
+
 function render(state) {
   currentState = state;
   const lang = currentLanguage();
@@ -936,17 +1066,27 @@ function render(state) {
   if (!state.isSignedIn) {
     requestedView = 'main';
   }
-  const session = hydrateSlot(state.quota?.session);
-  const weekly = hydrateSlot(state.quota?.weeklyAll);
-  const sessionPercent = clampPercent(session?.percent ?? 0);
-  const weeklyPercent = clampPercent(weekly?.percent ?? 0);
 
-  handleThresholdSounds(state, sessionPercent);
+  handleThresholdSounds(state);
+  // Compact rows show the used/left suffix only in "left" mode, where the
+  // number and the (always used) meter would otherwise disagree unlabelled.
+  document.body.dataset.quotaMode = currentQuotaMode(state);
 
+  renderOverview(state, lang);
+  renderProviderView(state, lang);
+  renderQuotaSection(state, lang);
+  indexQuotaRows(elements.mainView);
   renderActiveView();
-  renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang });
 
   elements.signOutButton.hidden = !state.isSignedIn;
+  renderOnboarding(state, lang);
+
+  renderSettingsControls(state);
+  renderBannersAndErrors(state, lang);
+  renderSettings(state, lang);
+}
+
+function renderOnboarding(state, lang) {
   const awaitingCode = Boolean(state.awaitingCode);
   const awaitingBrowser = Boolean(state.awaitingBrowser);
   elements.onboardSignInButton.hidden = awaitingCode || awaitingBrowser;
@@ -981,30 +1121,38 @@ function render(state) {
   // The old notice claims the redirect failed. While still waiting it has not
   // failed yet, so the hatch supplies its own line and this one stays hidden.
   elements.onboardFallbackNotice.hidden = awaitingBrowser;
-
-  renderSettingsControls(state, lang);
-  renderBannersAndErrors(state, sessionPercent, lang);
-  renderSettings(state, lang);
 }
 
-function handleThresholdSounds(state, sessionPercent) {
-  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
-  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
+function resetClearedBannerDismissals(state) {
+  for (const provider of ['claude', 'codex', 'antigravity']) {
+    const level = alertLevel(providerSessionPeak(state, provider).percent);
+    if (level !== 'critical') criticalDismissed.delete(provider);
+    if (!level) highUsageDismissed.delete(provider);
+  }
+}
 
-  // Threshold crossing detection — play sound on upward cross
-  if (prevSessionPercent !== null) {
-    if (expireSoundEnabled && prevSessionPercent < 100 && sessionPercent >= 100) playFullSound();
-    else if (limitSoundEnabled && prevSessionPercent < 90 && sessionPercent >= 90) playLimitSound();
-    else if (limitSoundEnabled && prevSessionPercent < 70 && sessionPercent >= 70) playLimitSound();
+function handleThresholdSounds(state) {
+  const expireSound = state.preferences?.notifications?.expireSound ?? false;
+  const limitSound = state.preferences?.notifications?.limitSound ?? false;
+  const currentChannels = extractChannelPercents(state);
+
+  const { playFull, playLimit } = detectThresholdCrossings(prevChannelPercents, currentChannels, {
+    expireSound,
+    limitSound
+  });
+
+  if (playFull) {
+    playFullSound();
+  } else if (playLimit) {
+    playLimitSound();
   }
-  // Reset dismissed state when percent drops back below threshold
-  if (sessionPercent < 70) {
-    highUsageDismissed = false;
-    criticalDismissed = false;
-  } else if (sessionPercent < 90) {
-    criticalDismissed = false;
+
+  prevChannelPercents.clear();
+  for (const [key, pct] of currentChannels) {
+    prevChannelPercents.set(key, pct);
   }
-  prevSessionPercent = sessionPercent;
+
+  resetClearedBannerDismissals(state);
 }
 
 function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang }) {
@@ -1014,150 +1162,120 @@ function updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, ses
   renderMeter(elements.sessionMeter, sessionPercent);
   elements.sessionReset.textContent = buildSessionResetLine(session, now, lang);
   renderPace(elements.sessionPace, sessionPace, lang);
-  const inPeakHours = isPeakHour(now);
-  elements.peakHoursBadge.hidden = !inPeakHours;
-  if (inPeakHours) {
-    const { start, end } = peakHoursLocalRange(now);
-    const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
-    // dataset.tooltip, not .title — see the custom tooltip wired up above,
-    // which is what actually renders this copy.
-    elements.peakHoursInfo.dataset.tooltip = titleText;
-    elements.peakHoursInfo.setAttribute('aria-label', titleText);
-    // This render loop runs every refresh tick; if the tooltip is already
-    // open on this trigger, keep its visible text in sync rather than
-    // waiting for the next hover/focus to pick up the new copy.
-    if (tooltipTrigger === elements.peakHoursInfo) elements.tooltip.textContent = titleText;
-  }
+  renderPeakBadge(elements.peakHoursBadge, elements.peakHoursInfo, now, lang);
 
   renderMeter(elements.weeklyMeter, weeklyPercent);
   elements.weeklyReset.textContent = buildWeeklyResetLine(weekly, now, lang);
 }
 
-function updateStatsAndPills({ state, notificationsEnabled, lang }) {
-  renderNotificationPill(notificationsEnabled, lang);
+// Claude's peak-hours badge: on the Claude page and on its Overview card.
+function renderPeakBadge(badge, info, now, lang) {
+  const inPeakHours = isPeakHour(now);
+  badge.hidden = !inPeakHours;
+  if (!inPeakHours) return;
+  const { start, end } = peakHoursLocalRange(now);
+  const titleText = tFormat('home.peakHoursTooltip', lang, { start, end });
+  // dataset.tooltip, not .title — see the custom tooltip wired up above,
+  // which is what actually renders this copy.
+  info.dataset.tooltip = titleText;
+  info.setAttribute('aria-label', titleText);
+  // This render loop runs every refresh tick; if the tooltip is already
+  // open on this trigger, keep its visible text in sync rather than
+  // waiting for the next hover/focus to pick up the new copy.
+  if (tooltipTrigger === info) elements.tooltip.textContent = titleText;
+}
+
+function updateStatsAndPills(state, lang) {
+  renderNotificationPill(state.preferences?.notifications?.sessionReset ?? true, lang);
   elements.todayTokens.textContent = formatTokens(state.todayStats?.totalTokens, lang) ?? '';
   elements.monthTokens.textContent = formatTokens(state.monthStats?.totalTokens, lang) ?? '';
   updateLastUpdatedLine();
 }
 
-function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode = 'used' }) {
+function updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode = 'used' }) {
   const displaySession = quotaDisplayValue(sessionPercent, mode);
   const displayWeekly = quotaDisplayValue(weeklyPercent, mode);
-  if (entering) {
-    animateCountUp(elements.sessionPercent, displaySession, setPercentValue, { duration: 650, delay: 310 });
-    animateCountUp(elements.weeklyPercent, displayWeekly, setPercentValue, { duration: 650, delay: 380 });
-    animateCountUp(elements.todayCost, state.todayStats?.cost, setCostValue, { duration: 600, delay: 440 });
-    animateCountUp(elements.monthCost, state.monthStats?.cost, setCostValue, { duration: 600, delay: 470 });
-    prevRenderedSessionPct = sessionPercent;
-    prevRenderedWeeklyPct = weeklyPercent;
-  } else {
-    cancelCountUp(elements.sessionPercent);
-    elements.sessionPercent.textContent = session ? formatPercent(displaySession) : '--';
-    if (prevRenderedSessionPct !== null && prevRenderedSessionPct >= 95 && sessionPercent <= 5) {
-      triggerResetFlash();
-    } else if (prevRenderedSessionPct !== null && prevRenderedSessionPct !== sessionPercent) {
-      flashUpdate(elements.sessionPercent);
-    }
-    prevRenderedSessionPct = sessionPercent;
+  updateReading(elements.sessionPercent, session ? displaySession : null, setPercentValue);
+  if (isResetDrop(prevRenderedSessionPct, sessionPercent)) triggerResetFlash();
+  prevRenderedSessionPct = sessionPercent;
 
-    cancelCountUp(elements.weeklyPercent);
-    elements.weeklyPercent.textContent = weekly ? formatPercent(displayWeekly) : '--';
-    if (prevRenderedWeeklyPct !== null && prevRenderedWeeklyPct !== weeklyPercent) {
-      flashUpdate(elements.weeklyPercent);
-    }
-    prevRenderedWeeklyPct = weeklyPercent;
+  updateReading(elements.weeklyPercent, weekly ? displayWeekly : null, setPercentValue);
 
-    if (!animatingElements.has(elements.todayCost))
-      setCostValue(elements.todayCost, state.todayStats?.cost);
-    if (!animatingElements.has(elements.monthCost))
-      setCostValue(elements.monthCost, state.monthStats?.cost);
-  }
+  updateReading(elements.todayCost, state.todayStats?.cost, setCostValue);
+  updateReading(elements.monthCost, state.monthStats?.cost, setCostValue);
 }
 
-function renderQuotaSection({ state, session, weekly, sessionPercent, weeklyPercent, lang }) {
+function renderQuotaSection(state, lang) {
+  const session = hydrateSlot(state.quota?.session);
+  const weekly = hydrateSlot(state.quota?.weeklyAll);
+  const sessionPercent = clampPercent(session?.percent);
+  const weeklyPercent = clampPercent(weekly?.percent);
   const now = new Date();
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
   const sessionPace = buildUsagePace({
     slot: session,
     now,
     windowMs: SESSION_WINDOW_MS
   });
 
-  const mode = state.preferences?.display?.quotaMode ?? 'used';
+  const mode = currentQuotaMode(state);
   const suffixText = t(`quota.suffix.${mode}`, lang);
   elements.sessionQuotaSuffix.textContent = session ? suffixText : '';
   elements.weeklyQuotaSuffix.textContent = weekly ? suffixText : '';
 
   updateQuotaMeters({ session, sessionPercent, weekly, weeklyPercent, sessionPace, now, lang });
   renderExtraUsage(state.quota?.extraUsage);
-  updateStatsAndPills({ state, notificationsEnabled, lang });
+  renderClaudeScopedGroups(state, { now, lang, mode });
+  updateStatsAndPills(state, lang);
 
-  const entering = isEntering;
-  isEntering = false;
-
-  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, entering, mode });
+  updateQuotaAnimations({ state, session, weekly, sessionPercent, weeklyPercent, mode });
 }
 
-function renderSettingsControls(state, lang) {
-  const notificationsEnabled = state.preferences?.notifications?.sessionReset ?? true;
-  const soundEnabled = state.preferences?.notifications?.sound ?? false;
-  const soundVolume = state.preferences?.notifications?.soundVolume ?? 1.0;
-  const expireSoundEnabled = state.preferences?.notifications?.expireSound ?? false;
-  const expireSoundVolume = state.preferences?.notifications?.expireSoundVolume ?? 1.0;
-  const limitSoundEnabled = state.preferences?.notifications?.limitSound ?? false;
-  const limitSoundVolume = state.preferences?.notifications?.limitSoundVolume ?? 1.0;
-  const startupOpenAtLogin = state.preferences?.startup?.openAtLogin ?? false;
-  const floatingStyle = state.preferences?.floating?.style ?? 'classic';
-
-  elements.settingsLanguage.value = lang;
-  elements.settingsNotificationsToggle.checked = notificationsEnabled;
-  elements.settingsSoundToggle.checked = soundEnabled;
-  elements.settingsSoundVolume.value = String(soundVolume);
-  elements.settingsSoundVolume.disabled = !soundEnabled;
-  updateSliderFill(elements.settingsSoundVolume);
-  elements.settingsExpireSoundToggle.checked = expireSoundEnabled;
-  elements.settingsExpireSoundVolume.value = String(expireSoundVolume);
-  elements.settingsExpireSoundVolume.disabled = !expireSoundEnabled;
-  updateSliderFill(elements.settingsExpireSoundVolume);
-  elements.settingsLimitSoundToggle.checked = limitSoundEnabled;
-  elements.settingsLimitSoundVolume.value = String(limitSoundVolume);
-  elements.settingsLimitSoundVolume.disabled = !limitSoundEnabled;
-  updateSliderFill(elements.settingsLimitSoundVolume);
-  elements.settingsExpireAlertToggle.checked = state.preferences?.notifications?.expireAlert ?? false;
-  elements.settingsLimitAlertToggle.checked = state.preferences?.notifications?.limitAlert ?? false;
-  elements.settingsRefreshInterval.value = String(state.preferences?.refresh?.intervalSeconds ?? 30);
-  elements.settingsQuotaMode.value = state.preferences?.display?.quotaMode ?? 'used';
-  elements.settingsFloatingToggle.checked = state.preferences?.floating?.enabled ?? false;
-  elements.settingsPillWeeklyOption.hidden = floatingStyle !== 'mini';
-  elements.settingsPillWeeklyToggle.checked = state.preferences?.floating?.showWeekly ?? true;
-  elements.settingsStyleClassic.dataset.active = String(floatingStyle === 'classic');
-  elements.settingsStyleMini.dataset.active = String(floatingStyle === 'mini');
-  elements.settingsStyleClassic.setAttribute('aria-checked', String(floatingStyle === 'classic'));
-  elements.settingsStyleMini.setAttribute('aria-checked', String(floatingStyle === 'mini'));
-  elements.settingsStyleClassic.tabIndex = floatingStyle === 'classic' ? 0 : -1;
-  elements.settingsStyleMini.tabIndex = floatingStyle === 'mini' ? 0 : -1;
-  elements.settingsStartupToggle.checked = startupOpenAtLogin;
-  elements.settingsStartupToggle.disabled = !appInfo.isPackaged;
-  elements.settingsStartupShowWindowToggle.checked = state.preferences?.startup?.showWindowOnLogin ?? false;
-  elements.settingsStartupShowWindowToggle.disabled = !appInfo.isPackaged || !startupOpenAtLogin;
-  elements.settingsLaunchWithClaudeCodeToggle.checked = state.preferences?.integration?.launchWithClaudeCode ?? false;
-  elements.settingsLaunchWithClaudeCodeToggle.disabled = !appInfo.isPackaged;
-  const autoCheck = state.preferences?.updates?.autoCheck ?? true;
-  elements.settingsUpdatesAutoCheckToggle.checked = autoCheck;
-  elements.settingsUpdatesAutoDownloadToggle.checked = state.preferences?.updates?.autoDownload ?? false;
-  elements.settingsUpdatesAutoDownloadToggle.disabled = !autoCheck;
+function renderStylePicker(style) {
+  for (const [el, name] of [[elements.settingsStyleClassic, 'classic'], [elements.settingsStyleMini, 'mini']]) {
+    el.dataset.active = String(style === name);
+    el.setAttribute('aria-checked', String(style === name));
+    el.tabIndex = style === name ? 0 : -1;
+  }
 }
 
-function renderBannersAndErrors(state, sessionPercent, lang) {
-  if (sessionPercent >= 90 && !criticalDismissed) showBanner(elements.criticalBanner);
-  else hideBanner(elements.criticalBanner);
-  if (sessionPercent >= 70 && sessionPercent < 90 && !highUsageDismissed) showBanner(elements.highUsageBanner);
-  else hideBanner(elements.highUsageBanner);
+function renderSettingsControls(state) {
+  for (const [key, props] of Object.entries(settingsControlState(state.preferences, appInfo))) {
+    Object.assign(elements[key], props);
+  }
+  for (const slider of [elements.settingsSoundVolume, elements.settingsExpireSoundVolume, elements.settingsLimitSoundVolume]) {
+    updateSliderFill(slider);
+  }
+  renderStylePicker(state.preferences?.floating?.style ?? 'classic');
+}
 
+function toggleBanner(el, show) {
+  if (show) showBanner(el);
+  else hideBanner(el);
+}
+
+function renderUsageBanners(state, lang) {
+  const active = activeProvider();
+  const { percent, sectionId } = providerSessionPeak(state, active);
+  const titlePrefix = active === 'antigravity' && sectionId ? `${groupTitle(sectionId, lang)} · ` : '';
+  if (titlePrefix) {
+    for (const [el, key] of [
+      [elements.highUsageBannerTitle, 'alert.highUsage.title'],
+      [elements.criticalBannerTitle, 'alert.critical.title']
+    ]) {
+      if (el) el.textContent = `${titlePrefix}${t(key, lang)}`;
+    }
+  }
+  const level = alertLevel(percent);
+  toggleBanner(elements.criticalBanner, level === 'critical' && !criticalDismissed.has(active));
+  toggleBanner(elements.highUsageBanner, level === 'high' && !highUsageDismissed.has(active));
+}
+
+function renderBannersAndErrors(state, lang) {
+  renderUsageBanners(state, lang);
   if (!state.isOffline) offlineDismissed = false;
-  if (state.isOffline && !offlineDismissed) showBanner(elements.offlineBanner);
-  else hideBanner(elements.offlineBanner);
-  elements.reauthButton.hidden = !state.needsReauth;
+  toggleBanner(elements.offlineBanner, state.isOffline && !offlineDismissed);
+  const active = activeProvider();
+  elements.reauthButton.hidden = !state.needsReauth || !showsClaudeErrors(resolveView(state, requestedView), active);
   elements.reauthButton.textContent = t('error.scope_insufficient', lang);
   setErrorText([
     state.localError ? t(state.localError, lang) : null,
@@ -1169,17 +1287,311 @@ function renderBannersAndErrors(state, sessionPercent, lang) {
 function updateLastUpdatedLine() {
   if (!currentState) return;
   const lang = currentLanguage();
-  elements.lastUpdated.textContent = currentState.lastUpdated
-    ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(currentState.lastUpdated)) })
-    : '--';
+  const provider = activeProvider();
+  if (provider === 'claude' || provider === 'overview') {
+    const stamp = currentState.lastUpdated;
+    elements.lastUpdated.textContent = stamp
+      ? tFormat('time.updated.at', lang, { time: formatClockTime(new Date(stamp)) })
+      : '--';
+    return;
+  }
+  // A provider's stamp is when its source last reported, which can be days
+  // ago (Codex unused, Antigravity closed): name the day when it is not today.
+  const time = providerReadingTime(currentState[provider], lang);
+  if (!time) {
+    elements.lastUpdated.textContent = '--';
+    return;
+  }
+  const isLive = provider === 'antigravity' && currentState.antigravity?.status === 'live';
+  const key = isLive ? 'time.updated.at' : 'provider.lastReading';
+  elements.lastUpdated.textContent = tFormat(key, lang, { time });
+}
+
+function providerReadingTime(quota, lang) {
+  if (!quota?.updatedAt) return '';
+  const at = new Date(quota.updatedAt);
+  return at.toDateString() === new Date().toDateString()
+    ? formatClockTime(at)
+    : formatWeekdayClock(at, lang);
+}
+
+function activeProvider() {
+  return resolveProvider(currentState, requestedProvider);
+}
+
+function renderNavigation(state) {
+  const active = resolveNavigation(state, requestedView, requestedProvider);
+  for (const [provider, button] of [
+    ['overview', elements.overviewButton],
+    ['claude', elements.providerClaudeButton],
+    ['codex', elements.providerCodexButton],
+    ['antigravity', elements.providerAntigravityButton],
+    ['settings', elements.settingsButton]
+  ]) {
+    if (provider === 'codex' || provider === 'antigravity') button.hidden = !state?.[provider];
+    if (provider === active) {
+      button.setAttribute('aria-current', 'page');
+      delete button.dataset.alert;
+    } else {
+      button.removeAttribute('aria-current');
+      const level = alertLevel(providerSessionPeak(state, provider).percent);
+      if (level) button.dataset.alert = level;
+      else delete button.dataset.alert;
+    }
+  }
+  const expanded = !elements.rail.hidden;
+  elements.railToggleButton.setAttribute('aria-expanded', String(expanded));
+  const label = t(expanded ? 'navigation.hideSidebar' : 'navigation.showSidebar', currentLanguage());
+  elements.railToggleButton.setAttribute('aria-label', label);
+  elements.railToggleButton.title = label;
+}
+
+function groupTitle(id, lang) {
+  if (id === 'gemini') return 'Gemini';
+  if (id === 'thirdParty') return t('provider.antigravity.thirdParty', lang);
+  if (id === 'argon') return 'Gemini 4 Argon';
+  return PROVIDER_NAMES[id] ?? id;
+}
+
+function providerStatusText(provider, quota, lang) {
+  if (provider === 'codex') {
+    if (quota.status === 'error') return t('provider.codex.error', lang);
+    return quota.sections.length ? '' : t('provider.codex.empty', lang);
+  }
+  if (quota.status === 'error') return t('provider.antigravity.error', lang);
+  if (quota.status === 'closed') return t('provider.antigravity.closed', lang);
+  return '';
+}
+
+function renderProviderStatus(element, text, status) {
+  element.hidden = !text;
+  element.dataset.tone = status === 'error' ? 'error' : status === 'closed' ? 'warning' : 'info';
+  element.querySelector('[data-status-text]').textContent = text;
+}
+
+// The percent reading, the session reset flash and the remembered previous
+// percent. An unmeasured window shows no number and forgets the previous one.
+function renderRowReading(value, percent, measured, kind, mode) {
+  const prevPct = value.dataset.prevPercent != null ? Number(value.dataset.prevPercent) : null;
+  updateReading(value, measured ? quotaDisplayValue(percent, mode) : null, setPercentValue);
+  if (!measured) {
+    delete value.dataset.prevPercent;
+    return;
+  }
+  if (kind === 'session' && isResetDrop(prevPct, percent)) triggerResetFlash(value);
+  value.dataset.prevPercent = String(percent);
+}
+
+// Replace a container's children only when the order or identity differs, so
+// an unchanged list keeps its DOM (and running animations) untouched.
+function syncChildren(container, nodes) {
+  const shown = [...container.children];
+  if (nodes.length !== shown.length || nodes.some((node, i) => node !== shown[i])) container.replaceChildren(...nodes);
+}
+
+// `window` is a `providers::ProviderWindow`, or null when the source does not
+// offer that window at all — then the row is not shown.
+function renderQuotaRow(row, label, window, kind, ctx) {
+  row.hidden = !window;
+  if (!window) return;
+  const reading = measuredPercent(window);
+  const measured = reading != null;
+  const percent = reading ?? 0;
+  row.querySelector('[data-label]').textContent = label;
+  const value = row.querySelector('[data-percent]');
+  renderRowReading(value, percent, measured, kind, ctx.mode);
+  setQuotaColorDrift(value, percent);
+  row.querySelector('[data-suffix]').textContent = measured ? t(`quota.suffix.${ctx.mode}`, ctx.lang) : '';
+  const paceEl = row.querySelector('[data-pace]');
+  if (paceEl) {
+    const pace = buildUsagePace({
+      slot: measured ? { percent, resetsAt: window.resetsAt ? new Date(window.resetsAt) : null } : null,
+      now: ctx.now,
+      windowMs: SESSION_WINDOW_MS
+    });
+    renderPace(paceEl, pace, ctx.lang);
+  }
+  renderMeter(row.querySelector('[data-meter]'), percent);
+  const reset = buildProviderResetLine(window, kind, ctx);
+  const resetLine = row.querySelector('[data-reset]');
+  resetLine.textContent = reset;
+  // On the reset line only: a `title` on the row would also cover the pace
+  // badge and stack the OS tooltip on top of the designed one.
+  resetLine.title = reset;
+}
+
+// Visible rows in reading order. The entrance staggers each row by its index
+// (CSS `--row`, and the count-up delay reads `data-row`).
+function indexQuotaRows(container) {
+  [...container.querySelectorAll('.quota-row')].filter(row => !row.hidden).forEach((row, index) => {
+    row.dataset.row = String(index);
+    row.style.setProperty('--row', index);
+  });
+}
+
+function orderSections(sections) {
+  const rank = id => (SECTION_ORDER.includes(id) ? SECTION_ORDER.indexOf(id) : SECTION_ORDER.length);
+  return [...sections].sort((a, b) => rank(a.id) - rank(b.id));
+}
+
+// The provider's main group gets the large session row; the others (and every
+// Antigravity group but Gemini) show two compact rows under a group title.
+function isCompactSection(provider, sectionId, index) {
+  return provider === 'antigravity' ? sectionId !== 'gemini' : index > 0;
+}
+
+function createQuotaGroup(sectionId) {
+  const group = elements.overviewSectionTemplate.content.firstElementChild.cloneNode(true);
+  group.dataset.section = sectionId;
+  wireTooltip(group.querySelector('[data-pace]'));
+  return group;
+}
+
+// One quota group (session + weekly rows), shared by the Overview cards and
+// the Codex / Antigravity pages. Reset lines are visible on every row, so a
+// rolled-over or unknown window explains itself there.
+function renderQuotaGroup(group, section, compact, ctx) {
+  const { lang } = ctx;
+  group.classList.toggle('overview-section--compact', compact);
+  const heading = group.querySelector('[data-group-title]');
+  heading.hidden = !compact;
+  heading.textContent = section.title ?? groupTitle(section.id, lang);
+  const rowCtx = { ...ctx, blocked: Boolean(section.blocked), weeklySpent: (section.weekly?.percent ?? 0) >= 100 };
+  const [session, weekly] = group.querySelectorAll('.quota-row');
+  session.classList.toggle('overview-compact', compact);
+  session.querySelector('[data-pace]').hidden = compact;
+  renderQuotaRow(session, t('home.session', lang), section.session, 'session', rowCtx);
+  renderQuotaRow(weekly, t('home.weekly', lang), section.weekly, 'weekly', rowCtx);
+  group.querySelector('[data-section-status]').textContent =
+    !section.session && !section.weekly ? t('provider.window.unknown', lang) : '';
+}
+
+function getOverviewCard(id) {
+  const existing = overviewCards.get(id);
+  if (existing) return existing;
+  const card = elements.overviewCardTemplate.content.firstElementChild.cloneNode(true);
+  card.dataset.provider = id;
+  const title = card.querySelector('[data-overview-title]');
+  title.id = `overview-${id}-heading`;
+  title.textContent = PROVIDER_NAMES[id];
+  card.setAttribute('aria-labelledby', title.id);
+  const reading = card.querySelector('[data-overview-reading]');
+  reading.id = `overview-${id}-reading`;
+  card.setAttribute('aria-describedby', reading.id);
+  const button = { claude: elements.providerClaudeButton, codex: elements.providerCodexButton, antigravity: elements.providerAntigravityButton }[id];
+  card.querySelector('[data-overview-icon]').appendChild(button.querySelector('svg').cloneNode(true));
+  // The card is a shortcut to the provider's page: the title button, or a
+  // click on the card itself that is not on one of its own controls.
+  card.addEventListener('click', event => {
+    if (event.target.closest('button:not([data-overview-open]), [tabindex]')) return;
+    const hadFocus = card.contains(document.activeElement);
+    button.click();
+    if (hadFocus) elements.providerHeading.focus({ preventScroll: true });
+  });
+  const peak = card.querySelector('[data-overview-peak]');
+  wireTooltip(peak.querySelector('[data-peak-info]'), peak);
+  overviewCards.set(id, card);
+  return card;
+}
+
+function renderOverviewReading(card, quota, ctx) {
+  const time = providerReadingTime(quota, ctx.lang);
+  const reading = time ? tFormat('provider.lastReading', ctx.lang, { time }) : '';
+  card.querySelector('[data-overview-open]').title = reading;
+  card.querySelector('[data-overview-reading]').textContent = reading;
+  const stale = card.querySelector('[data-overview-stale]');
+  stale.hidden = !time || ctx.now - new Date(quota.updatedAt) < STALE_READING_MS;
+  stale.title = reading;
+  stale.querySelector('[data-stale-text]').textContent = stale.hidden ? '' : time;
+}
+
+function renderOverviewCard({ id, sections }, state, ctx) {
+  const { lang } = ctx;
+  const card = getOverviewCard(id);
+  // Peak hours are Anthropic's, so only the Claude card carries the badge.
+  const badge = card.querySelector('[data-overview-peak]');
+  if (id === 'claude') {
+    badge.querySelector('[data-peak-label]').textContent = t('home.peakHours', lang);
+    renderPeakBadge(badge, badge.querySelector('[data-peak-info]'), ctx.now, lang);
+  } else {
+    badge.hidden = true;
+  }
+  const container = card.querySelector('[data-overview-sections]');
+  const shown = [...container.children];
+  const groups = orderSections(sections).map((section, index) => {
+    const group = shown.find(node => node.dataset.section === section.id) ?? createQuotaGroup(section.id);
+    renderQuotaGroup(group, section, isCompactSection(id, section.id, index), ctx);
+    return group;
+  });
+  syncChildren(container, groups);
+  const status = id === 'claude' ? '' : providerStatusText(id, state[id], lang);
+  renderProviderStatus(card.querySelector('[data-overview-status]'), status || (!sections.length ? t('provider.window.unknown', lang) : ''), state[id]?.status);
+  renderOverviewReading(card, state[id], ctx);
+  return card;
+}
+
+function renderOverview(state, lang) {
+  if (!state.isSignedIn) return;
+  const ctx = { now: new Date(), lang, mode: currentQuotaMode(state) };
+  const cards = overviewProviders(state).map(entry => renderOverviewCard(entry, state, ctx));
+  syncChildren(elements.overviewCards, cards);
+  indexQuotaRows(elements.overviewCards);
+}
+
+// One card per group. The main group has no title (the panel header names
+// the provider); the others are titled by their group heading.
+function renderProviderGroupCard(provider, section, index, ctx) {
+  let card = groupCards.get(section.id);
+  if (!card) {
+    card = document.createElement('section');
+    card.className = 'card overview-card';
+    card.append(createQuotaGroup(section.id));
+    groupCards.set(section.id, card);
+  }
+  renderQuotaGroup(card.firstElementChild, section, isCompactSection(provider, section.id, index), ctx);
+  const title = card.querySelector('[data-group-title]');
+  title.id = `quota-${provider}-${section.id}-heading`;
+  title.setAttribute('aria-level', '2');
+  card.setAttribute('aria-labelledby', title.hidden ? 'providerHeading' : title.id);
+  return card;
+}
+
+// Model-scoped weekly quotas (Fable) under Claude's main card, one titled
+// compact card each — the same cards the other providers' secondary groups use.
+function renderClaudeScopedGroups(state, ctx) {
+  const cards = claudeScopedSections(state).map((section, index) => renderProviderGroupCard('claude', section, index + 1, ctx));
+  syncChildren(elements.claudeScopedGroups, cards);
+}
+
+function renderProviderStats(quota, lang) {
+  const hasStats = Boolean(quota.todayStats || quota.monthStats);
+  elements.providerCostGrid.hidden = !hasStats;
+  if (!hasStats) return;
+  updateReading(elements.providerTodayCost, quota.todayStats?.cost, setCostValue);
+  elements.providerTodayTokens.textContent = formatTokens(quota.todayStats?.totalTokens, lang) ?? '';
+  updateReading(elements.providerMonthCost, quota.monthStats?.cost, setCostValue);
+  elements.providerMonthTokens.textContent = formatTokens(quota.monthStats?.totalTokens, lang) ?? '';
+}
+
+function renderProviderView(state, lang) {
+  const provider = activeProvider();
+  const quota = state[provider];
+  if (provider === 'claude' || !quota) return;
+  elements.providerHeading.textContent = PROVIDER_NAMES[provider];
+  const ctx = { now: new Date(), lang, mode: state.preferences?.display?.quotaMode ?? 'used' };
+  const cards = orderSections(quota.sections).map((section, index) => renderProviderGroupCard(provider, section, index, ctx));
+  syncChildren(elements.providerGroups, cards);
+  indexQuotaRows(elements.providerGroups);
+  renderProviderStats(quota, lang);
+  renderProviderStatus(elements.providerStatus, providerStatusText(provider, quota, lang), quota.status);
 }
 
 function renderNotificationPill(enabled, lang = currentLanguage()) {
   elements.notificationState.dataset.tone = enabled ? 'accent' : 'muted';
   const label = t(enabled ? 'home.notif.on' : 'home.notif.off', lang);
   elements.notificationStateText.textContent = label;
-  // The topbar shows only the bell, so the state that used to be readable in
-  // the footer now lives in the tooltip (and in the hidden label above).
+  // The rail shows only the bell, so the state lives in the tooltip (and in
+  // the hidden label above).
   elements.notificationState.title = label;
   if (enabled) {
     delete elements.notificationState.dataset.notifOff;
@@ -1222,8 +1634,19 @@ async function refreshNow() {
 
 function renderPace(element, pace, lang = currentLanguage()) {
   if (!element) return;
-  element.dataset.status = pace?.status ?? 'no_data';
-  element.textContent = t(`pace.${pace?.status ?? 'no_data'}`, lang);
+  const status = pace?.status ?? 'no_data';
+  element.dataset.status = status;
+  const label = t(`pace.${status}`, lang);
+  element.textContent = label;
+  const hint = tFormat(`pace.${status}Tooltip`, lang, { time: formatClockTime(pace?.projectedDepletionAt) });
+  element.dataset.tooltip = hint;
+  if (element === elements.sessionPace) {
+    elements.sessionPaceHint.textContent = hint;
+  } else {
+    element.setAttribute('aria-label', `${label} — ${hint}`);
+  }
+  // Runs every refresh tick: keep an open bubble in sync with the new copy.
+  if (tooltipTrigger === element) elements.tooltip.textContent = hint;
 }
 
 function setCostValue(element, cost) {
@@ -1259,26 +1682,36 @@ function renderExtraUsage(extra) {
   showBanner(elements.extraUsageCard);
   elements.extraUsedCredits.textContent = formatCurrency(extra.usedCredits);
   elements.extraMonthlyLimit.textContent = formatCurrency(extra.monthlyLimit);
+  // The ring takes the session meter's level colours for the share spent.
+  const spent = extra.monthlyLimit > 0 ? clampPercent((extra.usedCredits / extra.monthlyLimit) * 100) : 0;
+  elements.extraGauge.dataset.level = levelForPercent(spent);
+  elements.extraGauge.style.setProperty('--gauge-fill', spent);
+}
+
+function buildMeterSegments(meter, total, filled) {
+  meter.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < total; i++) {
+    const seg = document.createElement('div');
+    seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
+    seg.style.setProperty('--i', i);
+    fragment.appendChild(seg);
+  }
+  meter.appendChild(fragment);
 }
 
 function renderMeter(meter, percent) {
-  const total = 40;
-  const level = levelForPercent(percent);
+  const total = Number(meter.dataset.segments ?? 40);
   const filled = Math.round((percent / 100) * total);
-  if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
+  // Nothing lit reads as an empty, neutral track rather than a faint green one.
+  const level = filled === 0 ? 'zero' : levelForPercent(percent);
+  if (meter.dataset.level === level && meter.dataset.filled === String(filled) && meter.children.length === total) return;
   meter.dataset.level = level;
   meter.dataset.filled = String(filled);
   meter.style.setProperty('--filled', filled); // width of the glow behind the filled run
+  meter.style.setProperty('--segments', total);
   if (meter.children.length !== total) {
-    meter.replaceChildren();
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < total; i++) {
-      const seg = document.createElement('div');
-      seg.className = i < filled ? 'meter-segment active' : 'meter-segment';
-      seg.style.setProperty('--i', i);
-      fragment.appendChild(seg);
-    }
-    meter.appendChild(fragment);
+    buildMeterSegments(meter, total, filled);
     return;
   }
   for (let i = 0; i < total; i++) {
@@ -1286,6 +1719,28 @@ function renderMeter(meter, percent) {
   }
 }
 
+function clearSettingsPanelStyle(panel) {
+  panel.style.position = '';
+  panel.style.width = '';
+  panel.style.pointerEvents = '';
+  panel.style.opacity = '';
+  panel.style.transform = '';
+}
+
+function interruptSettingsTabTransition(panels, card, name) {
+  if (!_tabTransitioning) return;
+  // The panel still arriving becomes the one leaving, from wherever its fade
+  // had reached; only a third panel (already on its way out) is dropped.
+  clearTimeout(_tabTransitionTimer);
+  for (const [panelName, panel] of Object.entries(panels)) {
+    if (panelName === currentSettingsTab || panelName === name) continue;
+    panel.hidden = true;
+    clearSettingsPanelStyle(panel);
+  }
+  delete card.dataset.resizing;
+  card.style.height = '';
+  _tabTransitioning = false;
+}
 
 function switchSettingsTab(name, { focus = false } = {}) {
   const panels = {
@@ -1305,27 +1760,17 @@ function switchSettingsTab(name, { focus = false } = {}) {
     if (focus) tabs[name].focus();
     return;
   }
-  if (_tabTransitioning) {
-    clearTimeout(_tabTransitionTimer);
-    for (const [panelName, panel] of Object.entries(panels)) {
-      panel.hidden = panelName !== currentSettingsTab;
-      panel.style.position = '';
-      panel.style.width = '';
-      panel.style.pointerEvents = '';
-      panel.style.opacity = '';
-    }
-    card.style.height = '';
-    delete card.dataset.resizing;
-    _tabTransitioning = false;
-  }
+  // Container-Follows-Content Rule (DESIGN.md §5): capture the card's height
+  // before the outgoing panel is parked out of flow — mid-swap this is the
+  // height the tween has reached, so an interrupted swap continues from it.
+  const startHeight = card.getBoundingClientRect().height;
+  interruptSettingsTabTransition(panels, card, name);
   _tabTransitioning = true;
   const FADE_MS = cssMs('--duration-tab-fade', 110);
   const outgoing = panels[currentSettingsTab];
   const incoming = panels[name];
-  // Container-Follows-Content Rule (DESIGN.md §5): capture the card's height
-  // before the outgoing panel is parked out of flow, while it still reflects
-  // both panels' natural layout.
-  const startHeight = card.getBoundingClientRect().height;
+  // Panels travel the way the pill does; opacity only under reduced motion.
+  const shift = (reducedMotion() ? 0 : 6) * Math.sign(tabIndexes[name] - tabIndexes[currentSettingsTab]);
   tabs[currentSettingsTab].classList.remove('settings-tab--active');
   tabs[name].classList.add('settings-tab--active');
   tabs[currentSettingsTab].setAttribute('aria-selected', 'false');
@@ -1344,9 +1789,12 @@ function switchSettingsTab(name, { focus = false } = {}) {
   outgoing.style.width = `${width}px`;
   outgoing.style.pointerEvents = 'none';
   outgoing.style.opacity = '0';
+  outgoing.style.transform = `translateX(${-shift}px)`;
 
   incoming.hidden = false;
+  clearSettingsPanelStyle(incoming);
   incoming.style.opacity = '0';
+  incoming.style.transform = `translateX(${shift}px)`;
 
   // Container-Follows-Content Rule: now that the outgoing panel is out of
   // flow and the incoming one is in it, the card's natural height is the
@@ -1366,16 +1814,17 @@ function switchSettingsTab(name, { focus = false } = {}) {
   card.style.height = `${targetHeight}px`;
 
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => { incoming.style.opacity = '1'; });
+    requestAnimationFrame(() => {
+      if (currentSettingsTab !== name) return;
+      incoming.style.opacity = '1';
+      incoming.style.transform = '';
+    });
   });
 
   _tabTransitionTimer = setTimeout(() => {
     outgoing.hidden = true;
-    outgoing.style.position = '';
-    outgoing.style.width = '';
-    outgoing.style.pointerEvents = '';
-    outgoing.style.opacity = '';
-    incoming.style.opacity = '';
+    clearSettingsPanelStyle(outgoing);
+    clearSettingsPanelStyle(incoming);
     card.style.height = '';
     delete card.dataset.resizing;
     _tabTransitioning = false;
@@ -1411,9 +1860,6 @@ function showView(view) {
   renderActiveView();
 }
 
-let _transitioning = false;
-let renderedView = null;
-let settingsReturnFocus = null;
 
 function focusAfterViewChange(activeView, previousView) {
   let target = null;
@@ -1433,65 +1879,57 @@ function focusAfterViewChange(activeView, previousView) {
   });
 }
 
+function dashboardForProvider(provider) {
+  return provider === 'overview' ? elements.overviewView : provider === 'claude' ? elements.mainView : elements.providerView;
+}
+
+function renderViewHeader(settings, provider, changed) {
+  elements.backButton.hidden = !settings;
+  elements.settingsTitle.hidden = !settings;
+  elements.providerHeading.hidden = settings;
+  elements.refreshButton.hidden = settings;
+  elements.providerHeading.textContent = provider === 'overview' ? t('navigation.overview', currentLanguage()) : PROVIDER_NAMES[provider];
+  // The header names the destination; it fades in with the view instead of
+  // swapping a frame ahead of it (150ms, --duration-view-fade).
+  if (changed) {
+    (settings ? elements.settingsTitle : elements.providerHeading).animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+  }
+}
+
 function renderActiveView() {
   const activeView = resolveView(currentState, requestedView);
   const previousView = renderedView;
   const viewChanged = activeView !== previousView;
+  const provider = activeProvider();
+  const previousProvider = renderedProvider;
+  const changed = viewChanged || provider !== previousProvider;
+  if (changed) stopEntranceSequence();
+  if (activeView !== 'main') lastEntranceAt = -Infinity;
   renderedView = activeView;
+  renderedProvider = provider;
   document.body.dataset.view = activeView;
+  // Onboarding has no rail at all; give the window its full width back so the
+  // sign-in copy is not squeezed into the collapsed size.
+  if (activeView === 'onboard') setRailCollapsed(false);
+  renderNavigation(currentState);
+  renderViewHeader(activeView === 'settings', provider, changed);
+  const direction = viewDirection(activeView, provider, previousView, previousProvider);
+  const claudeErrors = showsClaudeErrors(activeView, provider);
+  elements.errorText.hidden = !claudeErrors;
+  elements.reauthButton.hidden = !claudeErrors || !currentState?.needsReauth;
 
-  const viewMap = { onboard: elements.onboardView, main: elements.mainView, settings: elements.settingsView };
-  const incoming = viewMap[activeView];
-  const outgoing = Object.values(viewMap).find(v => !v.hidden && v !== incoming);
-
-  if (!outgoing || _transitioning) {
-    elements.onboardView.hidden = activeView !== 'onboard';
-    elements.mainView.hidden = activeView !== 'main';
-    elements.settingsView.hidden = activeView !== 'settings';
-    if (activeView === 'settings' && currentState) renderSettings(currentState);
-    if (viewChanged) focusAfterViewChange(activeView, previousView);
-    return;
-  }
-
-  _transitioning = true;
-
-  // Overlap the crossfade instead of running it twice. Parking the outgoing
-  // view out of flow (.shell-scroll is position:relative) lets the incoming one
-  // take its place at once, so opening a view costs one fade, not two — the
-  // same trick switchSettingsTab uses for the settings panels.
-  const width = outgoing.getBoundingClientRect().width;
-  outgoing.style.position = 'absolute';
-  outgoing.style.top = '0';
-  outgoing.style.left = '0';
-  outgoing.style.width = `${width}px`;
-  outgoing.style.pointerEvents = 'none';
-  outgoing.style.opacity = '0';
-  outgoing.style.transform = 'translateY(-6px)';
-
-  incoming.hidden = false;
-  incoming.style.opacity = '0';
-  incoming.style.transform = 'translateY(6px)';
-  if (activeView === 'settings' && currentState) renderSettings(currentState);
-
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    incoming.style.opacity = '';
-    incoming.style.transform = '';
-  }));
-
-  setTimeout(() => {
-    outgoing.hidden = true;
-    outgoing.style.position = '';
-    outgoing.style.top = '';
-    outgoing.style.left = '';
-    outgoing.style.width = '';
-    outgoing.style.pointerEvents = '';
-    outgoing.style.opacity = '';
-    outgoing.style.transform = '';
-    incoming.style.opacity = '';
-    incoming.style.transform = '';
-    _transitioning = false;
-    if (viewChanged) focusAfterViewChange(activeView, previousView);
-  }, cssMs('--duration-view-fade', 150));
+  const mainPanel = dashboardForProvider(provider);
+  const viewMap = { onboard: elements.onboardView, main: mainPanel, settings: elements.settingsView };
+  crossfadeTo(viewMap[activeView], {
+    direction,
+    onVisible: () => {
+      if (activeView === 'settings' && currentState) renderSettings(currentState);
+      if (activeView === 'main' && previousView !== 'main') playEntranceSequence();
+    },
+    onSettled: () => {
+      if (viewChanged) focusAfterViewChange(activeView, previousView);
+    }
+  });
 }
 
 function currentLanguage() {
@@ -1550,54 +1988,63 @@ function updateSliderFill(slider) {
 
 
 
-// The entrance choreography runs every time the window is shown — boot, and
-// each reopen from the tray or from minimized. It costs ~1s before the session
-// number lands on its final value, which is the whole point of the app, but
-// the reveal is what the window is *for* on a tray app: it says "this is fresh"
-// better than the numbers alone do.
-//
-// This is a deadline, not a duration: dropping `data-entering` deselects the
-// keyframes, so anything still running is cut off rather than finished. The
-// last step to land is the weekly meter's 40th segment, at
-// `39 * 6ms + 295ms + 210ms` = 739ms (see the `body[data-entering] #weeklyMeter`
-// rules in styles.css). Keep that sum under this number — at the old 12ms
-// stagger it was 973ms and the last six segments snapped instead of settling.
-const ENTER_SEQUENCE_MS = 900;
-const ENTER_DEDUPE_MS = 250;
-let enterSequenceTimer = null;
-let lastEntranceAt = -Infinity;
+function stopEntranceSequence() {
+  cancelAnimationFrame(windowEntranceFrame);
+  windowEntranceFrame = null;
+  clearTimeout(enterSequenceTimer);
+  enterSequenceTimer = null;
+  delete document.body.dataset.entering;
+  for (const view of [elements.overviewView, elements.mainView, elements.providerView]) delete view.dataset.entering;
+  for (const element of animatingElements.keys()) {
+    cancelCountUp(element);
+    const target = element.dataset.entryValue === '' ? null : Number(element.dataset.entryValue);
+    const setValue = element.classList.contains('stat-value') ? setCostValue : setPercentValue;
+    setValue(element, target);
+  }
+}
+
+function startEntranceCountUps(view) {
+  for (const element of view.querySelectorAll('[data-entry-value]')) {
+    if (element.dataset.entryValue === '') continue;
+    const cost = element.classList.contains('stat-value');
+    const timing = entranceCountUpTiming(cost, element.closest('.quota-row')?.dataset?.row);
+    animateCountUp(element, Number(element.dataset.entryValue), cost ? setCostValue : setPercentValue, timing);
+  }
+}
 
 function playEntranceSequence() {
-  // Two signals can describe the same show (the native `window-shown` and, if
-  // the webview ever does update its visibility, `visibilitychange`). Restarting
-  // the sequence milliseconds in reads as a stutter, so the second one loses.
+  if (!currentState || document.hidden || reducedMotion()) return;
+  const view = resolveView(currentState, requestedView) === 'main' ? dashboardForProvider(activeProvider()) : null;
   const now = performance.now();
-  if (now - lastEntranceAt < ENTER_DEDUPE_MS) return;
-  lastEntranceAt = now;
-  isEntering = true;
-  // Reopening inside the 900ms window would otherwise find the attribute still
-  // set and no CSS animation would restart. Drop it, force a reflow, re-add.
-  delete document.body.dataset.entering;
+  if (view?.dataset.entering && now - lastEntranceAt < ENTER_DEDUPE_MS) return;
+  if (view) lastEntranceAt = now;
+  stopEntranceSequence();
   void document.body.offsetWidth;
   document.body.dataset.entering = '1';
-  // Re-render now so the count-ups start with the CSS reveal instead of waiting
-  // for the next refresh tick, up to 30s away. Same state in, so the threshold
-  // sounds see no crossing and the view transition sees no change.
-  if (currentState) render(currentState);
-  clearTimeout(enterSequenceTimer);
+  if (view) {
+    view.dataset.entering = '1';
+    startEntranceCountUps(view);
+  }
   enterSequenceTimer = setTimeout(() => {
+    if (view) delete view.dataset.entering;
     delete document.body.dataset.entering;
+    enterSequenceTimer = null;
   }, ENTER_SEQUENCE_MS);
+}
+
+function queueWindowEntrance() {
+  cancelAnimationFrame(windowEntranceFrame);
+  windowEntranceFrame = requestAnimationFrame(() => {
+    windowEntranceFrame = null;
+    playEntranceSequence();
+  });
 }
 
 // The native signal, emitted by `windows_ctl::show_window` for every tray or
 // menu show and by the `Resized` handler for a taskbar restore. This is what
 // actually fires on Windows.
-// Subscribed here, at the bottom, rather than beside the other `window.siphon`
-// listeners: the module's top-level `await`s mean those run before this file's
-// tail, and an event arriving in that gap would hit `lastEntranceAt` in its
-// temporal dead zone. `?.` covers the bridge having bailed out.
-window.siphon?.onWindowShown?.(playEntranceSequence);
+// Coalesce native show/view/provider events before choosing the visible data.
+window.siphon?.onWindowShown?.(queueWindowEntrance);
 
 // Kept as a belt-and-braces second source: WebView2 does not update document
 // visibility when the native window is hidden, but a future runtime (or a
@@ -1605,7 +2052,7 @@ window.siphon?.onWindowShown?.(playEntranceSequence);
 // from playing over each other.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
-  playEntranceSequence();
+  queueWindowEntrance();
 });
 
 // The window is born hidden (`visible: false`) and shown from Rust's `setup()`
@@ -1614,4 +2061,4 @@ document.addEventListener('visibilitychange', () => {
 // entrance is simply lost, which is what happens under `npm start`. So play it
 // straight away whenever we load into a visible window; only a genuinely hidden
 // start waits for the event.
-if (!document.hidden) playEntranceSequence();
+if (!document.hidden) queueWindowEntrance();

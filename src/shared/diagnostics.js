@@ -4,6 +4,8 @@ const SENSITIVE_KEYS = new Set([
   'accessToken',
   'refresh_token',
   'refreshToken',
+  'csrf_token',
+  'csrfToken',
   'code',
   'code_verifier',
   'state'
@@ -67,15 +69,15 @@ function redactString(value) {
   return String(value)
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, `Bearer ${REDACTED}`)
     .replace(
-      /([?&](?:access_token|refresh_token|code|code_verifier|state)=)[^&#\s]+/gi,
+      /([?&](?:access_token|refresh_token|csrf_token|csrfToken|code|code_verifier|state)=)[^&#\s]+/gi,
       `$1${REDACTED}`
     )
     .replace(
-      /\b(access_token|refresh_token|code|code_verifier|state)=([^&\s"',}]+)/gi,
+      /\b(access_token|refresh_token|csrf_token|csrfToken|code|code_verifier|state)=([^&\s"',}]+)/gi,
       `$1=${REDACTED}`
     )
     .replace(
-      /("(?:access_token|refresh_token|accessToken|refreshToken|code_verifier|code|state)"\s*:\s*)"[^"]*"/g,
+      /("(?:access_token|refresh_token|accessToken|refreshToken|csrf_token|csrfToken|code_verifier|code|state)"\s*:\s*)"[^"]*"/g,
       `$1"${REDACTED}"`
     );
 }

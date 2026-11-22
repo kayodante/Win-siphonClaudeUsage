@@ -25,12 +25,24 @@ pub struct ExtraUsage {
     pub utilization: f64,
 }
 
+/// A weekly quota the API scopes to one model (Fable today), from `limits[]`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ScopedSlot {
+    /// The model's display name as the API sends it ("Fable").
+    pub name: String,
+    pub percent: f64,
+    pub resets_at: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Quota {
     pub session: Option<Slot>,
     pub weekly_all: Option<Slot>,
     pub extra_usage: Option<ExtraUsage>,
+    #[serde(default)]
+    pub weekly_scoped: Vec<ScopedSlot>,
 }
 
 /// Error codes matching `QuotaError.code` in the JS.
@@ -44,8 +56,7 @@ pub enum QuotaErrorCode {
     Server,
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("{message}")]
+#[derive(Debug, Clone)]
 pub struct QuotaError {
     pub code: QuotaErrorCode,
     pub message: String,
@@ -66,7 +77,31 @@ pub fn parse_usage_response(raw: &Value) -> Quota {
         session: parse_bucket(raw.get("five_hour")),
         weekly_all: parse_bucket(raw.get("seven_day")),
         extra_usage: parse_extra_usage(raw.get("extra_usage")),
+        weekly_scoped: parse_weekly_scoped(raw.get("limits")),
     }
+}
+
+/// `limits[]` entries of kind `weekly_scoped` that name a model. Entries
+/// scoped to something else (a surface) or without a percent are skipped.
+fn parse_weekly_scoped(limits: Option<&Value>) -> Vec<ScopedSlot> {
+    let Some(limits) = limits.and_then(|l| l.as_array()) else {
+        return Vec::new();
+    };
+    limits
+        .iter()
+        .filter(|l| l.get("kind").and_then(|k| k.as_str()) == Some("weekly_scoped"))
+        .filter_map(|l| {
+            let name = l
+                .pointer("/scope/model/display_name")
+                .and_then(|n| n.as_str())
+                .filter(|n| !n.trim().is_empty())?;
+            Some(ScopedSlot {
+                name: name.to_string(),
+                percent: l.get("percent").and_then(|p| p.as_f64())?,
+                resets_at: normalize_reset(l.get("resets_at")),
+            })
+        })
+        .collect()
 }
 
 fn parse_bucket(bucket: Option<&Value>) -> Option<Slot> {
@@ -78,18 +113,14 @@ fn parse_bucket(bucket: Option<&Value>) -> Option<Slot> {
         .get("utilization")
         .and_then(|v| v.as_f64())
         .unwrap_or(0.0);
-    let resets_at = bucket
-        .get("resets_at")
-        .and_then(|v| v.as_str())
-        .filter(|s| parse_iso(s).is_some())
-        .map(|s| {
-            // Re-emit as a normalized ISO string so downstream `new Date()` is happy.
-            parse_iso(s)
-                .unwrap()
-                .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                .to_string()
-        });
+    let resets_at = normalize_reset(bucket.get("resets_at"));
     Some(Slot { percent, resets_at })
+}
+
+/// Re-emit a valid ISO timestamp normalized so downstream `new Date()` is happy.
+fn normalize_reset(value: Option<&Value>) -> Option<String> {
+    let parsed = parse_iso(value?.as_str()?)?;
+    Some(parsed.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
 }
 
 /// Matches `parseExtraUsage`: only present when `is_enabled === true`.
@@ -150,6 +181,37 @@ mod tests {
         let extra = q.extra_usage.as_ref().unwrap();
         assert_eq!(extra.used_credits, 15.56);
         assert_eq!(extra.monthly_limit, 20.0);
+    }
+
+    /// Shape captured from the live endpoint on 2026-11-16.
+    #[test]
+    fn parses_model_scoped_weekly_limits() {
+        let raw = json!({
+            "limits": [
+                { "kind": "session", "percent": 66, "resets_at": "2026-11-16T04:30:00.169584+00:00", "scope": null },
+                { "kind": "weekly_all", "percent": 56, "resets_at": "2026-11-17T03:00:00.169602+00:00", "scope": null },
+                { "kind": "weekly_scoped", "percent": 66, "resets_at": "2026-11-17T03:00:00.169856+00:00",
+                  "scope": { "model": { "id": null, "display_name": "Fable" }, "surface": null } },
+                { "kind": "weekly_scoped", "percent": 10, "scope": { "model": null, "surface": { "display_name": "Cowork" } } },
+                { "kind": "weekly_scoped", "scope": { "model": { "display_name": "NoPercent" } } }
+            ]
+        });
+        let scoped = parse_usage_response(&raw).weekly_scoped;
+        assert_eq!(scoped.len(), 1);
+        assert_eq!(scoped[0].name, "Fable");
+        assert_eq!(scoped[0].percent, 66.0);
+        assert_eq!(
+            scoped[0].resets_at.as_deref(),
+            Some("2026-11-17T03:00:00.169Z")
+        );
+    }
+
+    #[test]
+    fn missing_limits_means_no_scoped_quota() {
+        assert!(parse_usage_response(&json!({})).weekly_scoped.is_empty());
+        assert!(parse_usage_response(&json!({ "limits": null }))
+            .weekly_scoped
+            .is_empty());
     }
 
     #[test]

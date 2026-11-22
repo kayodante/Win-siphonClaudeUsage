@@ -11,6 +11,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "Bitcount Single";
+  src: url("assets/fonts/BitcountSingle-VariableFont_CRSV,ELSH,ELXP,slnt,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
   font-family: "Geist Pixel";
   src: url("assets/fonts/GeistPixel-Line.woff2") format("woff2");
   font-display: swap;
@@ -37,7 +43,7 @@
   --line-strong: oklch(100% 0 0 / 0.15);
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", monospace;
-  --font-pixel: "Geist Pixel", monospace;
+  --font-pixel: "Bitcount Single", "Geist Pixel", monospace;
   --page-width: 1240px;
   --section-space: clamp(72px, 8vw, 128px);
   --radius-sm: 8px;
@@ -179,13 +185,14 @@ section:focus, main:focus { outline: none; }
   font-size: 11px;
   font-weight: 600;
   color: var(--dim);
-  transition: color 150ms ease, background-color 150ms ease;
+  transition: color 150ms ease, background-color 150ms ease, transform 120ms var(--ease-out);
 }
 .language-switch button[aria-pressed="true"] {
   color: var(--ink);
   background: var(--surface-raised);
 }
 .language-switch button:hover { color: var(--ink); }
+.language-switch button:active { transform: scale(0.97); }
 
 .button {
   display: inline-flex;
@@ -200,14 +207,16 @@ section:focus, main:focus { outline: none; }
   font-size: 14px;
   font-weight: 600;
   border: 1px solid var(--line);
-  transition: all 180ms var(--ease-out);
+  transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out),
+    color 180ms var(--ease-out), transform 140ms var(--ease-out),
+    box-shadow 180ms var(--ease-out), filter 180ms var(--ease-out);
 }
 .button:hover {
   background: var(--surface-hover);
   border-color: var(--line-strong);
   transform: translateY(-1px);
 }
-.button:active { transform: translateY(0); }
+.button:active { transform: scale(0.97); }
 .button-primary {
   background: var(--accent);
   color: var(--accent-ink);
@@ -806,13 +815,14 @@ section:focus, main:focus { outline: none; }
   font-size: 13px;
   font-weight: 550;
   color: var(--dim);
-  transition: color 150ms ease, background-color 150ms ease;
+  transition: color 150ms ease, background-color 150ms ease, transform 120ms var(--ease-out);
 }
 .demo-tabs button[aria-selected="true"] {
   color: var(--ink);
   background: oklch(30% 0.01 260);
 }
 .demo-tabs button:hover { color: var(--ink); }
+.demo-tabs button:active { transform: scale(0.97); }
 
 /* ==========================================================================
    Bento Grid Section (Features)
@@ -1050,7 +1060,7 @@ section:focus, main:focus { outline: none; }
   align-items: center;
   gap: 12px;
   box-shadow: 0 12px 30px oklch(0% 0 0 / 0.25);
-  transition: transform 180ms ease, border-color 180ms ease;
+  transition: transform 180ms var(--ease-out), border-color 180ms ease;
 }
 .marquee-card:hover {
   transform: translateY(-4px);
@@ -1167,7 +1177,7 @@ section:focus, main:focus { outline: none; }
   justify-content: space-between;
   min-height: 380px;
   position: relative;
-  transition: transform 180ms ease, border-color 180ms ease;
+  transition: transform 180ms var(--ease-out), border-color 180ms ease;
 }
 .install-card:hover {
   transform: translateY(-3px);
@@ -1231,7 +1241,10 @@ section:focus, main:focus { outline: none; }
   color: var(--subtle);
   font-size: 12px;
   font-weight: 600;
-  transition: all 150ms;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--ease-out);
+}
+.copy-button:active {
+  transform: scale(0.97);
 }
 .copy-button[data-copied="true"] {
   background: var(--accent);
@@ -1285,7 +1298,7 @@ section:focus, main:focus { outline: none; }
   font-size: 22px;
   font-weight: 300;
   color: var(--dim);
-  transition: transform 180ms ease;
+  transition: transform 180ms var(--ease-out);
 }
 .faq-item[open] .faq-icon {
   transform: rotate(45deg);
@@ -1397,7 +1410,7 @@ section:focus, main:focus { outline: none; }
   .hero-cta-group { animation-delay: 180ms; }
   .hero-trust-list { animation-delay: 240ms; }
   .hero-stage { animation: settle-in 800ms var(--ease-out) 280ms both; }
-  .demo-panel:not([hidden]) > [data-asset-slot] { animation: panel-in 380ms var(--ease-out); }
+  .demo-panel:not([hidden]) > [data-asset-slot] { animation: panel-in 200ms var(--ease-out); }
 
   @keyframes settle-in {
     from { opacity: 0.5; transform: translateY(12px); filter: blur(3px); }
@@ -1409,8 +1422,48 @@ section:focus, main:focus { outline: none; }
   }
 }
 
+@media (hover: none) {
+  .button:hover,
+  .button-primary:hover,
+  .mockup-window:hover,
+  .bento-card:hover,
+  .marquee-card:hover,
+  .install-card:hover {
+    transform: none;
+    filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .button, .demo-tabs button, .language-switch button, .site-nav a, .copy-button { transition: none; }
-  .button:hover, .button:active { transform: none; }
+  .skip-link,
+  .cd-nav-shell,
+  .site-nav a,
+  .language-switch button,
+  .button,
+  .button-secondary,
+  .mobile-menu nav a,
+  .mockup-window,
+  .eng-card,
+  .demo-tabs button,
+  .bento-card,
+  .marquee-card,
+  .install-card,
+  .copy-button,
+  .faq-item,
+  .faq-icon,
+  .footer-col a {
+    transition: none;
+  }
+  .button:hover,
+  .button:active,
+  .language-switch button:active,
+  .demo-tabs button:active,
+  .copy-button:active,
+  .mockup-window:hover,
+  .bento-card:hover,
+  .marquee-card:hover,
+  .install-card:hover {
+    transform: none;
+  }
 }

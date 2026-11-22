@@ -33,8 +33,13 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 
 ## Features
 
+* **Overview** | The initial dashboard brings Claude, Codex and Antigravity quotas together in compact cards, with weekly mini-meters. Installed providers retain their individual tabs. Settings stays highlighted while open, and the panel header can hide or show the sidebar — hiding it narrows the window from its left edge, so the cards stay where they are. Click a provider card to open its tab. Hover its title for the source reading time, which also appears on the card once the reading is an hour old
+* **Provider navigation** | Dedicated pages keep the provider name in the page header, while Antigravity cards retain their model-family labels. Closed-source notices use an amber warning. Quota/count-up entrances play on app opening, tray restore and return from Settings; switching between provider tabs does not replay them. A changed reading counts from its old value, and views slide along the sidebar order. Reduced motion keeps only short fades. Windows contrast themes keep the meters readable
+
 * **Session quota** | Progress bar for your current 5-hour session with a reset countdown
-* **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint
+* **Weekly limits** | Tracks your all-model weekly cap pulled from the OAuth usage endpoint, plus any weekly cap scoped to a single model (such as Fable's), shown as its own group on the Claude card and page
+* **Codex and Antigravity** | Tabs on the side rail with their own session and weekly limits, pace indicators, and status dots, shown once either app is installed. Codex is read from the session logs Codex writes locally (no sign-in, no network, including Today and This Month token/cost estimates), so it reflects your last Codex turn on this PC. Antigravity is read from the running app and shows Gemini, Claude-and-GPT, and Gemini 4 Argon limits separately; while the app is closed (including across Siphon restarts), the last reading stays up with a note. A window whose reset has passed shows it is waiting for a new reading rather than a guessed 0%. Both get the same 70/90/100% and reset notifications and sounds as Claude (clicking a toast opens that provider's tab); the tray icon and widget stay on Claude
+* **Antigravity discovery** | Finds the running server through Windows processes, their owned loopback ports, and `~/.gemini/antigravity/daemon/hub_*.json` discovery files (with command-line `--csrf_token` fallback for older versions and `main.log` / `language_server.log` as optional port hints); tokens go only to verified server ports. Quotas refresh on the local interval (30s) without remote rate limits. Explicit quota durations take priority, and ambiguous or unreadable data keeps the previous reading with an error status
 * **Usage tracking** | Today's and this month's usage in USD, calculated locally from Claude Code's usage and pricing files
 * **Quota alerts** | Warning and critical banners at 70% and 90% session usage (dismissible per session); optional Windows toasts at 70%, 90%, and 100%, each configurable on its own
 * **Reset notification** | Windows toast when your session resets. If the app was closed during the reset window, it fires on next launch
@@ -43,7 +48,7 @@ This is a Windows port of [appariciojunior/siphonClaudeUsage](https://github.com
 * **Configurable refresh** | Defaults to 30 seconds; 1, 5, and 15 minute options in Settings
 * **Start with Windows** | Optional autostart, with a separate setting for whether the window opens on login
 * **Launch with Claude Code** | Optional `SessionStart` hook that opens Siphon if it is closed and leaves an already-running app's window and focus alone. Uses a direct executable hook without PowerShell; requires Claude Code with exec-form hook support (`command` + `args`)
-* **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early
+* **Pace indicator** | Shows whether your usage rate is on track or likely to hit the limit early; hover it to see what the state means and, when it may run out, around what time
 * **Peak-hours badge** | Flags Anthropic's peak window (weekdays, 5–11 AM Pacific) when quotas run out faster; adjusts for daylight saving automatically
 * **Color-coded tray icon** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="tray icon sample" /> - Encodes session and weekly quota levels simultaneously using two independent color channels
 * **Localization** | English, Brazilian Portuguese, Japanese, and Korean, switchable from Settings
@@ -103,9 +108,11 @@ for known Claude models. No data leaves your machine for usage calculations.
 | File | Purpose |
 |------|---------|
 | `%APPDATA%\Siphon\credentials.json` | OAuth tokens (mode `0600`) |
-| `%APPDATA%\Siphon\reset-notification.json` | Pending reset timestamp |
+| `%APPDATA%\Siphon\reset-notification.json` | Pending Claude reset timestamp |
+| `%APPDATA%\Siphon\reset-notification-<provider>.json` | Pending Codex / Antigravity reset timestamp, one file each |
 | `%APPDATA%\Siphon\preferences.json` | Language, notification toggles, widget + main-window position, autostart, refresh interval, update checking, quota display mode, email masking, and Claude Code launch integration settings |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Rebuildable incremental cache for modern Claude Code JSONL usage files |
+| `%APPDATA%\Siphon\antigravity-quota-cache.json` | Last known Antigravity quota snapshot (sections and timestamps only; never tokens), shown while Antigravity is closed |
 
 ### Sign-in
 
@@ -146,7 +153,8 @@ NSIS output into the release-asset naming (`Siphon.Setup.<version>.exe` +
 ## Privacy
 
 - **Two destinations, both yours** — usage and quota data go only to Anthropic (`api.anthropic.com`). The only other outbound traffic is the update check against the GitHub Releases API and, if you download an update, the installer itself from GitHub. Nothing about your usage is sent there. No telemetry, no analytics, no third-party data sharing.
-- **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, and `%APPDATA%\Siphon\`.
+- **No disk scanning** — only reads known paths: `~/.claude/readout-*.json`, `~/.claude/projects/` JSONL files, Codex's `~/.codex/sessions/` logs (rate-limit and token-usage entries only — never `auth.json`), Antigravity's `~/.gemini/antigravity/daemon/hub_*.json` and optional `main.log` / `language_server.log`, and `%APPDATA%\Siphon\`.
+- **Antigravity stays on your machine** — Siphon reads the access token of Antigravity's local quota server from `~/.gemini/antigravity/daemon/hub_*.json` (or that process's command line on older releases) and sends it only to verified ports owned by that server on `127.0.0.1`, without a proxy. The token is never stored or logged; only the resulting quota percentages and reset timestamps are cached locally so your limits remain visible while Antigravity is closed. Siphon also checks the known Antigravity data and installation directories to distinguish a closed app from an absent installation.
 - **Protected credentials** — OAuth tokens are encrypted with Windows DPAPI (via the `windows` crate) before being written to disk. Falls back to plaintext only if DPAPI is unavailable on the current machine.
 - **Safe diagnostics** — any internal logs expose service/status metadata only, never raw tokens, OAuth values, or credentials.
 

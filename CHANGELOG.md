@@ -11,6 +11,108 @@ is added above it.
 
 ## [Unreleased]
 
+### Added
+
+- Claude's model-scoped weekly quota (Fable's) is shown as its own "Fable"
+  group: compact on the Overview Claude card and as a card under the main one on
+  the Claude page. It is read from the usage endpoint's `limits[]` entries of
+  kind `weekly_scoped`; the tray icon, widget and alerts are unchanged.
+- An Overview dashboard with compact Claude, Codex and Antigravity quota cards,
+  20-segment weekly meters, and provider-source timestamps on hover and for
+  screen readers. Missing, rolled-over and blocked readings retain their meaning.
+  Clicking anywhere on an Overview card (or its title button) navigates to that
+  provider's tab.
+- Bitcount Single bundled variable pixel font (`--font-pixel`), replacing
+  Geist Pixel for data readouts (percentages, cost numbers, account name) in
+  both the desktop app and the landing page.
+- Codex Today and This Month usage cards with token totals and estimated USD
+  cost, aggregating `token_count` events from local rollout files with custom
+  `codexPath` and WSL directory support.
+- Gemini 4 Argon quota section in Antigravity parsing and UI display.
+- Clicking any notification toast reopens the main window on the triggering
+  provider's tab (`provider-select`).
+- Notification sounds (session reset, 100% full, and 70%/90% threshold alerts)
+  now play for all provider channels when enabled.
+- Fluid UI animations: view crossfades travel 6px along the sidebar rail order
+  (reversed on Back) and retarget mid-fade without snapping; the sidebar toggle
+  animates with a View Transition; changed readings count from the old value
+  (400ms); scroll-driven top edge fade masks content under the panel header.
+
+- Codex and Antigravity tabs on the side rail, each with its own 5-hour
+  session and weekly limits, shown once the app is installed. Codex is read
+  from the session logs Codex writes on this PC (no sign-in, no network), so
+  it reflects your last Codex turn here. Antigravity is read from the running
+  app and shows the Gemini, Claude-and-GPT, and Gemini 4 Argon limits separately;
+  while it is closed, the last reading stays with an "Open Antigravity to update"
+  note. A window whose reset time has passed says it is waiting for a new reading
+  instead of showing a guessed 0%, a reading from another day names the day,
+  and a window the source does not offer is not shown. When Antigravity holds
+  back the Claude-and-GPT models behind a spent weekly limit, the card says
+  "Blocked by the weekly limit" and no session-reset toast promises otherwise.
+- Codex and Antigravity get the same 70/90/100% and session-reset toasts as
+  Claude, named after the provider ("Codex · Critical usage"). The tray icon,
+  floating widget and in-app banners stay on Claude.
+- The session pace badge explains its state on hover or keyboard focus, and
+  "May run out" names the time the session is projected to hit 100%.
+
+### Changed
+
+- Dashboard restyle toward the Nothing-inspired spec in Figma: quota, pace and
+  peak labels in Geist Mono uppercase with bracketed status text, a 56px hero
+  reading on provider pages, 18px compact percentages over 6px dot meters with
+  the reset line beneath, cost values at 24px with a smaller `$`, and a
+  three-size type budget. Spacing follows the Figma frames: 24px under card
+  titles and between groups, 16px between a group's rows, 12px from each label
+  to its reading. Pixel numbers use `text-box` cap trimming so value, suffix
+  and pace word share a baseline. The switch thumb turns lime when on; the
+  refresh glow is white and the footer dot grid pulses lime while refreshing.
+  Banners take the cards' 16px side inset, and the widget's reading aligns on
+  its baseline.
+- Tokenized typography letter-spacing (`--tracking-tighter`, `--tracking-tight`,
+  `--tracking-normal`, `--tracking-wide`, `--tracking-caps`) and normalized
+  `--text-xs` to 11px across `styles.css`.
+- Selected rail provider buttons tint with the interactive accent, and the Quit
+  button gains a destructive hover state.
+- Filled sidebar buttons stack the shared border tokens for default, hover and
+  active backgrounds; the active fill stays unchanged on hover.
+- Dedicated provider cards no longer repeat the page's provider name;
+  Antigravity model-family labels remain. Closed-source messages use an amber
+  warning with an icon, and read errors use the existing destructive palette.
+- Overview and every dedicated provider page share the quota/count-up entrance
+  on opening, tray restore and return from Settings. Provider-tab navigation is
+  local and does not replay it. Interrupted entries settle their readings,
+  refreshes cannot consume a pending return, and reduced-motion transitions
+  settle immediately.
+
+- Overview is the initial dashboard. The shared panel header names the current
+  view and can hide or show the sidebar. Settings keeps its active lime icon and
+  edge highlight while open, including when opened from the tray; Back restores
+  the previously selected dashboard.
+
+- The main window gains a side rail: the Claude provider tab on top, and
+  refresh, notifications, settings, the claude.ai usage page and quit at the
+  bottom, all icon-only with tooltips. The topbar keeps just the logo and
+  window controls, and the footer keeps just the "Updated" stamp.
+- The main window now has the same acrylic backdrop as the floating widget,
+  with 8px corners to match the Windows 11 window rounding.
+- The window is 352px wide (minimum 352px); windows saved at the old 320px
+  widen on the next launch.
+- In Settings › System, "Start with Windows" now sits above "Open with Claude
+  Code".
+- Quota percentages drop from 56px to 36px and the Today / This Month costs
+  from 20px to 18px, to fit the narrower cards.
+- Card titles and badges no longer wrap at narrow widths. The peak badge
+  reads "PEAK", the Today / This Month info button moves next to the card
+  title, and "Usage estimate" becomes "Estimate". Titles that still don't
+  fit end in an ellipsis.
+- Shorter pace badge labels so they fit beside the percentage: "No data",
+  "May run out" (PT-BR "Sem dados", "Acaba antes"; Japanese labels shortened
+  too). The peak badge's tooltip now opens when hovering anywhere on the
+  badge, not only its info icon.
+- Settings tabs follow the updated design: 13px labels on a darker tray, with
+  a raised pill behind the active tab. The Sign out button is now lighter at
+  the top than at the bottom.
+
 ### Security
 
 - The updater downloads only the installer and checksum URLs it fetched from
@@ -19,8 +121,37 @@ is added above it.
 
 ### Fixed
 
+- Antigravity 2.34+ quota discovery reads `~/.gemini/antigravity/daemon/hub_*.json`
+  (matching `pid` and OS-owned loopback ports while keeping the command-line
+  `--csrf_token` fallback for older versions), and persists the last valid
+  quota reading in `%APPDATA%\Siphon\antigravity-quota-cache.json` so active
+  weekly and session windows remain visible across Siphon restarts while
+  Antigravity is closed.
+- Claude Fable 5.2, Mythos 5.2, Sonnet 5.5 and Haiku 5.5 usage now counts
+  toward the Claude Code cost cards; those models were missing from the bundled
+  pricing table, so their tokens were costed at $0.
+- Antigravity discovery no longer requires `main.log`: Windows process identity
+  and PID-owned loopback ports determine which endpoints may receive the token.
+  Stale log ports are excluded, ownership is rediscovered before each request,
+  and inspection failures preserve the last reading instead of hiding the tab.
+- Antigravity quota parsing respects explicit window durations and source-group
+  identity. Unknown durations and duplicate windows fail conservatively;
+  supported summary envelopes and nested remaining fractions retain measured
+  values without turning missing measurements into zero usage.
+- Switching tabs again before the fade finished (Claude → Codex → Claude)
+  could leave the main window empty until the next refresh.
+- The window's first render on launch no longer stops partway through.
+- Screen readers now read "used" or "left" after each quota percentage, so
+  the two display modes no longer sound the same.
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
+- Inactive Settings tab labels now meet WCAG AA contrast (4.53:1, up from
+  about 4.27:1).
+- Screen readers announce the session percentage on the floating widget's
+  open button ("Current Session: 42% used, Open Siphon") instead of only
+  "Open Siphon".
+- Screen readers no longer re-announce the floating widget's reset time on
+  every refresh; it is announced only when it changes.
 - Update the TLS dependency (rustls) to 0.23.46 and the `fallow` dev tool to
   3.38, closing the open Dependabot advisories for both.
 

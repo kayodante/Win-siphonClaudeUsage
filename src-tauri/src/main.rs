@@ -15,6 +15,7 @@ mod launch;
 mod notify;
 mod oauth_server;
 mod prefs;
+mod process;
 mod token_store;
 mod tray;
 mod update_check;
@@ -34,14 +35,38 @@ use prefs::{Change, PrefsStore};
 use siphon_core::json_store::config_dir;
 use token_store::TokenStore;
 
-/// Latest main-window position waiting to be persisted. `Some` also means a
-/// flush task is already scheduled (trailing debounce, one write per drag burst).
-/// Mirrors the floating widget's `PENDING_POS`.
 static MAIN_PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
-const MAIN_POS_FLUSH_DELAY_MS: u64 = 500;
-
-/// Same debounce as `MAIN_PENDING_POS`, for window size.
 static MAIN_PENDING_SIZE: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
+const POS_FLUSH_DELAY_MS: u64 = 500;
+
+/// Trailing debounce (500ms) for persisting a `(i64, i64)` window position or
+/// size pair into preferences — one write per drag/resize burst.
+pub fn debounce_pref_pair(
+    slot: &'static std::sync::Mutex<Option<(i64, i64)>>,
+    handle: tauri::AppHandle,
+    keys: [&'static str; 2],
+    pair: (i64, i64),
+) {
+    let schedule_flush = {
+        let mut pending = slot.lock().unwrap();
+        let first = pending.is_none();
+        *pending = Some(pair);
+        first
+    };
+    if schedule_flush {
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(POS_FLUSH_DELAY_MS)).await;
+            let Some((a, b)) = slot.lock().unwrap().take() else {
+                return;
+            };
+            if let Some(ctx) = handle.try_state::<AppContext>() {
+                let _ = ctx
+                    .prefs
+                    .set_many(vec![(keys[0].into(), a.into()), (keys[1].into(), b.into())]);
+            }
+        });
+    }
+}
 
 /// Whether the main window is currently minimized, tracked through the 0×0
 /// `Resized` event Windows reports for a minimize. Restoring from the taskbar
@@ -86,7 +111,6 @@ fn main() {
             let prefs = Arc::new(PrefsStore::new(config_dir().join("preferences.json")));
             let tokens = Arc::new(TokenStore::new());
             let cache_path = config_dir().join("local-usage-cache.json");
-            let reset_path = config_dir().join("reset-notification.json");
             let exe_path = std::env::current_exe()
                 .map(|p| p.to_string_lossy().into_owned())
                 .unwrap_or_default();
@@ -96,7 +120,7 @@ fn main() {
                 prefs.clone(),
                 tokens.clone(),
                 cache_path,
-                reset_path,
+                config_dir(),
             ));
 
             app.manage(AppContext {
@@ -118,6 +142,12 @@ fn main() {
             // Build the tray with the empty initial state.
             let initial_state = controller.get_state();
             tray::build(&handle, &initial_state)?;
+
+            // Acrylic before first show, so the frame never paints without it.
+            #[cfg(windows)]
+            if let Some(win) = handle.get_webview_window("main") {
+                windows_ctl::apply_backdrop(&win);
+            }
 
             // Put the window back where the user left it before first paint.
             // Runs even when launching hidden so a later tray-show is anchored.
@@ -141,6 +171,7 @@ fn main() {
                 // leave the numbers stale for longer than the user asked for.
                 let mut last_local = Utc::now();
                 let mut last_quota = Utc::now();
+                let mut last_antigravity = Utc::now();
                 loop {
                     tokio::time::sleep(TICK).await;
                     let now = Utc::now();
@@ -155,6 +186,13 @@ fn main() {
                     {
                         last_quota = now;
                         c.refresh_quota().await;
+                    }
+                    // Antigravity needs no Claude sign-in and runs over loopback
+                    // (127.0.0.1) with no external rate limits, so it rides the
+                    // local refresh cadence.
+                    if (now - last_antigravity).num_seconds() >= interval {
+                        last_antigravity = now;
+                        c.refresh_antigravity().await;
                     }
                 }
             });
@@ -184,28 +222,21 @@ fn main() {
                     if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
                         return;
                     }
-                    let schedule_flush = {
-                        let mut p = MAIN_PENDING_POS.lock().unwrap();
-                        let first = p.is_none();
-                        *p = Some((pos.x as i64, pos.y as i64));
-                        first
-                    };
-                    if schedule_flush {
-                        let handle = window.app_handle().clone();
-                        tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
-                                .await;
-                            let Some((x, y)) = MAIN_PENDING_POS.lock().unwrap().take() else {
-                                return;
-                            };
-                            if let Some(ctx) = handle.try_state::<AppContext>() {
-                                let _ = ctx.prefs.set_many(vec![
-                                    ("window.x".into(), x.into()),
-                                    ("window.y".into(), y.into()),
-                                ]);
-                            }
-                        });
+                    // A collapsed rail shifts the left edge right by the rail's
+                    // width (the right edge stays put), but the rail always boots
+                    // expanded — save the x it will need then. The collapse flag
+                    // flips before the window moves, so this event sees it.
+                    let mut x = pos.x as i64;
+                    if windows_ctl::rail_collapsed() {
+                        let scale = window.scale_factor().unwrap_or(1.0);
+                        x -= siphon_core::geometry::rail_delta_px(windows_ctl::RAIL_W, scale);
                     }
+                    debounce_pref_pair(
+                        &MAIN_PENDING_POS,
+                        window.app_handle().clone(),
+                        ["window.x", "window.y"],
+                        (x, pos.y as i64),
+                    );
                 }
                 // Persist size on resize, same debounce as `Moved`. Minimizing
                 // reports 0×0, which would wipe the real size.
@@ -230,7 +261,12 @@ fn main() {
                         let _ = window.app_handle().emit_to("main", "window-shown", ());
                     }
                     let scale = window.scale_factor().unwrap_or(1.0);
-                    let size = size.to_logical::<f64>(scale);
+                    let mut size = size.to_logical::<f64>(scale);
+                    // A collapsed rail narrows the window by RAIL_W, but the rail
+                    // always boots expanded — save the width it will need then.
+                    if windows_ctl::rail_collapsed() {
+                        size.width += windows_ctl::RAIL_W;
+                    }
                     // Same door the DPI-shrunk size used to sneak in through:
                     // a mismatched scale factor between the monitor the window
                     // was born on and the one `restore_main_position` resolved
@@ -242,28 +278,12 @@ fn main() {
                     if size.width < windows_ctl::MIN_W || size.height < windows_ctl::MIN_H {
                         return;
                     }
-                    let schedule_flush = {
-                        let mut p = MAIN_PENDING_SIZE.lock().unwrap();
-                        let first = p.is_none();
-                        *p = Some((size.width.round() as i64, size.height.round() as i64));
-                        first
-                    };
-                    if schedule_flush {
-                        let handle = window.app_handle().clone();
-                        tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
-                                .await;
-                            let Some((w, h)) = MAIN_PENDING_SIZE.lock().unwrap().take() else {
-                                return;
-                            };
-                            if let Some(ctx) = handle.try_state::<AppContext>() {
-                                let _ = ctx.prefs.set_many(vec![
-                                    ("window.width".into(), w.into()),
-                                    ("window.height".into(), h.into()),
-                                ]);
-                            }
-                        });
-                    }
+                    debounce_pref_pair(
+                        &MAIN_PENDING_SIZE,
+                        window.app_handle().clone(),
+                        ["window.width", "window.height"],
+                        (size.width.round() as i64, size.height.round() as i64),
+                    );
                 }
                 _ => {}
             }
@@ -275,15 +295,13 @@ fn main() {
             commands::auth_submit,
             commands::auth_cancel,
             commands::auth_sign_out,
-            commands::prefs_get,
             commands::prefs_set,
-            commands::view_show_main,
-            commands::view_show_settings,
             commands::floating_open_main,
             commands::floating_close,
             commands::floating_set_expanded,
             commands::app_info,
             commands::window_minimize,
+            commands::window_set_rail_collapsed,
             commands::window_close,
             commands::app_quit,
             commands::shell_open_external,
@@ -319,7 +337,7 @@ pub fn apply_pref_change(app: &tauri::AppHandle, ctx: &AppContext, change: &Chan
     ctx.controller.sync_preferences();
 
     match change.path.as_str() {
-        "claudePath" => {
+        "claudePath" | "codexPath" => {
             let c = ctx.controller.clone();
             tauri::async_runtime::spawn(async move {
                 c.refresh_local_blocking().await;

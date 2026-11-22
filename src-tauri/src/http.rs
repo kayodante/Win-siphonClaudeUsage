@@ -7,11 +7,14 @@ use std::time::Duration;
 use serde_json::Value;
 use siphon_core::oauth::{self, TOKEN_URL};
 use siphon_core::profile::extract_profile;
-use siphon_core::quota::{self, Quota, QuotaError, QuotaErrorCode};
+use siphon_core::quota::{QuotaError, QuotaErrorCode};
 use siphon_core::state::Profile;
 use siphon_core::token::Credentials;
 
 const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
+/// The refresh loop awaits this call, so a hung local server must not hold up
+/// Claude's refresh for long.
+const LOOPBACK_TIMEOUT: Duration = Duration::from_secs(5);
 const USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
 const PROFILE_URL: &str = "https://api.anthropic.com/api/oauth/profile";
 
@@ -33,9 +36,24 @@ impl TokenError {
     }
 }
 
+/// Why a loopback quota read failed.
+#[derive(Debug)]
+pub enum LoopbackError {
+    /// Nothing answered: the app is closed (or still starting).
+    Unreachable,
+    /// Something answered with a status or body Siphon cannot use.
+    Unreadable,
+}
+
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
+    /// Only for Antigravity's local server, which has a self-signed
+    /// certificate. Kept apart so the relaxed TLS can never reach a real host:
+    /// every URL it sees is built on `127.0.0.1`, it bypasses any system proxy
+    /// (the CSRF token must not leave the machine), and it never follows a
+    /// redirect off loopback.
+    loopback: reqwest::Client,
 }
 
 impl HttpClient {
@@ -45,7 +63,43 @@ impl HttpClient {
                 .timeout(FETCH_TIMEOUT)
                 .build()
                 .expect("reqwest client"),
+            loopback: reqwest::Client::builder()
+                .timeout(LOOPBACK_TIMEOUT)
+                .danger_accept_invalid_certs(true)
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .expect("reqwest loopback client"),
         }
+    }
+
+    /// POST Antigravity's `RetrieveUserQuotaSummary` on `127.0.0.1:<port>`.
+    pub async fn antigravity_quota(&self, port: u16, token: &str) -> Result<Value, LoopbackError> {
+        use siphon_core::antigravity::{CSRF_HEADER, QUOTA_RPC_PATH};
+        let url = format!("https://127.0.0.1:{port}{QUOTA_RPC_PATH}");
+        let resp = self
+            .loopback
+            .post(url)
+            .header(CSRF_HEADER, token)
+            .header("Connect-Protocol-Version", "1")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body("{}")
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_connect() || e.is_timeout() {
+                    LoopbackError::Unreachable
+                } else {
+                    LoopbackError::Unreadable
+                }
+            })?;
+        if !resp.status().is_success() {
+            log::warn!("Antigravity quota: HTTP {}", resp.status().as_u16());
+            return Err(LoopbackError::Unreadable);
+        }
+        resp.json::<Value>()
+            .await
+            .map_err(|_| LoopbackError::Unreadable)
     }
 
     fn oauth_headers(token: &str) -> Result<reqwest::header::HeaderMap, QuotaError> {
@@ -90,11 +144,6 @@ impl HttpClient {
             .map(|s| s.to_string());
         let body = resp.json::<Value>().await.unwrap_or(Value::Null);
         Ok((status, retry_after, body))
-    }
-
-    /// Parse a 200 usage body into a `Quota`.
-    pub fn parse_usage(body: &Value) -> Quota {
-        quota::parse_usage_response(body)
     }
 
     /// GET the profile endpoint. Returns `None` on any non-200 or error, matching

@@ -108,8 +108,17 @@ function render(state) {
   elements.percent.dataset.value = numberText;
   if (elements.percentSuffix) elements.percentSuffix.textContent = session ? suffix : '';
 
-  elements.resetLabel.textContent = buildFloatingReset(session, currentLang);
-  elements.resetTime.textContent = '';
+  // The button's aria-label replaces its content, so it has to carry the
+  // reading too — otherwise a screen reader hears only "Open Siphon".
+  const openLabel = t('floating.openMain', currentLang);
+  elements.openButton.setAttribute('aria-label', session
+    ? `${t('home.session', currentLang)}: ${formatQuotaPercent(session.percent, mode, suffix)}, ${openLabel}`
+    : openLabel);
+
+  // .floating-reset is a live region and render runs on every state push:
+  // rewriting identical text re-announces it, so only write on a real change.
+  setText(elements.resetLabel, buildFloatingReset(session, currentLang));
+  setText(elements.resetTime, '');
 
   elements.weeklyValue.textContent = weekly ? formatQuotaPercent(weekly.percent, mode, suffix) : '--';
   elements.todayValue.textContent = formatCurrency(state.todayStats?.cost);
@@ -139,6 +148,10 @@ function render(state) {
     : elements.miniSessionGroup.title;
 }
 
+function setText(element, text) {
+  if (element.textContent !== text) element.textContent = text;
+}
+
 function buildFloatingReset(session, lang) {
   if (!session) return t('floating.signIn', lang);
   const percent = clampPercent(session.percent ?? 0);
@@ -150,7 +163,6 @@ function applyStaticLabels() {
   elements.titleLabel.textContent = t('floating.title', currentLang);
   elements.refreshButton.setAttribute('aria-label', t('floating.refresh', currentLang));
   elements.closeButton.setAttribute('aria-label', t('floating.close', currentLang));
-  elements.openButton.setAttribute('aria-label', t('floating.openMain', currentLang));
   elements.expandButton.setAttribute(
     'aria-label',
     t(currentExpanded ? 'floating.collapse' : 'floating.expand', currentLang)
@@ -170,7 +182,15 @@ function renderMeter(percent) {
   const level = levelForPercent(percent);
   const filled = Math.round((percent / 100) * METER_SEGMENTS);
   const meter = elements.meter;
+  if (meter.dataset.level === level && meter.dataset.filled === String(filled)) return;
   meter.dataset.level = level;
+  meter.dataset.filled = String(filled);
+  if (meter.children?.length === METER_SEGMENTS) {
+    for (let i = 0; i < METER_SEGMENTS; i++) {
+      meter.children[i].className = i < filled ? 'meter-segment active' : 'meter-segment';
+    }
+    return;
+  }
   meter.replaceChildren();
   for (let i = 0; i < METER_SEGMENTS; i++) {
     const seg = document.createElement('div');

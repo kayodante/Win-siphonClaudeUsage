@@ -33,8 +33,13 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 
 ## Recursos
 
+* **Visão geral** | A tela inicial reúne as cotas de Claude, Codex e Antigravity em cartões compactos, com mini-indicadores semanais. Os provedores instalados mantêm suas abas individuais. Configurações permanece destacado enquanto estiver aberto, e o cabeçalho permite ocultar ou mostrar a barra lateral — ao ocultá-la, a janela encolhe pela borda esquerda e os cartões ficam no mesmo lugar. Clique no cartão de um provedor para abrir a aba dele. Passe o mouse sobre o título para consultar o horário da leitura de origem, que também aparece no cartão quando a leitura tem mais de uma hora
+* **Navegação dos provedores** | As páginas dedicadas mantêm o nome do provedor no cabeçalho, e os cards do Antigravity preservam os nomes das famílias de modelos. O aviso de fonte fechada usa âmbar. A entrada das cotas e a contagem dos números acontecem ao abrir o app, restaurar pela bandeja e voltar de Configurações; trocar entre as abas dos provedores não repete a animação. Um valor que muda conta a partir do anterior, e as telas deslizam na ordem da barra lateral. Movimento reduzido mantém apenas fades curtos. Os temas de contraste do Windows mantêm os medidores legíveis
+
 * **Cota da sessão** | Barra de progresso da sessão atual de 5 horas, com contagem regressiva até a redefinição
-* **Limites semanais** | Acompanha o limite semanal para todos os modelos a partir do endpoint de uso OAuth
+* **Limites semanais** | Acompanha o limite semanal para todos os modelos a partir do endpoint de uso OAuth, além de qualquer limite semanal restrito a um único modelo (como o do Fable), mostrado como um grupo próprio no card e na aba do Claude
+* **Codex e Antigravity** | Abas no trilho lateral com limite de sessão e semanal próprios, indicador de ritmo e pontos de status, que aparecem quando o app está instalado. O Codex é lido dos logs de sessão que ele grava localmente (sem login, sem rede, incluindo estimativas de tokens e custo de Hoje e Este Mês), então reflete sua última interação com o Codex neste PC. O Antigravity é lido do app aberto e mostra os limites de Gemini, de Claude e GPT e de Gemini 4 Argon separados; com o app fechado (inclusive ao reiniciar o Siphon), a última leitura continua na tela com um aviso. Uma janela cujo reset já passou mostra que aguarda nova leitura, em vez de um 0% presumido. Os dois recebem as mesmas notificações e alertas sonoros de 70/90/100% e de redefinição do Claude (clicar na notificação abre a aba daquele provedor); o ícone da bandeja e o widget continuam no Claude
+* **Descoberta do Antigravity** | Encontra o servidor aberto pelos processos do Windows, pelas portas locais pertencentes a eles e pelos arquivos de descoberta `~/.gemini/antigravity/daemon/hub_*.json` (com fallback para `--csrf_token` na linha de comando em versões anteriores e `main.log` / `language_server.log` como pistas opcionais de porta); o token só é enviado às portas verificadas do servidor. As cotas atualizam no intervalo local (30s) sem limites remotos de requisição. A duração explícita da cota tem prioridade, e dados ambíguos ou ilegíveis mantêm a leitura anterior com status de erro
 * **Acompanhamento do uso** | Uso de hoje e do mês em USD, calculado localmente com os arquivos de uso e preços do Claude Code
 * **Alertas de cota** | Avisos na interface quando o uso da sessão chega a 70% e 90% (dispensáveis por sessão); notificações opcionais do Windows aos 70%, 90% e 100%, cada uma configurável separadamente
 * **Notificação de redefinição** | Notificação do Windows quando a sessão é redefinida. Se o aplicativo estava fechado, ela aparece na próxima abertura
@@ -43,7 +48,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 * **Atualização configurável** | A cada 30 segundos por padrão; opções de 1, 5 e 15 minutos em Configurações
 * **Iniciar com o Windows** | Inicialização automática opcional, com uma configuração separada para abrir ou não a janela ao entrar no sistema
 * **Abrir com o Claude Code** | Hook `SessionStart` opcional que abre o Siphon se estiver fechado e preserva a janela e o foco quando já estiver em execução. Usa o executável diretamente, sem PowerShell; requer Claude Code com suporte a hooks no formato exec (`command` + `args`)
-* **Indicador de ritmo** | Mostra se seu ritmo de uso está adequado ou se você provavelmente atingirá o limite antes da hora
+* **Indicador de ritmo** | Mostra se seu ritmo de uso está adequado ou se você provavelmente atingirá o limite antes da hora; passe o mouse para ver o que o estado significa e, quando pode acabar antes, por volta de que horas
 * **Indicador de horário de pico** | Sinaliza o período de pico da Anthropic (dias úteis, das 5h às 11h no horário do Pacífico), quando as cotas se esgotam mais rápido; ajusta automaticamente o horário de verão
 * **Ícone colorido na bandeja** | <img src="src/assets/tray-icon/tray-ok-high.png" width="18" alt="Exemplo do ícone na bandeja" /> - Mostra simultaneamente os níveis das cotas da sessão e da semana por meio de duas cores independentes
 * **Idiomas** | Inglês, português do Brasil, japonês e coreano, selecionáveis em Configurações
@@ -97,9 +102,11 @@ Os valores de uso são calculados localmente a partir dos dados do Claude Code. 
 | Arquivo | Finalidade |
 |---------|------------|
 | `%APPDATA%\Siphon\credentials.json` | Tokens OAuth (permissão `0600`) |
-| `%APPDATA%\Siphon\reset-notification.json` | Horário de redefinição pendente |
+| `%APPDATA%\Siphon\reset-notification.json` | Horário de redefinição pendente do Claude |
+| `%APPDATA%\Siphon\reset-notification-<provedor>.json` | Horário de redefinição pendente do Codex / Antigravity, um arquivo para cada |
 | `%APPDATA%\Siphon\preferences.json` | Idioma, notificações, posição do widget e da janela principal, inicialização automática, intervalo de atualização, busca por atualizações, modo de exibição da cota, ocultação do e-mail e integração para abrir com o Claude Code |
 | `%APPDATA%\Siphon\local-usage-cache.json` | Cache incremental que pode ser reconstruído a partir dos arquivos JSONL de uso do Claude Code |
+| `%APPDATA%\Siphon\antigravity-quota-cache.json` | Último snapshot conhecido da cota do Antigravity (apenas porcentagens e horários; nunca tokens), exibido enquanto o Antigravity está fechado |
 
 ### Autenticação
 
@@ -127,7 +134,8 @@ Os testes de JS ficam em `test/` e cobrem `src/shared/`, `src/renderer/viewState
 ## Privacidade
 
 - **Dois destinos, ambos relacionados ao aplicativo** — os dados de uso e cota vão apenas para a Anthropic (`api.anthropic.com`). O único outro tráfego de saída é a busca por atualizações na API do GitHub Releases e, se você baixar uma atualização, o próprio instalador vindo do GitHub. Nenhum dado sobre seu uso é enviado ao GitHub. Sem telemetria, análises ou compartilhamento de dados com terceiros.
-- **Sem varredura do disco** — o aplicativo lê apenas caminhos conhecidos: `~/.claude/readout-*.json`, arquivos JSONL em `~/.claude/projects/` e `%APPDATA%\Siphon\`.
+- **Sem varredura do disco** — o aplicativo lê apenas caminhos conhecidos: `~/.claude/readout-*.json`, arquivos JSONL em `~/.claude/projects/`, os logs de `~/.codex/sessions/` (só as entradas de limite e de uso de tokens — nunca o `auth.json`), os arquivos `~/.gemini/antigravity/daemon/hub_*.json` e logs opcionais `main.log` / `language_server.log` do Antigravity, e `%APPDATA%\Siphon\`.
+- **O Antigravity fica na sua máquina** — o Siphon lê o token de acesso do servidor local de cota do Antigravity em `~/.gemini/antigravity/daemon/hub_*.json` (ou na linha de comando desse processo em versões anteriores) e o envia apenas às portas verificadas pertencentes a esse servidor em `127.0.0.1`, sem proxy. O token nunca é salvo nem registrado em log; apenas as porcentagens de cota e horários de reset resultantes são salvos em cache localmente para continuar visíveis quando o Antigravity estiver fechado. O Siphon também verifica os diretórios conhecidos de dados e instalação do Antigravity para distinguir o app fechado de uma instalação ausente.
 - **Credenciais protegidas** — os tokens OAuth são criptografados com o DPAPI do Windows (por meio da crate `windows`) antes de serem gravados no disco. Eles só são gravados em texto simples se o DPAPI não estiver disponível no computador.
 - **Diagnósticos seguros** — os registros internos mostram apenas metadados de serviço e estado, nunca tokens, valores OAuth ou credenciais.
 

@@ -1,8 +1,6 @@
 //! Credential type + expiry logic (`tokenLifecycle.js`) and the marker-byte
 //! encoding from `tokenStore.js`. The DPAPI cipher itself lives in the binary
-//! crate (`src/token_store.rs`) behind the `Cipher` trait defined here, so the
-//! on-disk format — including migration from legacy plaintext JSON — is decided
-//! and tested in one place.
+//! crate (`src/token_store.rs`).
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -70,26 +68,6 @@ pub fn decode_plaintext(buf: &[u8]) -> String {
     String::from_utf8_lossy(&buf[1..]).into_owned()
 }
 
-/// The DPAPI cipher, implemented in the binary crate. Kept as a trait so the
-/// store's load/save (with legacy migration) is host-agnostic and testable with
-/// a plaintext fake.
-pub trait Cipher {
-    fn encrypt(&self, json: &str) -> std::io::Result<Vec<u8>>;
-    fn decrypt(&self, buf: &[u8]) -> std::io::Result<String>;
-}
-
-/// Plaintext cipher used on non-Windows hosts and in tests.
-pub struct PlaintextCipher;
-
-impl Cipher for PlaintextCipher {
-    fn encrypt(&self, json: &str) -> std::io::Result<Vec<u8>> {
-        Ok(encode_plaintext(json))
-    }
-    fn decrypt(&self, buf: &[u8]) -> std::io::Result<String> {
-        Ok(decode_plaintext(buf))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,10 +93,9 @@ mod tests {
 
     #[test]
     fn plaintext_marker_round_trip() {
-        let cipher = PlaintextCipher;
-        let buf = cipher.encrypt("{\"a\":1}").unwrap();
+        let buf = encode_plaintext("{\"a\":1}");
         assert_eq!(buf[0], MARKER_PLAIN);
-        assert_eq!(cipher.decrypt(&buf).unwrap(), "{\"a\":1}");
+        assert_eq!(decode_plaintext(&buf), "{\"a\":1}");
     }
 
     #[test]

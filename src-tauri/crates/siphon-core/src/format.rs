@@ -4,7 +4,7 @@
 //! `clamp_percent`, `quota_display_value`, `format_quota_percent`,
 //! `format_clock_time` and `format_relative_updated`.
 
-use chrono::{DateTime, Local, TimeZone, Utc};
+use chrono::{DateTime, Local, Utc};
 
 /// Tray colour bucket for a utilisation percent. Matches `levelForPercent`.
 pub fn level_for_percent(value: f64) -> &'static str {
@@ -165,24 +165,13 @@ pub fn to_local_date_key(date: DateTime<Utc>) -> String {
 
 /// UTC hour bucket ISO string, matching `toHourKey` (truncates to the hour).
 pub fn to_hour_key(date: DateTime<Utc>) -> String {
-    let truncated = Utc
-        .with_ymd_and_hms(
-            date.format("%Y").to_string().parse().unwrap_or(1970),
-            date.format("%m").to_string().parse().unwrap_or(1),
-            date.format("%d").to_string().parse().unwrap_or(1),
-            date.format("%H").to_string().parse().unwrap_or(0),
-            0,
-            0,
-        )
-        .single()
-        .unwrap_or(date);
-    // Emit with milliseconds + Z, matching `Date.toISOString()`.
-    truncated.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    date.format("%Y-%m-%dT%H:00:00.000Z").to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     #[test]
     fn level_buckets() {

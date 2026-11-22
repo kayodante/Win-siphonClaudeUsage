@@ -7,18 +7,18 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 use siphon_core::json_store::{config_dir, set_owner_only};
-use siphon_core::token::{Cipher, Credentials, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN};
+use siphon_core::token::{
+    decode_plaintext, encode_plaintext, Credentials, MARKER_DPAPI, MARKER_LEGACY, MARKER_PLAIN,
+};
 
 pub struct TokenStore {
     path: PathBuf,
-    cipher: Box<dyn Cipher + Send + Sync>,
 }
 
 impl TokenStore {
     pub fn new() -> Self {
         TokenStore {
             path: config_dir().join("credentials.json"),
-            cipher: default_cipher(),
         }
     }
 
@@ -48,7 +48,7 @@ impl TokenStore {
                 format!("tokenStore: unknown format marker 0x{:02x}", buf[0]),
             ));
         }
-        let json = self.cipher.decrypt(&buf)?;
+        let json = decrypt(&buf)?;
         let creds = serde_json::from_str(&json)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(Some(creds))
@@ -61,7 +61,7 @@ impl TokenStore {
         }
         let json = serde_json::to_string(credentials)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        let buf = self.cipher.encrypt(&json)?;
+        let buf = encrypt(&json);
         let tmp = self.path.with_extension("json.tmp");
         std::fs::write(&tmp, &buf)?;
         set_owner_only(&tmp)?;
@@ -84,17 +84,6 @@ impl Default for TokenStore {
     }
 }
 
-fn default_cipher() -> Box<dyn Cipher + Send + Sync> {
-    #[cfg(windows)]
-    {
-        Box::new(dpapi::DpapiCipher)
-    }
-    #[cfg(not(windows))]
-    {
-        Box::new(siphon_core::token::PlaintextCipher)
-    }
-}
-
 /// Reading `~/.claude/.credentials.json` for the profile fallback (not encrypted;
 /// this is Claude Code's own file).
 pub fn read_claude_credentials() -> Option<Value> {
@@ -104,49 +93,48 @@ pub fn read_claude_credentials() -> Option<Value> {
 }
 
 #[cfg(windows)]
-mod dpapi {
-    //! Thin wrapper over DPAPI. Encrypts with `CryptProtectData` (per-user), the
-    //! same protection Electron's `safeStorage` used. If DPAPI is unavailable we
-    //! fall back to the plaintext marker, matching `SafeStorageCrypto`.
+fn encrypt(json: &str) -> Vec<u8> {
+    match dpapi::protect(json.as_bytes()) {
+        Ok(cipher) => {
+            let mut out = Vec::with_capacity(cipher.len() + 1);
+            out.push(MARKER_DPAPI);
+            out.extend_from_slice(&cipher);
+            out
+        }
+        Err(_) => encode_plaintext(json),
+    }
+}
 
-    use siphon_core::token::{Cipher, MARKER_DPAPI, MARKER_PLAIN};
+#[cfg(not(windows))]
+fn encrypt(json: &str) -> Vec<u8> {
+    encode_plaintext(json)
+}
+
+#[cfg(windows)]
+fn decrypt(buf: &[u8]) -> std::io::Result<String> {
+    if buf[0] == MARKER_PLAIN {
+        return Ok(decode_plaintext(buf));
+    }
+    let plain = dpapi::unprotect(&buf[1..])
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    Ok(String::from_utf8_lossy(&plain).into_owned())
+}
+
+#[cfg(not(windows))]
+fn decrypt(buf: &[u8]) -> std::io::Result<String> {
+    Ok(decode_plaintext(buf))
+}
+
+#[cfg(windows)]
+mod dpapi {
+    //! Thin wrapper over DPAPI (`CryptProtectData` per-user).
+
     use windows::Win32::Foundation::{LocalFree, HLOCAL};
     use windows::Win32::Security::Cryptography::{
         CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB,
     };
 
-    pub struct DpapiCipher;
-
-    impl Cipher for DpapiCipher {
-        fn encrypt(&self, json: &str) -> std::io::Result<Vec<u8>> {
-            match protect(json.as_bytes()) {
-                Ok(cipher) => {
-                    let mut out = Vec::with_capacity(cipher.len() + 1);
-                    out.push(MARKER_DPAPI);
-                    out.extend_from_slice(&cipher);
-                    Ok(out)
-                }
-                Err(_) => {
-                    // DPAPI unavailable — store as plaintext, like the JS fallback.
-                    let mut out = Vec::with_capacity(json.len() + 1);
-                    out.push(MARKER_PLAIN);
-                    out.extend_from_slice(json.as_bytes());
-                    Ok(out)
-                }
-            }
-        }
-
-        fn decrypt(&self, buf: &[u8]) -> std::io::Result<String> {
-            if buf[0] == MARKER_PLAIN {
-                return Ok(String::from_utf8_lossy(&buf[1..]).into_owned());
-            }
-            let plain = unprotect(&buf[1..])
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            Ok(String::from_utf8_lossy(&plain).into_owned())
-        }
-    }
-
-    fn protect(data: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn protect(data: &[u8]) -> Result<Vec<u8>, String> {
         unsafe {
             let input = CRYPT_INTEGER_BLOB {
                 cbData: data.len() as u32,
@@ -161,7 +149,7 @@ mod dpapi {
         }
     }
 
-    fn unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
         unsafe {
             let input = CRYPT_INTEGER_BLOB {
                 cbData: data.len() as u32,
@@ -177,25 +165,16 @@ mod dpapi {
     }
 }
 
-// Keep the import used on all platforms.
-#[cfg(not(windows))]
-#[allow(unused_imports)]
-use siphon_core::token::PlaintextCipher as _PlaintextCipher;
-
 #[cfg(all(test, windows))]
 mod tests {
-    use super::dpapi::DpapiCipher;
     use super::*;
 
     #[test]
     fn dpapi_protect_unprotect_roundtrip() {
-        let cipher = DpapiCipher;
         let original_json =
             r#"{"access_token":"sk-ant-test","expires_at":"2026-09-10T15:00:00.000Z"}"#;
 
-        let encrypted = cipher
-            .encrypt(original_json)
-            .expect("DPAPI encryption must succeed");
+        let encrypted = encrypt(original_json);
         assert_eq!(encrypted[0], MARKER_DPAPI, "Marker must be MARKER_DPAPI");
         assert_ne!(
             &encrypted[1..],
@@ -203,9 +182,7 @@ mod tests {
             "Payload must be encrypted ciphertext"
         );
 
-        let decrypted = cipher
-            .decrypt(&encrypted)
-            .expect("DPAPI decryption must succeed");
+        let decrypted = decrypt(&encrypted).expect("DPAPI decryption must succeed");
         assert_eq!(
             decrypted, original_json,
             "Decrypted text must match original payload"
