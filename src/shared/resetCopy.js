@@ -13,8 +13,8 @@ const DAY_MS = 86_400_000;
 export function buildSessionResetLine(slot, now = new Date(), lang = 'en') {
   if (!slot) return t('session.reset.empty', lang);
 
-  const percent = clamp(slot.percent ?? 0);
-  if (percent === 0) return t('session.reset.empty', lang);
+  const percent = Number(slot.percent);
+  if (!(percent > 0)) return t('session.reset.empty', lang);
 
   const time = formatClockTime(slot.resetsAt);
 
@@ -36,8 +36,8 @@ export function buildSessionResetLine(slot, now = new Date(), lang = 'en') {
 export function buildWeeklyResetLine(slot, now = new Date(), lang = 'en') {
   if (!slot) return t('weekly.reset.empty', lang);
 
-  const percent = clamp(slot.percent ?? 0);
-  if (percent === 0) return t('weekly.reset.empty', lang);
+  const percent = Number(slot.percent);
+  if (!(percent > 0)) return t('weekly.reset.empty', lang);
 
   const weekday = formatWeekdayClock(slot.resetsAt, lang);
 
@@ -77,9 +77,4 @@ export function buildProviderResetLine(window, kind, {
   return kind === 'session'
     ? buildSessionResetLine(slot, now, lang)
     : buildWeeklyResetLine(slot, now, lang);
-}
-
-function clamp(value) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
-  return Math.max(0, Math.min(100, value));
 }

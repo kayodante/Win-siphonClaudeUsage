@@ -28,12 +28,27 @@ pub struct UsageSummary {
     pub last_updated: DateTime<Utc>,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum LocalError {
-    #[error("no Claude Code data found")]
     NoData,
-    #[error("io error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(std::io::Error),
+}
+
+impl std::fmt::Display for LocalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoData => f.write_str("no Claude Code data found"),
+            Self::Io(e) => write!(f, "io error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for LocalError {}
+
+impl From<std::io::Error> for LocalError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
 }
 
 /// Reads `~/.claude` usage on each refresh. Mirrors `LocalDataService`.

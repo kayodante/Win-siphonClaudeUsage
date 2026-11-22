@@ -3,20 +3,31 @@
 //! Serialized straight to the renderer, so `kind` is a stable contract:
 //! the renderer maps it to an i18n string. `Display` is English, for logs.
 
-#[derive(Debug, thiserror::Error, serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum CommandError {
-    #[error("unknown preference path: {0}")]
     UnknownPreference(String),
-    #[error("invalid value for preference {path}")]
     InvalidPreferenceValue { path: String, value: String },
-    #[error("preference write failed: {0}")]
     PrefWrite(String),
-    #[error("Claude Code settings sync failed: {0}")]
     ClaudeSettings(String),
-    #[error("blocked external url: {0}")]
     UnsafeUrl(String),
 }
+
+impl std::fmt::Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownPreference(p) => write!(f, "unknown preference path: {p}"),
+            Self::InvalidPreferenceValue { path, .. } => {
+                write!(f, "invalid value for preference {path}")
+            }
+            Self::PrefWrite(e) => write!(f, "preference write failed: {e}"),
+            Self::ClaudeSettings(e) => write!(f, "Claude Code settings sync failed: {e}"),
+            Self::UnsafeUrl(u) => write!(f, "blocked external url: {u}"),
+        }
+    }
+}
+
+impl std::error::Error for CommandError {}
 
 /// Every command in `commands.rs` returns this. Note that several commands are
 /// infallible and still return it: Tauri requires a `Result` from any async

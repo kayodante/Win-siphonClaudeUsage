@@ -174,10 +174,6 @@ pub fn show_window_at_boot(launch_hidden: bool, show_window_on_login: bool) -> b
 
 const FORBIDDEN: [&str; 3] = ["__proto__", "constructor", "prototype"];
 
-fn is_plain_object(v: &Value) -> bool {
-    v.is_object()
-}
-
 /// Deep-merge `stored` over `DEFAULT_PREFERENCES`, returning a merged `Value`.
 pub fn merge(stored: Value) -> Value {
     let mut base = Preferences::default_value();
@@ -193,7 +189,7 @@ fn deep_merge(target: &mut Map<String, Value>, source: &Map<String, Value>) {
             continue;
         }
         match (target.get_mut(key), value) {
-            (Some(t), s) if is_plain_object(t) && is_plain_object(s) => {
+            (Some(t), s) if t.is_object() && s.is_object() => {
                 deep_merge(t.as_object_mut().unwrap(), s.as_object().unwrap());
             }
             _ => {

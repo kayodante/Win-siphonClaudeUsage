@@ -56,8 +56,7 @@ pub enum QuotaErrorCode {
     Server,
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("{message}")]
+#[derive(Debug, Clone)]
 pub struct QuotaError {
     pub code: QuotaErrorCode,
     pub message: String,

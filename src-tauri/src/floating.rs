@@ -12,10 +12,7 @@ const MINI_WEEKLY: (f64, f64) = (136.0, 32.0);
 const COMPACT: (f64, f64) = (220.0, 104.0);
 const EXPANDED: (f64, f64) = (220.0, 192.0);
 
-/// Latest dragged position waiting to be persisted. `Some` also means a
-/// flush task is already scheduled (trailing debounce, one write per burst).
 static PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
-const POS_FLUSH_DELAY_MS: u64 = 500;
 
 /// Bumped by every `create`; the topmost-keeper task exits when it no longer
 /// matches, so re-enabling the widget can never leave two loops running.
@@ -171,27 +168,12 @@ fn create(app: &AppHandle, state: &AppState) {
             if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
                 return;
             }
-            let schedule_flush = {
-                let mut p = PENDING_POS.lock().unwrap();
-                let first = p.is_none();
-                *p = Some((pos.x as i64, pos.y as i64));
-                first
-            };
-            if schedule_flush {
-                let handle = handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(POS_FLUSH_DELAY_MS)).await;
-                    let Some((x, y)) = PENDING_POS.lock().unwrap().take() else {
-                        return;
-                    };
-                    if let Some(ctx) = handle.try_state::<crate::AppContext>() {
-                        let _ = ctx.prefs.set_many(vec![
-                            ("floating.x".into(), x.into()),
-                            ("floating.y".into(), y.into()),
-                        ]);
-                    }
-                });
-            }
+            crate::debounce_pref_pair(
+                &PENDING_POS,
+                handle.clone(),
+                ["floating.x", "floating.y"],
+                (pos.x as i64, pos.y as i64),
+            );
         }
     });
 }

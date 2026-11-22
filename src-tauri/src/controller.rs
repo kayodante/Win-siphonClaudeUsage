@@ -434,7 +434,7 @@ impl Controller {
         }
 
         if status == 200 {
-            let quota = HttpClient::parse_usage(&body);
+            let quota = siphon_core::quota::parse_usage_response(&body);
             {
                 let mut state = self.state.lock().unwrap();
                 state.quota = Some(quota.clone());
@@ -962,9 +962,7 @@ impl Controller {
             if prefs.get("notifications.sessionReset") == Some(Value::Bool(true)) && !blocked {
                 let toast = channel.reset_toast(&prefs.load().language);
                 crate::notify::show(&app, &toast.title, &toast.body, channel.provider_id());
-                if channel.plays_reset_sound()
-                    && prefs.get("notifications.sound") == Some(Value::Bool(true))
-                {
+                if prefs.get("notifications.sound") == Some(Value::Bool(true)) {
                     let _ = app.emit("play-reset-sound", ());
                 }
             }

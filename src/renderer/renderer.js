@@ -81,8 +81,6 @@ const elements = {
   extraGauge: document.querySelector('#extraGauge'),
   notificationState: document.querySelector('#notificationState'),
   notificationStateText: document.querySelector('#notificationStateText'),
-  notificationIconOn: document.querySelector('#notificationIconOn'),
-  notificationIconOff: document.querySelector('#notificationIconOff'),
   todayCost: document.querySelector('#todayCost'),
   todayTokens: document.querySelector('#todayTokens'),
   monthCost: document.querySelector('#monthCost'),
@@ -503,30 +501,36 @@ document.addEventListener('keydown', event => {
 // underneath it would otherwise leave it pointing at empty space.
 document.querySelector('.shell-scroll')?.addEventListener('scroll', hideTooltip, { passive: true });
 
+function onRovingKeydown(getOptions, onSelect = (options, nextIndex) => {
+  options[nextIndex].focus();
+  options[nextIndex].click();
+}) {
+  return event => {
+    const options = getOptions();
+    const currentIndex = options.indexOf(event.target);
+    if (currentIndex < 0) return;
+
+    let nextIndex;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = options.length - 1;
+    else return;
+
+    event.preventDefault();
+    onSelect(options, nextIndex);
+  };
+}
+
 elements.refreshButton.addEventListener('click', () => refreshNow());
 elements.settingsButton.addEventListener('click', () => showView('settings'));
 elements.settingsTabSystem.addEventListener('click', () => switchSettingsTab('system'));
 elements.settingsTabNotification.addEventListener('click', () => switchSettingsTab('notification'));
 elements.settingsTabWidget.addEventListener('click', () => switchSettingsTab('widget'));
-elements.settingsTabs.addEventListener('keydown', event => {
-  const tabs = [
-    ['system', elements.settingsTabSystem],
-    ['notification', elements.settingsTabNotification],
-    ['widget', elements.settingsTabWidget]
-  ];
-  const currentIndex = tabs.findIndex(([, tab]) => tab === event.target);
-  if (currentIndex < 0) return;
-
-  let nextIndex;
-  if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
-  else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-  else if (event.key === 'Home') nextIndex = 0;
-  else if (event.key === 'End') nextIndex = tabs.length - 1;
-  else return;
-
-  event.preventDefault();
-  switchSettingsTab(tabs[nextIndex][0], { focus: true });
-});
+elements.settingsTabs.addEventListener('keydown', onRovingKeydown(
+  () => [elements.settingsTabSystem, elements.settingsTabNotification, elements.settingsTabWidget],
+  (_, nextIndex) => switchSettingsTab(['system', 'notification', 'widget'][nextIndex], { focus: true })
+));
 elements.backButton.addEventListener('click', () => showView('main'));
 elements.railToggleButton.addEventListener('click', () => setRailCollapsed(!elements.rail.hidden));
 
@@ -557,33 +561,12 @@ for (const [provider, button] of [
     if (currentState) render(currentState);
   });
 }
-elements.railProviders?.addEventListener('keydown', event => {
-  const buttons = [
-    elements.overviewButton,
-    elements.providerClaudeButton,
-    elements.providerCodexButton,
-    elements.providerAntigravityButton
-  ].filter(btn => btn && !btn.hidden);
-  const currentIndex = buttons.indexOf(event.target);
-  if (currentIndex < 0) return;
-
-  let nextIndex;
-  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
-    nextIndex = (currentIndex + 1) % buttons.length;
-  } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-  } else if (event.key === 'Home') {
-    nextIndex = 0;
-  } else if (event.key === 'End') {
-    nextIndex = buttons.length - 1;
-  } else {
-    return;
-  }
-
-  event.preventDefault();
-  buttons[nextIndex].focus();
-  buttons[nextIndex].click();
-});
+elements.railProviders?.addEventListener('keydown', onRovingKeydown(() => [
+  elements.overviewButton,
+  elements.providerClaudeButton,
+  elements.providerCodexButton,
+  elements.providerAntigravityButton
+].filter(btn => btn && !btn.hidden)));
 async function beginSignIn() {
   try {
     const result = await window.siphon.startSignIn();
@@ -774,22 +757,10 @@ elements.settingsStyleMini.addEventListener('click', async () => {
     if (message && elements.errorText) setErrorText(message);
   }
 });
-elements.settingsStylePicker.addEventListener('keydown', event => {
-  const options = [elements.settingsStyleClassic, elements.settingsStyleMini];
-  const currentIndex = options.indexOf(event.target);
-  if (currentIndex < 0) return;
-
-  let nextIndex;
-  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length;
-  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length;
-  else if (event.key === 'Home') nextIndex = 0;
-  else if (event.key === 'End') nextIndex = options.length - 1;
-  else return;
-
-  event.preventDefault();
-  options[nextIndex].focus();
-  options[nextIndex].click();
-});
+elements.settingsStylePicker.addEventListener('keydown', onRovingKeydown(() => [
+  elements.settingsStyleClassic,
+  elements.settingsStyleMini
+]));
 elements.settingsStartupToggle.addEventListener('change', async event => {
   try {
     await window.siphon.setPreference('startup.openAtLogin', event.target.checked);

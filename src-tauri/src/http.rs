@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde_json::Value;
 use siphon_core::oauth::{self, TOKEN_URL};
 use siphon_core::profile::extract_profile;
-use siphon_core::quota::{self, Quota, QuotaError, QuotaErrorCode};
+use siphon_core::quota::{QuotaError, QuotaErrorCode};
 use siphon_core::state::Profile;
 use siphon_core::token::Credentials;
 
@@ -144,11 +144,6 @@ impl HttpClient {
             .map(|s| s.to_string());
         let body = resp.json::<Value>().await.unwrap_or(Value::Null);
         Ok((status, retry_after, body))
-    }
-
-    /// Parse a 200 usage body into a `Quota`.
-    pub fn parse_usage(body: &Value) -> Quota {
-        quota::parse_usage_response(body)
     }
 
     /// GET the profile endpoint. Returns `None` on any non-200 or error, matching

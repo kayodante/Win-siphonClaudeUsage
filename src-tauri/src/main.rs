@@ -35,14 +35,38 @@ use prefs::{Change, PrefsStore};
 use siphon_core::json_store::config_dir;
 use token_store::TokenStore;
 
-/// Latest main-window position waiting to be persisted. `Some` also means a
-/// flush task is already scheduled (trailing debounce, one write per drag burst).
-/// Mirrors the floating widget's `PENDING_POS`.
 static MAIN_PENDING_POS: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
-const MAIN_POS_FLUSH_DELAY_MS: u64 = 500;
-
-/// Same debounce as `MAIN_PENDING_POS`, for window size.
 static MAIN_PENDING_SIZE: std::sync::Mutex<Option<(i64, i64)>> = std::sync::Mutex::new(None);
+const POS_FLUSH_DELAY_MS: u64 = 500;
+
+/// Trailing debounce (500ms) for persisting a `(i64, i64)` window position or
+/// size pair into preferences — one write per drag/resize burst.
+pub fn debounce_pref_pair(
+    slot: &'static std::sync::Mutex<Option<(i64, i64)>>,
+    handle: tauri::AppHandle,
+    keys: [&'static str; 2],
+    pair: (i64, i64),
+) {
+    let schedule_flush = {
+        let mut pending = slot.lock().unwrap();
+        let first = pending.is_none();
+        *pending = Some(pair);
+        first
+    };
+    if schedule_flush {
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(POS_FLUSH_DELAY_MS)).await;
+            let Some((a, b)) = slot.lock().unwrap().take() else {
+                return;
+            };
+            if let Some(ctx) = handle.try_state::<AppContext>() {
+                let _ = ctx
+                    .prefs
+                    .set_many(vec![(keys[0].into(), a.into()), (keys[1].into(), b.into())]);
+            }
+        });
+    }
+}
 
 /// Whether the main window is currently minimized, tracked through the 0×0
 /// `Resized` event Windows reports for a minimize. Restoring from the taskbar
@@ -198,28 +222,12 @@ fn main() {
                     if siphon_core::geometry::position_is_sentinel(pos.x as f64, pos.y as f64) {
                         return;
                     }
-                    let schedule_flush = {
-                        let mut p = MAIN_PENDING_POS.lock().unwrap();
-                        let first = p.is_none();
-                        *p = Some((pos.x as i64, pos.y as i64));
-                        first
-                    };
-                    if schedule_flush {
-                        let handle = window.app_handle().clone();
-                        tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
-                                .await;
-                            let Some((x, y)) = MAIN_PENDING_POS.lock().unwrap().take() else {
-                                return;
-                            };
-                            if let Some(ctx) = handle.try_state::<AppContext>() {
-                                let _ = ctx.prefs.set_many(vec![
-                                    ("window.x".into(), x.into()),
-                                    ("window.y".into(), y.into()),
-                                ]);
-                            }
-                        });
-                    }
+                    debounce_pref_pair(
+                        &MAIN_PENDING_POS,
+                        window.app_handle().clone(),
+                        ["window.x", "window.y"],
+                        (pos.x as i64, pos.y as i64),
+                    );
                 }
                 // Persist size on resize, same debounce as `Moved`. Minimizing
                 // reports 0×0, which would wipe the real size.
@@ -261,28 +269,12 @@ fn main() {
                     if size.width < windows_ctl::MIN_W || size.height < windows_ctl::MIN_H {
                         return;
                     }
-                    let schedule_flush = {
-                        let mut p = MAIN_PENDING_SIZE.lock().unwrap();
-                        let first = p.is_none();
-                        *p = Some((size.width.round() as i64, size.height.round() as i64));
-                        first
-                    };
-                    if schedule_flush {
-                        let handle = window.app_handle().clone();
-                        tauri::async_runtime::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(MAIN_POS_FLUSH_DELAY_MS))
-                                .await;
-                            let Some((w, h)) = MAIN_PENDING_SIZE.lock().unwrap().take() else {
-                                return;
-                            };
-                            if let Some(ctx) = handle.try_state::<AppContext>() {
-                                let _ = ctx.prefs.set_many(vec![
-                                    ("window.width".into(), w.into()),
-                                    ("window.height".into(), h.into()),
-                                ]);
-                            }
-                        });
-                    }
+                    debounce_pref_pair(
+                        &MAIN_PENDING_SIZE,
+                        window.app_handle().clone(),
+                        ["window.width", "window.height"],
+                        (size.width.round() as i64, size.height.round() as i64),
+                    );
                 }
                 _ => {}
             }
@@ -294,10 +286,7 @@ fn main() {
             commands::auth_submit,
             commands::auth_cancel,
             commands::auth_sign_out,
-            commands::prefs_get,
             commands::prefs_set,
-            commands::view_show_main,
-            commands::view_show_settings,
             commands::floating_open_main,
             commands::floating_close,
             commands::floating_set_expanded,

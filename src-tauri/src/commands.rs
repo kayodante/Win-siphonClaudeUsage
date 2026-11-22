@@ -63,11 +63,6 @@ pub async fn auth_sign_out(ctx: State<'_, AppContext>) -> CommandResult {
     Ok(())
 }
 
-#[tauri::command]
-pub fn prefs_get(ctx: State<'_, AppContext>) -> Value {
-    serde_json::to_value(ctx.prefs.load()).unwrap_or(Value::Null)
-}
-
 const ALLOWED_PREFS: &[&str] = &[
     "language",
     "notifications.sessionReset",
@@ -173,16 +168,6 @@ pub async fn prefs_set(app: AppHandle, ctx: State<'_, AppContext>, args: PrefSet
         return Err(CommandError::ClaudeSettings(e));
     }
     Ok(())
-}
-
-#[tauri::command]
-pub fn view_show_main(app: AppHandle) {
-    crate::windows_ctl::show_main(&app);
-}
-
-#[tauri::command]
-pub fn view_show_settings(app: AppHandle) {
-    crate::windows_ctl::show_settings(&app);
 }
 
 #[tauri::command]

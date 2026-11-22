@@ -125,7 +125,7 @@ pub fn read_quota(codex_home: &Path, known_at: Option<DateTime<Utc>>) -> Observa
             promote_exhausted(taken_at, section, Some(exceeded), None);
         }
     }
-    if let (Some(known), Some(( Some(taken), _))) = (known_at, &best) {
+    if let (Some(known), Some((Some(taken), _))) = (known_at, &best) {
         if *taken <= known {
             best = None;
         }
@@ -377,7 +377,9 @@ fn parse_limit_exceeded_line(line: &str) -> Option<Option<DateTime<Utc>>> {
     Some(ts)
 }
 
-fn parse_rate_limits_line(line: &str) -> Option<(Option<DateTime<Utc>>, QuotaSection, Option<Kind>)> {
+fn parse_rate_limits_line(
+    line: &str,
+) -> Option<(Option<DateTime<Utc>>, QuotaSection, Option<Kind>)> {
     let event: Value = serde_json::from_str(line).ok()?;
     let payload = event.get("payload")?;
     if payload.get("type").and_then(Value::as_str) != Some("token_count") {
@@ -455,10 +457,9 @@ fn promote_exhausted(
     let Some(window) = target else {
         return;
     };
-    if let (Some(exceeded), Some(resets)) = (
-        exceeded_at,
-        window.resets_at.as_deref().and_then(parse_iso),
-    ) {
+    if let (Some(exceeded), Some(resets)) =
+        (exceeded_at, window.resets_at.as_deref().and_then(parse_iso))
+    {
         if resets <= exceeded {
             return;
         }
@@ -1088,11 +1089,7 @@ mod tests {
         // than the old `MAX_FILES * 2 = 80` directory walk cap).
         for i in 0..90 {
             let p = newer_day.join(format!("rollout-2026-10-22T12-00-{i:02}-sub.jsonl"));
-            std::fs::write(
-                &p,
-                line_at("2026-10-22T12:01:00.000Z", &pct(12.0), "null"),
-            )
-            .unwrap();
+            std::fs::write(&p, line_at("2026-10-22T12:01:00.000Z", &pct(12.0), "null")).unwrap();
             std::fs::File::options()
                 .write(true)
                 .open(&p)

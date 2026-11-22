@@ -260,12 +260,6 @@ pub enum EndpointPick {
     Ambiguous,
 }
 
-/// Combine the port from `main.log` / `language_server.log` with the running
-/// `language_server` processes and their OS-owned loopback ports.
-pub fn resolve_endpoint(log_port: Option<u16>, processes: &[ServerProcess]) -> EndpointPick {
-    resolve_endpoint_with_hubs(log_port, processes, &[])
-}
-
 /// Combine the optional log port hint, the running `language_server` processes
 /// (with their OS-owned loopback ports), and any `hub_*.json` discovery files.
 ///
@@ -392,16 +386,6 @@ fn resolve_process_server(
 
 /// Running processes establish presence even without any files. Inspection
 /// failures are errors, never proof that an installation disappeared.
-pub fn discover_endpoint(
-    log_port: Option<u16>,
-    processes: Result<&[ServerProcess], std::io::ErrorKind>,
-    installed: Result<bool, std::io::ErrorKind>,
-) -> Result<EndpointPick, Observation> {
-    discover_endpoint_with_hubs(log_port, processes, &[], installed)
-}
-
-/// Same as `discover_endpoint`, including any `~/.gemini/antigravity/daemon/hub_*.json`
-/// discovery records for Antigravity 2.34+.
 pub fn discover_endpoint_with_hubs(
     log_port: Option<u16>,
     processes: Result<&[ServerProcess], std::io::ErrorKind>,
@@ -436,22 +420,10 @@ fn unique_token<'a>(tokens: impl IntoIterator<Item = &'a str>) -> TokenPick {
 /// install); the port comes from the log and nothing ties it to either
 /// process, so with two different tokens Siphon does not guess.
 #[derive(Debug, PartialEq, Eq)]
-pub enum TokenPick {
-    /// No Antigravity server is running: the app is closed.
+enum TokenPick {
     None,
     One(String),
     Ambiguous,
-}
-
-pub fn pick_token<S: AsRef<str>>(command_lines: &[S]) -> TokenPick {
-    let mut found: Option<String> = None;
-    for token in command_lines.iter().filter_map(|l| csrf_token(l.as_ref())) {
-        match &found {
-            Some(seen) if *seen != token => return TokenPick::Ambiguous,
-            _ => found = Some(token),
-        }
-    }
-    found.map_or(TokenPick::None, TokenPick::One)
 }
 
 /// `RetrieveUserQuotaSummary` → the sections the UI shows: `gemini`
@@ -658,14 +630,14 @@ mod tests {
     fn an_unowned_log_port_is_never_authenticated() {
         let processes = [server("aaaaaaaa-1111", &[50001])];
         assert_eq!(
-            resolve_endpoint(Some(59999), &processes),
+            resolve_endpoint_with_hubs(Some(59999), &processes, &[]),
             EndpointPick::Ready {
                 ports: vec![50001],
                 token: "aaaaaaaa-1111".into(),
             }
         );
         assert_eq!(
-            resolve_endpoint(Some(59999), &[server("aaaaaaaa-1111", &[])]),
+            resolve_endpoint_with_hubs(Some(59999), &[server("aaaaaaaa-1111", &[])], &[]),
             EndpointPick::Ambiguous
         );
     }
@@ -677,14 +649,14 @@ mod tests {
             server("bbbbbbbb-2222", &[50002, 50003]),
         ];
         assert_eq!(
-            resolve_endpoint(Some(50001), &processes),
+            resolve_endpoint_with_hubs(Some(50001), &processes, &[]),
             EndpointPick::Ready {
                 ports: vec![50001],
                 token: "aaaaaaaa-1111".into(),
             }
         );
         assert_eq!(
-            resolve_endpoint(Some(50002), &processes),
+            resolve_endpoint_with_hubs(Some(50002), &processes, &[]),
             EndpointPick::Ambiguous
         );
     }
@@ -696,7 +668,10 @@ mod tests {
             command_line: "language_server.exe --override_ide_name antigravity".into(),
             ports: vec![50001],
         };
-        assert_eq!(resolve_endpoint(None, &[process]), EndpointPick::Ambiguous);
+        assert_eq!(
+            resolve_endpoint_with_hubs(None, &[process], &[]),
+            EndpointPick::Ambiguous
+        );
         assert_eq!(csrf_token("language_server.exe --override_ide_name antigravity-other --csrf_token aaaaaaaa-1111"), None);
     }
 
@@ -764,19 +739,20 @@ mod tests {
     #[test]
     fn restart_uses_only_the_new_instances_ports_and_token() {
         assert_eq!(
-            resolve_endpoint(Some(50001), &[server("bbbbbbbb-2222", &[50002])]),
+            resolve_endpoint_with_hubs(Some(50001), &[server("bbbbbbbb-2222", &[50002])], &[]),
             EndpointPick::Ready {
                 ports: vec![50002],
                 token: "bbbbbbbb-2222".into(),
             }
         );
         assert_eq!(
-            resolve_endpoint(
+            resolve_endpoint_with_hubs(
                 None,
                 &[
                     server("aaaaaaaa-1111", &[50001]),
                     server("bbbbbbbb-2222", &[50002])
-                ]
+                ],
+                &[]
             ),
             EndpointPick::Ambiguous
         );
@@ -788,24 +764,24 @@ mod tests {
         let processes = [server("aaaaaaaa-1111", &[50001])];
         for installed in [Ok(false), Err(PermissionDenied)] {
             assert!(matches!(
-                discover_endpoint(None, Ok(&processes), installed),
+                discover_endpoint_with_hubs(None, Ok(&processes), &[], installed),
                 Ok(EndpointPick::Ready { .. })
             ));
         }
         assert_eq!(
-            discover_endpoint(None, Ok(&[]), Ok(false)),
+            discover_endpoint_with_hubs(None, Ok(&[]), &[], Ok(false)),
             Err(Observation::NotInstalled)
         );
         assert_eq!(
-            discover_endpoint(None, Ok(&[]), Ok(true)),
+            discover_endpoint_with_hubs(None, Ok(&[]), &[], Ok(true)),
             Err(Observation::NoReading(ProviderStatus::Closed))
         );
         assert_eq!(
-            discover_endpoint(None, Err(PermissionDenied), Ok(false)),
+            discover_endpoint_with_hubs(None, Err(PermissionDenied), &[], Ok(false)),
             Err(Observation::NoReading(ProviderStatus::Error))
         );
         assert_eq!(
-            discover_endpoint(None, Ok(&[]), Err(PermissionDenied)),
+            discover_endpoint_with_hubs(None, Ok(&[]), &[], Err(PermissionDenied)),
             Err(Observation::NoReading(ProviderStatus::Error))
         );
     }
@@ -973,23 +949,6 @@ mod tests {
     }
 
     #[test]
-    fn two_servers_with_different_tokens_are_not_guessed_between() {
-        let server = |token: &str| {
-            format!("language_server.exe --override_ide_name antigravity --csrf_token {token}")
-        };
-        let a = server("aaaaaaaa-1111-4222-8333-944455556666");
-        let b = server("bbbbbbbb-1111-4222-8333-944455556666");
-        let windsurf = "language_server.exe --ide_name windsurf --csrf_token cccccccc-1111";
-        assert_eq!(pick_token::<&str>(&[]), TokenPick::None);
-        assert_eq!(pick_token(&[windsurf]), TokenPick::None);
-        assert_eq!(
-            pick_token(&[a.as_str(), windsurf, a.as_str()]),
-            TokenPick::One("aaaaaaaa-1111-4222-8333-944455556666".to_string())
-        );
-        assert_eq!(pick_token(&[a, b]), TokenPick::Ambiguous);
-    }
-
-    #[test]
     fn takes_the_newest_logged_port() {
         let log = "\
 [2026-10-22 23:20:14.179] [info]    Local:       https://127.0.0.1:62935/
@@ -1065,11 +1024,14 @@ I1026 17:22:34.033718 server.go:695] Language server listening on random port at
         let a = proc_with("aaaaaaaa-1111-4222-8333-944455556666", &[50083, 60106]);
         let b = proc_with("bbbbbbbb-1111-4222-8333-944455556666", &[51200]);
 
-        assert_eq!(resolve_endpoint(Some(50083), &[]), EndpointPick::Closed);
+        assert_eq!(
+            resolve_endpoint_with_hubs(Some(50083), &[], &[]),
+            EndpointPick::Closed
+        );
 
         // Two servers with different tokens, but the OS TCP table ties 50083 to `a`.
         assert_eq!(
-            resolve_endpoint(Some(50083), &[a.clone(), b.clone()]),
+            resolve_endpoint_with_hubs(Some(50083), &[a.clone(), b.clone()], &[]),
             EndpointPick::Ready {
                 ports: vec![50083, 60106],
                 token: "aaaaaaaa-1111-4222-8333-944455556666".to_string(),
@@ -1078,7 +1040,7 @@ I1026 17:22:34.033718 server.go:695] Language server listening on random port at
 
         // When main.log rotated or has no port, falls back to the single server's owned ports.
         assert_eq!(
-            resolve_endpoint(None, std::slice::from_ref(&b)),
+            resolve_endpoint_with_hubs(None, std::slice::from_ref(&b), &[]),
             EndpointPick::Ready {
                 ports: vec![51200],
                 token: "bbbbbbbb-1111-4222-8333-944455556666".to_string(),
@@ -1087,7 +1049,7 @@ I1026 17:22:34.033718 server.go:695] Language server listening on random port at
 
         // Two servers with different tokens and no matching port: still refuses to guess.
         assert_eq!(
-            resolve_endpoint(Some(59999), &[a, b]),
+            resolve_endpoint_with_hubs(Some(59999), &[a, b], &[]),
             EndpointPick::Ambiguous
         );
     }

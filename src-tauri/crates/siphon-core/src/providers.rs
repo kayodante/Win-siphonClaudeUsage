@@ -295,11 +295,6 @@ impl Channel {
         })
     }
 
-    /// Every channel plays the reset sound when reset toasts/sounds are enabled.
-    pub fn plays_reset_sound(self) -> bool {
-        true
-    }
-
     pub fn reset_toast(self, lang: &str) -> Alert {
         match self.label(lang) {
             None => Alert {
@@ -468,13 +463,6 @@ mod tests {
         assert_eq!(session_percent(&known), Some(80.0));
         let later = apply(known, Observation::NoReading(ProviderStatus::Live), now()).unwrap();
         assert!(later.sections[0].session.as_ref().unwrap().rolled_over);
-    }
-
-    #[test]
-    fn all_channels_play_the_reset_sound() {
-        for channel in Channel::ALL {
-            assert!(channel.plays_reset_sound());
-        }
     }
 
     #[test]
