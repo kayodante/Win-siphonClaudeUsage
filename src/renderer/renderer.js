@@ -164,7 +164,9 @@ let requestedView = 'main';
 let requestedProvider = 'overview';
 // View state lives up here, not beside renderActiveView: the bootstrap's
 // first render() runs before module evaluation reaches the bottom half of
-// this file, and a `let` read before its line throws.
+// this file, and a `let` read before its line throws. Any top-level
+// `const`/`let` that render() reads belongs in this block
+// (test/renderer-bootstrap.test.js enforces it).
 const crossfadeTo = createViewSwitcher(
   [elements.onboardView, elements.overviewView, elements.mainView, elements.providerView, elements.settingsView],
   { fadeMs: () => cssMs('--duration-view-fade', 150), shiftPx: () => (reducedMotion() ? 0 : 6) }
@@ -172,6 +174,9 @@ const crossfadeTo = createViewSwitcher(
 let renderedView = null;
 let renderedProvider = null;
 const PROVIDER_NAMES = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
+// Antigravity groups read Gemini first, then Argon, then Claude and GPT,
+// whatever order the language server reports them in.
+const SECTION_ORDER = ['gemini', 'argon', 'thirdParty'];
 const overviewCards = new Map();
 const groupCards = new Map();
 const ENTER_SEQUENCE_MS = 900;
@@ -1423,10 +1428,6 @@ function indexQuotaRows(container) {
     row.style.setProperty('--row', index);
   });
 }
-
-// Antigravity groups read Gemini first, then Argon, then Claude and GPT,
-// whatever order the language server reports them in.
-const SECTION_ORDER = ['gemini', 'argon', 'thirdParty'];
 
 function orderSections(sections) {
   const rank = id => (SECTION_ORDER.includes(id) ? SECTION_ORDER.indexOf(id) : SECTION_ORDER.length);
