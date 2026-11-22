@@ -37,7 +37,7 @@
   "author": "Kayo Dante",
   "license": "MIT",
   "devDependencies": {
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "fallow": "^3.38.1",
     "globals": "^16.0.0"
   }
