@@ -34,11 +34,8 @@ const CHUNK_BYTES: usize = 256 * 1024;
 /// and rate-limit error events are well under 64 KB. Skipping oversized lines
 /// while walking backwards avoids allocating or decoding multi-megabyte lines.
 const MAX_EVENT_LINE_BYTES: usize = 256 * 1024;
-/// How far past a `token_count` line `read_usage` walks backwards looking for
-/// a `turn_context` model name before checking the file header instead.
-const MODEL_LOOKBACK_BYTES: usize = 512 * 1024;
 /// Opening lines of a rollout (`session_meta` and the first `turn_context`),
-/// checked when the tail had token counts without a nearby model name.
+/// checked when no model line precedes a usage event in the scanned tail.
 const HEAD_MODEL_BYTES: usize = 16 * 1024;
 /// Files examined per quota attempt. Only files modified after the last known
 /// reading are candidates, so a normal refresh reads one; the cap bounds the
@@ -515,10 +512,11 @@ struct SessionUsage {
 }
 
 /// Aggregate Today and This Month token usage and estimated USD cost across
-/// Codex rollouts in `<codex_home>/sessions`. Each rollout's last
-/// `token_count` or `token_usage_record` event holds that session's cumulative
-/// token usage, so scanning backwards from the end of each recent file sums
-/// the month without loading full multi-megabyte transcripts into memory.
+/// Codex rollouts in `<codex_home>/sessions`. `token_count` and
+/// `token_usage_record` events hold the thread's cumulative usage, so each
+/// event's growth over the previous one is dated by that event and priced by
+/// the model in effect at it. Files are scanned backwards only as far as the
+/// first event before this month, without loading multi-megabyte transcripts.
 pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, PeriodStats) {
     let mut today = PeriodStats::default();
     let mut month = PeriodStats::default();
@@ -539,27 +537,25 @@ pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, Period
         if modified_utc < cutoff {
             break;
         }
-        let Some(usage) = file_session_usage(&path) else {
-            continue;
-        };
-        let when = usage.taken_at.unwrap_or(modified_utc);
-        let day_key = to_local_date_key(when);
-        if !day_key.starts_with(month_prefix) {
-            continue;
-        }
-        let uncached_input = usage.input_tokens.saturating_sub(usage.cached_input_tokens);
-        let cost = token_cost(
-            Tokens {
-                input: uncached_input as f64,
-                output: usage.output_tokens as f64,
-                cache_read: usage.cached_input_tokens as f64,
-                cache_write: usage.cache_write_tokens as f64,
-            },
-            codex_price(&usage.model),
-        );
-        add_usage(&mut month, &usage, uncached_input, cost);
-        if day_key == today_key {
-            add_usage(&mut today, &usage, uncached_input, cost);
+        for usage in file_usage_deltas(&path, month_prefix, modified_utc) {
+            let day_key = to_local_date_key(usage.taken_at.unwrap_or(modified_utc));
+            if !day_key.starts_with(month_prefix) {
+                continue;
+            }
+            let uncached_input = usage.input_tokens.saturating_sub(usage.cached_input_tokens);
+            let cost = token_cost(
+                Tokens {
+                    input: uncached_input as f64,
+                    output: usage.output_tokens as f64,
+                    cache_read: usage.cached_input_tokens as f64,
+                    cache_write: usage.cache_write_tokens as f64,
+                },
+                codex_price(&usage.model),
+            );
+            add_usage(&mut month, &usage, uncached_input, cost);
+            if day_key == today_key {
+                add_usage(&mut today, &usage, uncached_input, cost);
+            }
         }
     }
     today.cost = round_cost(today.cost);
@@ -579,56 +575,101 @@ fn add_usage(target: &mut PeriodStats, u: &SessionUsage, uncached_input: u64, co
     }
 }
 
-fn file_session_usage(path: &Path) -> Option<SessionUsage> {
-    let mut scan = UsageScan::default();
-    scan_lines_rev(path, |line| scan.feed(line)).ok()?;
-    if scan.usage.is_some() && scan.model.is_none() {
-        scan.model = read_head_model(path);
-    }
-    scan.finish()
+/// One line of interest in a rollout, in file order.
+enum UsageLine {
+    Usage(SessionUsage),
+    Model(String),
 }
 
-#[derive(Default)]
-struct UsageScan {
-    usage: Option<SessionUsage>,
-    model: Option<String>,
-    bytes_since_usage: usize,
-}
-
-impl UsageScan {
-    fn feed(&mut self, line: &str) -> ControlFlow<()> {
-        if self.model.is_none() && line.contains("\"model") {
-            if let Some(m) = parse_model_line(line) {
-                self.model = Some(m);
-            }
-        }
-        if self.usage.is_none()
-            && (line.contains("\"total_token_usage\"") || line.contains("\"thread_token_usage\""))
-        {
+/// Each usage event's growth over the event before it, oldest first. Codex
+/// logs cumulative per-thread totals, so a thread resumed today or carried
+/// over from last month would otherwise count its earlier tokens again. The
+/// backward scan stops at the first event dated before `month_prefix`, which
+/// becomes the baseline; `taken_at` falls back to `fallback_at` (the file's
+/// mtime) and `model` is the model in effect at each event.
+fn file_usage_deltas(
+    path: &Path,
+    month_prefix: &str,
+    fallback_at: DateTime<Utc>,
+) -> Vec<SessionUsage> {
+    let mut lines = Vec::new();
+    let mut has_baseline = false;
+    let scanned = scan_lines_rev(path, |line| {
+        if line.contains("\"total_token_usage\"") || line.contains("\"thread_token_usage\"") {
             if let Some((usage, inline_model)) = parse_usage_line(line) {
-                if self.model.is_none() {
-                    self.model = inline_model;
+                let day = to_local_date_key(usage.taken_at.unwrap_or(fallback_at));
+                // Pushed backwards: after the reverse the inline model sits
+                // just before its own event.
+                lines.push(UsageLine::Usage(usage));
+                if let Some(model) = inline_model {
+                    lines.push(UsageLine::Model(model));
                 }
-                self.usage = Some(usage);
+                if day.as_str() < month_prefix {
+                    has_baseline = true;
+                    return ControlFlow::Break(());
+                }
+                return ControlFlow::Continue(());
             }
         }
-        if self.usage.is_some() {
-            if self.model.is_some() {
-                return ControlFlow::Break(());
-            }
-            self.bytes_since_usage += line.len();
-            if self.bytes_since_usage >= MODEL_LOOKBACK_BYTES {
-                return ControlFlow::Break(());
+        if line.contains("\"model") {
+            if let Some(model) = parse_model_line(line) {
+                lines.push(UsageLine::Model(model));
             }
         }
         ControlFlow::Continue(())
+    });
+    if scanned.is_err() {
+        return Vec::new();
     }
+    lines.reverse();
 
-    fn finish(self) -> Option<SessionUsage> {
-        let mut usage = self.usage?;
-        usage.model = self.model.unwrap_or_else(|| "gpt-5-codex".to_string());
-        Some(usage)
+    let mut model: Option<String> = None;
+    let mut head_model: Option<Option<String>> = None;
+    let mut previous: Option<SessionUsage> = None;
+    let mut skip_baseline = has_baseline;
+    let mut deltas = Vec::new();
+    for line in lines {
+        let current = match line {
+            UsageLine::Model(m) => {
+                model = Some(m);
+                continue;
+            }
+            UsageLine::Usage(current) => current,
+        };
+        let mut growth = match &previous {
+            Some(prev) if current.total_tokens >= prev.total_tokens => SessionUsage {
+                taken_at: current.taken_at,
+                input_tokens: current.input_tokens.saturating_sub(prev.input_tokens),
+                cached_input_tokens: current
+                    .cached_input_tokens
+                    .saturating_sub(prev.cached_input_tokens),
+                cache_write_tokens: current
+                    .cache_write_tokens
+                    .saturating_sub(prev.cache_write_tokens),
+                output_tokens: current.output_tokens.saturating_sub(prev.output_tokens),
+                total_tokens: current.total_tokens.saturating_sub(prev.total_tokens),
+                model: String::new(),
+            },
+            // No earlier event, or the counter reset: all of it is new.
+            _ => current.clone(),
+        };
+        previous = Some(current);
+        if std::mem::take(&mut skip_baseline) || growth.total_tokens == 0 {
+            continue;
+        }
+        growth.taken_at = Some(growth.taken_at.unwrap_or(fallback_at));
+        // ponytail: a model switch before the month baseline is not seen; head model is the fallback
+        growth.model = model
+            .clone()
+            .or_else(|| {
+                head_model
+                    .get_or_insert_with(|| read_head_model(path))
+                    .clone()
+            })
+            .unwrap_or_else(|| "gpt-5-codex".to_string());
+        deltas.push(growth);
     }
+    deltas
 }
 
 fn parse_model_line(line: &str) -> Option<String> {
@@ -1153,5 +1194,100 @@ mod tests {
         assert_eq!(today.cache_read_tokens, 50_000);
         assert_eq!(today.output_tokens, 5_000);
         assert!(today.cost > 0.10);
+    }
+
+    /// A `token_count` line whose cumulative totals are all input tokens.
+    fn usage_line(timestamp: &str, total: u64) -> String {
+        format!(
+            r#"{{"timestamp":"{timestamp}","type":"event_msg","payload":{{"type":"token_count","info":{{"total_token_usage":{{"input_tokens":{total},"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":0,"total_tokens":{total}}}}}}}}}"#
+        )
+    }
+
+    fn model_line(timestamp: &str, model: &str) -> String {
+        format!(
+            r#"{{"timestamp":"{timestamp}","type":"turn_context","payload":{{"model":"{model}"}}}}"#
+        )
+    }
+
+    #[test]
+    fn resumed_thread_counts_only_todays_growth() {
+        let home = Home::new("usage-resumed");
+        let content = [
+            usage_line("2026-10-21T12:00:00.000Z", 100_000),
+            usage_line("2026-10-22T12:00:00.000Z", 150_000),
+        ]
+        .join("\n");
+        home.rollout("resumed", &content, 5);
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (today, month) = read_usage(&home.0, now);
+        assert_eq!(today.total_tokens, 50_000);
+        assert_eq!(month.total_tokens, 150_000);
+    }
+
+    #[test]
+    fn month_boundary_excludes_last_months_tokens() {
+        let home = Home::new("usage-boundary");
+        let content = [
+            usage_line("2026-09-30T12:00:00.000Z", 80_000),
+            usage_line("2026-10-01T12:00:00.000Z", 100_000),
+        ]
+        .join("\n");
+        home.rollout("boundary", &content, 5);
+        let now = Utc.with_ymd_and_hms(2026, 10, 1, 15, 0, 0).unwrap();
+        let (today, month) = read_usage(&home.0, now);
+        assert_eq!(month.total_tokens, 20_000);
+        assert_eq!(today.total_tokens, 20_000);
+    }
+
+    #[test]
+    fn model_switch_prices_each_growth_with_its_model() {
+        let home = Home::new("usage-switch");
+        let content = [
+            model_line("2026-10-22T12:00:00.000Z", "gpt-5-codex"),
+            usage_line("2026-10-22T12:01:00.000Z", 100_000),
+            model_line("2026-10-22T12:02:00.000Z", "o3"),
+            usage_line("2026-10-22T12:03:00.000Z", 250_000),
+        ]
+        .join("\n");
+        home.rollout("switch", &content, 5);
+        let input = |n: u64| Tokens {
+            input: n as f64,
+            output: 0.0,
+            cache_read: 0.0,
+            cache_write: 0.0,
+        };
+        let expected = round_cost(
+            token_cost(input(100_000), codex_price("gpt-5-codex"))
+                + token_cost(input(150_000), codex_price("o3")),
+        );
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (today, _) = read_usage(&home.0, now);
+        assert_eq!(today.cost, expected);
+    }
+
+    #[test]
+    fn counter_reset_counts_the_new_total() {
+        let home = Home::new("usage-reset");
+        let content = [
+            usage_line("2026-10-22T12:00:00.000Z", 200_000),
+            usage_line("2026-10-22T12:30:00.000Z", 30_000),
+        ]
+        .join("\n");
+        home.rollout("reset", &content, 45);
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (today, _) = read_usage(&home.0, now);
+        assert_eq!(today.total_tokens, 230_000);
+    }
+
+    #[test]
+    fn timestampless_event_falls_back_to_mtime_once() {
+        let home = Home::new("usage-untimed");
+        let line = r#"{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":42000,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":0,"total_tokens":42000}}}}"#;
+        home.rollout("untimed", line, 5);
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (first, _) = read_usage(&home.0, now);
+        assert_eq!(first.total_tokens, 42_000);
+        let (second, _) = read_usage(&home.0, now);
+        assert_eq!(second.total_tokens, 42_000);
     }
 }

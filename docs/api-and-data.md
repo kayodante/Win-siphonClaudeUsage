@@ -665,9 +665,9 @@ object per line to `<codex home>/sessions/YYYY/MM/DD/rollout-*.jsonl`, where
 `~/.codex/sessions` is absent on Windows and `$WSL_DISTRO_NAME` is set) a WSL
 `\\wsl$\<distro>\home\<user>\.codex` directory. Every model turn adds a
 `token_count` event carrying the account's current rate limits and cumulative
-token usage (`info.total_token_usage`, paired with `turn_context.model` for
-Today and This Month token/cost aggregation in `codex::read_usage`), observed on
-Codex 0.160:
+token usage (`info.total_token_usage`). `codex::read_usage` counts Today and
+This Month as each event's growth over the previous one, dated by that event and
+priced by the `turn_context.model` in effect at it, observed on Codex 0.160:
 
 ```jsonc
 {
