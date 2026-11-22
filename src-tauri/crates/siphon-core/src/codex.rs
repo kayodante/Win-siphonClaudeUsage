@@ -596,7 +596,8 @@ struct SessionUsage {
 /// `token_usage_record` events hold the thread's cumulative usage, so each
 /// event's growth over the previous one is dated by that event and priced by
 /// the model in effect at it. Files are scanned backwards only as far as the
-/// first event before this month, without loading multi-megabyte transcripts.
+/// first event before this month (and the model in effect there), without
+/// loading multi-megabyte transcripts; later, only appended bytes are read.
 pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, PeriodStats) {
     let mut today = PeriodStats::default();
     let mut month = PeriodStats::default();
@@ -851,7 +852,8 @@ fn file_usage(
 /// complete line. Codex logs cumulative per-thread totals, so a thread resumed
 /// today or carried over from last month would otherwise count its earlier
 /// tokens again. The backward scan stops at the first event dated before
-/// `month_prefix`, which becomes the baseline.
+/// `month_prefix`, which becomes the baseline, once it has the model in
+/// effect there (or reaches the start of the file).
 fn full_usage_scan(
     path: &Path,
     month_prefix: &str,
@@ -864,21 +866,21 @@ fn full_usage_scan(
         let Some((usage, model)) = parse_rollout_line(line) else {
             return ControlFlow::Continue(());
         };
-        let mut baseline = false;
-        // Pushed backwards: after the reverse the inline model sits just
-        // before its own event.
-        if let Some(usage) = usage {
-            let day = to_local_date_key(usage.taken_at.unwrap_or(fallback.at));
-            baseline = day.as_str() < month_prefix;
-            lines.push(UsageLine::Usage(usage));
+        // Past the baseline, only the model in effect at it is still needed.
+        if !has_baseline {
+            // Pushed backwards: after the reverse the inline model sits just
+            // before its own event.
+            if let Some(usage) = usage {
+                let day = to_local_date_key(usage.taken_at.unwrap_or(fallback.at));
+                has_baseline = day.as_str() < month_prefix;
+                lines.push(UsageLine::Usage(usage));
+            }
         }
         if let Some(model) = model {
             lines.push(UsageLine::Model(model));
-        }
-        if baseline {
-            // ponytail: a model switch before the month baseline is not seen; head model is the fallback
-            has_baseline = true;
-            return ControlFlow::Break(());
+            if has_baseline {
+                return ControlFlow::Break(());
+            }
         }
         ControlFlow::Continue(())
     })?;
@@ -1638,5 +1640,32 @@ mod tests {
             6,
         );
         assert_eq!(read_usage(&home.0, now).0.total_tokens, 70_000);
+    }
+
+    #[test]
+    fn model_switch_last_month_prices_this_month() {
+        let home = Home::new("usage-baseline-model");
+        let content = [
+            model_line("2026-09-10T12:00:00.000Z", "gpt-5-codex"),
+            usage_line("2026-09-20T12:00:00.000Z", 50_000),
+            model_line("2026-09-25T12:00:00.000Z", "o3"),
+            usage_line("2026-09-28T12:00:00.000Z", 80_000),
+            usage_line("2026-10-22T12:00:00.000Z", 200_000),
+        ]
+        .join("\n");
+        home.rollout("baseline-model", &content, 5);
+        let growth = Tokens {
+            input: 120_000.0,
+            output: 0.0,
+            cache_read: 0.0,
+            cache_write: 0.0,
+        };
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        let (_, month) = read_usage(&home.0, now);
+        assert_eq!(month.total_tokens, 120_000);
+        assert_eq!(
+            month.cost,
+            round_cost(token_cost(growth, codex_price("o3")))
+        );
     }
 }
