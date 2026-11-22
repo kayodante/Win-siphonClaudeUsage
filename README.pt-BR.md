@@ -56,7 +56,7 @@ Esta é uma versão para Windows do [appariciojunior/siphonClaudeUsage](https://
 ## Requisitos
 
 - Windows 10 ou posterior
-- Node.js 22 ou posterior (somente para desenvolvimento)
+- Node.js 22.13 ou posterior (somente para desenvolvimento)
 - [Claude Code](https://claude.ai/code) instalado e utilizado pelo menos uma vez
 
 ## Instalação

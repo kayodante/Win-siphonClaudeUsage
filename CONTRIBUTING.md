@@ -6,7 +6,7 @@ everyone.
 
 ## Dev setup
 
-- Node.js 22 or later.
+- Node.js 22.13 or later.
 - Windows 10+ (the app is Windows-only — DPAPI credential storage, the tray
   icon, and the toast notifications all depend on Win32 APIs).
 
