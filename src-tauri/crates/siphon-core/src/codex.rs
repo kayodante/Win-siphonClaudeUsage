@@ -12,9 +12,11 @@
 //! turn on this machine. `providers::apply` keeps the newest reading across
 //! attempts and marks a window rolled over once its reset passes.
 
+use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::SystemTime;
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
@@ -532,12 +534,34 @@ pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, Period
     let _ = collect_rollouts(&sessions, SCAN_MAX_FILES, &mut files);
     files.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));
 
+    // Taken out of the memo so the lock is not held while files are read.
+    let mut previous = memo_lock()
+        .get_or_insert_with(HashMap::new)
+        .remove(codex_home)
+        .unwrap_or_default();
+    let mut visited = HashMap::new();
     for (modified, path) in files.into_iter().take(USAGE_MAX_FILES) {
         let modified_utc = DateTime::<Utc>::from(modified);
         if modified_utc < cutoff {
             break;
         }
-        for usage in file_usage_deltas(&path, month_prefix, modified_utc) {
+        let len = std::fs::metadata(&path).map(|m| m.len()).ok();
+        let entry = match previous.remove(&path) {
+            Some(entry)
+                if Some(entry.len) == len
+                    && entry.modified == modified
+                    && entry.month_prefix == month_prefix =>
+            {
+                entry
+            }
+            _ => UsageMemo {
+                len: len.unwrap_or(u64::MAX),
+                modified,
+                month_prefix: month_prefix.to_string(),
+                deltas: file_usage_deltas(&path, month_prefix, modified_utc),
+            },
+        };
+        for usage in &entry.deltas {
             let day_key = to_local_date_key(usage.taken_at.unwrap_or(modified_utc));
             if !day_key.starts_with(month_prefix) {
                 continue;
@@ -552,15 +576,42 @@ pub fn read_usage(codex_home: &Path, now: DateTime<Utc>) -> (PeriodStats, Period
                 },
                 codex_price(&usage.model),
             );
-            add_usage(&mut month, &usage, uncached_input, cost);
+            add_usage(&mut month, usage, uncached_input, cost);
             if day_key == today_key {
-                add_usage(&mut today, &usage, uncached_input, cost);
+                add_usage(&mut today, usage, uncached_input, cost);
             }
         }
+        if len.is_some() {
+            visited.insert(path, entry);
+        }
     }
+    // Only this scan's files are kept, so the memo cannot outgrow the history.
+    memo_lock()
+        .get_or_insert_with(HashMap::new)
+        .insert(codex_home.to_path_buf(), visited);
     today.cost = round_cost(today.cost);
     month.cost = round_cost(month.cost);
     (today, month)
+}
+
+/// `read_usage` runs on every local refresh (30 s by default) and a month of
+/// rollouts with inline base64 can reach hundreds of MB, so each file's deltas
+/// are kept until its length, mtime or the current month changes. Keyed by
+/// Codex home, then by file.
+static USAGE_MEMO: Mutex<Option<UsageMemos>> = Mutex::new(None);
+type UsageMemos = HashMap<PathBuf, HashMap<PathBuf, UsageMemo>>;
+
+/// A poisoned lock still holds usable data, and the release build aborts on
+/// panic, so recover instead of unwrapping.
+fn memo_lock() -> std::sync::MutexGuard<'static, Option<UsageMemos>> {
+    USAGE_MEMO.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+struct UsageMemo {
+    len: u64,
+    modified: SystemTime,
+    month_prefix: String,
+    deltas: Vec<SessionUsage>,
 }
 
 fn add_usage(target: &mut PeriodStats, u: &SessionUsage, uncached_input: u64, cost: f64) {
@@ -1289,5 +1340,21 @@ mod tests {
         assert_eq!(first.total_tokens, 42_000);
         let (second, _) = read_usage(&home.0, now);
         assert_eq!(second.total_tokens, 42_000);
+    }
+
+    #[test]
+    fn unchanged_file_is_not_rescanned() {
+        let home = Home::new("usage-memo");
+        let now = Utc.with_ymd_and_hms(2026, 10, 22, 15, 0, 0).unwrap();
+        home.rollout("memo", &usage_line("2026-10-22T12:00:00.000Z", 100_000), 5);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 100_000);
+
+        // Same length and mtime: the memoized deltas are reused.
+        home.rollout("memo", &usage_line("2026-10-22T12:00:00.000Z", 200_000), 5);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 100_000);
+
+        // A new mtime is a miss, so the file is read again.
+        home.rollout("memo", &usage_line("2026-10-22T12:00:00.000Z", 200_000), 6);
+        assert_eq!(read_usage(&home.0, now).0.total_tokens, 200_000);
     }
 }
