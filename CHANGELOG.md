@@ -21,6 +21,8 @@ is added above it.
 
 - Update the TLS dependency to reject handshake messages sent at the wrong
   encryption level (GHSA-2mjx-qc3c-rqvc).
+- Update the TLS dependency (rustls) to 0.23.46 and the `fallow` dev tool to
+  3.38, closing the open Dependabot advisories for both.
 
 ## [1.15.1] - 2026-10-19
 
